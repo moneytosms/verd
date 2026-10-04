@@ -8,6 +8,7 @@ import (
 	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/submit"
 	"image/color"
+	"math/rand"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -1113,7 +1114,178 @@ func TestStatsScrollsAndHelp(t *testing.T) {
 		t.Fatal("j should scroll the Stats view")
 	}
 	m, _ = send(m, "?")
-	if out := plain(m); !strings.Contains(out, "Keys: Stats") || !strings.Contains(out, "select an attempted Problem") {
+	if out := plain(m); !strings.Contains(out, "Keys: Stats") || !strings.Contains(out, "select next/previous attempted Problem") {
 		t.Fatalf("help:\n%s", out)
 	}
+}
+
+func pickProblems() []cf.Problem {
+	var ps []cf.Problem
+	add := func(c int, idx string, rating int, tags ...string) {
+		ps = append(ps, cf.Problem{ContestID: c, Index: idx, Name: fmt.Sprintf("P%d%s", c, idx), Rating: rating, Tags: tags})
+	}
+	add(1, "A", 800, "math")
+	add(1, "B", 900, "dp")
+	add(1, "C", 1100, "graphs")
+	add(1, "D", 1200, "dp", "math")
+	add(1, "E", 1500, "dp") // out of the unrated default band
+	add(1, "F", 0, "dp")    // unrated Problem never matches a rating range
+	add(2, "A", 1000, "greedy")
+	return ps
+}
+
+func TestPickFiltersAndSolved(t *testing.T) {
+	status := func(p cf.Problem) store.Status {
+		if p.ContestID == 1 && p.Index == "B" {
+			return store.StatusSolved
+		}
+		return store.StatusNone
+	}
+	f := PickFilter(0)
+	if f.MinRating != 800 || f.MaxRating != 1200 || !f.Unsolved {
+		t.Fatalf("unrated default: %+v", f)
+	}
+	if f := PickFilter(1500); f.MinRating != 1500 || f.MaxRating != 1700 {
+		t.Fatalf("rated default is rating..rating+200: %+v", f)
+	}
+	rng := rand.New(rand.NewSource(1))
+	seen := map[string]int{}
+	for i := 0; i < 300; i++ {
+		p, n, ok := Pick(pickProblems(), status, f, rng, nil)
+		if !ok || n != 4 { // 1A 1C 1D 2A (1B solved, 1E too high, 1F unrated)
+			t.Fatalf("matches=%d ok=%v", n, ok)
+		}
+		seen[fmt.Sprintf("%d%s", p.ContestID, p.Index)]++
+	}
+	for _, bad := range []string{"1B", "1E", "1F"} {
+		if seen[bad] != 0 {
+			t.Fatalf("%s must never be picked: %v", bad, seen)
+		}
+	}
+	for _, good := range []string{"1A", "1C", "1D", "2A"} {
+		if seen[good] < 30 {
+			t.Fatalf("%s should be reachable roughly uniformly: %v", good, seen)
+		}
+	}
+	// re-roll never repeats when there is a choice
+	cur := pickProblems()[0]
+	for i := 0; i < 100; i++ {
+		p, _, _ := Pick(pickProblems(), status, f, rng, &cur)
+		if p.ContestID == cur.ContestID && p.Index == cur.Index {
+			t.Fatal("re-roll repeated the same Problem")
+		}
+	}
+	// a single match may repeat (nothing else to give)
+	one := Filter{Unsolved: true, Include: []string{"graphs"}}
+	only := pickProblems()[2]
+	if p, n, ok := Pick(pickProblems(), status, one, rng, &only); !ok || n != 1 || p.Index != "C" {
+		t.Fatalf("%v %d %v", p, n, ok)
+	}
+	// nothing matches
+	if _, n, ok := Pick(pickProblems(), status, Filter{Include: []string{"geometry"}}, rng, nil); ok || n != 0 {
+		t.Fatal("no match must report !ok")
+	}
+	// AnyOf is OR across tags
+	any := Filter{AnyOf: []string{"graphs", "greedy"}}
+	_, n, _ := Pick(pickProblems(), status, any, rng, nil)
+	if n != 2 {
+		t.Fatalf("AnyOf(graphs|greedy) should match 2, got %d", n)
+	}
+}
+
+func TestPickerTab(t *testing.T) {
+	deps := Deps{Load: func(cf.Problem, bool) (*scrape.Detail, error) { return nil, cf.ErrChallenge }}
+	m := New(nil, "", deps).WithData(Data{Problems: pickProblems()}).WithRand(rand.New(rand.NewSource(7)))
+	m, _ = send(m, "4")
+	out := plain(m)
+	if !strings.Contains(out, "Problem Picker") || !strings.Contains(out, "rating 800-1200, unsolved only") || m.picked == nil {
+		t.Fatalf("picker should roll on entry:\n%s", out)
+	}
+	if m.picked.Rating < 800 || m.picked.Rating > 1200 {
+		t.Fatalf("pick outside the default band: %+v", m.picked)
+	}
+	first := *m.picked
+	changed := false
+	for i := 0; i < 20 && !changed; i++ {
+		m, _ = send(m, " ")
+		changed = m.picked.Index != first.Index || m.picked.ContestID != first.ContestID
+	}
+	if !changed {
+		t.Fatal("space should re-roll to a different Problem")
+	}
+	// enter opens the pick
+	want := *m.picked
+	m, cmd := send(m, "enter")
+	if m.open == nil || m.open.ContestID != want.ContestID || m.open.Index != want.Index || cmd == nil {
+		t.Fatalf("enter should open the pick: %+v", m.open)
+	}
+	m, _ = send(m, "esc")
+	// f edits filters; a bad expression keeps the prompt open
+	m, _ = send(m, "f")
+	m = typeText(m, "wat")
+	m, _ = send(m, "enter")
+	if m.input == nil || !strings.Contains(plain(m), "unknown filter") {
+		t.Fatal("bad filter should show an error")
+	}
+	m, _ = send(m, "ctrl+u")
+	nm, _ := m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = typeText(nm.(Model), "800-2000 +graphs")
+	m, _ = send(m, "enter")
+	if m.picked == nil || m.picked.Index != "C" || m.pickMatches != 1 || !strings.Contains(plain(m), "filter: 800-2000 +graphs") {
+		t.Fatalf("filtered pick: %+v matches=%d\n%s", m.picked, m.pickMatches, plain(m))
+	}
+	// no match: clear message
+	m, _ = send(m, "f")
+	nm, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = typeText(nm.(Model), "+geometry")
+	m, _ = send(m, "enter")
+	if m.picked != nil || !strings.Contains(plain(m), "No Problem matches these filters.") || !strings.Contains(plain(m), "0 match(es)") {
+		t.Fatalf("no-match message:\n%s", plain(m))
+	}
+	m, cmd = send(m, "enter")
+	if cmd != nil || m.open != nil {
+		t.Fatal("enter with no pick must do nothing")
+	}
+}
+
+func TestStatsPJumpsToWeakTopicsPicker(t *testing.T) {
+	st := statsFixture()
+	st.Rating = 1000
+	st.Weaknesses = []stats.TagStat{{Tag: "graphs"}, {Tag: "greedy"}}
+	m := New(nil, "", Deps{}).WithData(Data{Problems: pickProblems(), Stats: st}).WithRand(rand.New(rand.NewSource(3)))
+	m, _ = send(m, "3")
+	m, _ = send(m, "p")
+	out := plain(m)
+	if m.tab != 3 || !strings.Contains(out, "preset: weak topics (graphs, greedy)") || !strings.Contains(out, "rating 1000-1200") {
+		t.Fatalf("p on Stats should open the Picker with the preset:\n%s", out)
+	}
+	if m.picked == nil || (m.picked.Index != "C" && m.picked.Index != "A") || m.pickMatches != 2 {
+		t.Fatalf("pick must come from the weak tags in band: %+v matches=%d", m.picked, m.pickMatches)
+	}
+	for i := 0; i < 20; i++ {
+		m, _ = send(m, " ")
+		if m.picked.Index != "C" && !(m.picked.ContestID == 2 && m.picked.Index == "A") {
+			t.Fatalf("re-roll left the preset: %+v", m.picked)
+		}
+	}
+	// no weaknesses yet: explains instead of silently using everything
+	m2 := New(nil, "", Deps{}).WithData(Data{Problems: pickProblems(), Stats: statsFixtureNoWeak()}).WithRand(rand.New(rand.NewSource(3)))
+	m2, _ = send(m2, "3")
+	m2, _ = send(m2, "p")
+	if out := plain(m2); !strings.Contains(out, "no weak topics yet") || m2.picked == nil {
+		t.Fatalf("no-data preset:\n%s", out)
+	}
+	// w on the Picker applies the same preset
+	m, _ = send(m, "f")
+	m, _ = send(m, "esc")
+	m, _ = send(m, "w")
+	if m.pickPreset != "weak topics" {
+		t.Fatal("w should apply the preset")
+	}
+}
+
+func statsFixtureNoWeak() stats.Stats {
+	s := statsFixture()
+	s.Weaknesses, s.Strengths, s.Rating = nil, nil, 0
+	return s
 }

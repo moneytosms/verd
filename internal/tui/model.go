@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os/exec"
 	"strings"
 	"time"
@@ -82,6 +83,14 @@ type Data struct {
 }
 
 type Model struct {
+	rng         *rand.Rand
+	pickInit    bool
+	pickFilter  Filter
+	pickExpr    string
+	pickPreset  string
+	pickNote    string
+	picked      *cf.Problem
+	pickMatches int
 	stats       stats.Stats
 	statsScroll int
 	statsSel    int
@@ -202,11 +211,34 @@ type input struct {
 	text string
 }
 
+// onTab runs when a tab becomes active.
+func (m Model) onTab() Model {
+	if m.tab == 3 {
+		return m.enterPicker()
+	}
+	return m
+}
+
 func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.input, m.inputErr = nil, ""
 	case "enter":
+		if m.input.kind == 'p' {
+			f, err := ParseFilter(m.input.text)
+			if err != nil {
+				m.inputErr = err.Error()
+				return m, nil
+			}
+			f.Unsolved = true // the Picker only suggests unsolved Problems
+			if f.MinRating == 0 && f.MaxRating == 0 {
+				d := PickFilter(m.stats.Rating)
+				f.MinRating, f.MaxRating = d.MinRating, d.MaxRating
+			}
+			m.pickFilter, m.pickExpr, m.pickPreset, m.pickNote = f, m.input.text, "", ""
+			m.input, m.inputErr = nil, ""
+			return m.roll(), nil
+		}
 		if m.input.kind == '/' {
 			m.filter.Search = m.input.text
 		} else {
@@ -419,10 +451,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.refresh(0)
 		case "1", "2", "3", "4":
 			m.tab = int(k[0] - '1')
-			return m, nil
+			return m.onTab(), nil
 		case "tab":
 			m.tab = (m.tab + 1) % len(tabs)
-			return m, nil
+			return m.onTab(), nil
 		}
 		switch m.tab {
 		case 0:
@@ -431,6 +463,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateContests(msg)
 		case 2:
 			return m.updateStats(msg)
+		case 3:
+			return m.updatePicker(msg)
 		}
 		if k := msg.String(); k == "q" || k == "ctrl+c" {
 			return m, tea.Quit
@@ -734,8 +768,7 @@ func (m Model) View() tea.View {
 	case m.tab == 2:
 		footer = m.viewStats(&b)
 	default:
-		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
-		footer = "1-4 tabs  ? help  q quit"
+		footer = m.viewPicker(&b)
 	}
 	if m.confirm {
 		footer = st.Warn.Render(m.confirmText())
@@ -791,7 +824,10 @@ func (m Model) keys() (screen string, keys [][2]string) {
 		return "Contests", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "list Problems"}}, global...)
 	}
 	if m.tab == 2 {
-		return "Stats", append([][2]string{{"j/k, pgup/pgdn", "scroll"}, {"n/p", "select an attempted Problem"}, {"enter", "open it"}}, global...)
+		return "Stats", append([][2]string{{"j/k, pgup/pgdn", "scroll"}, {"n/N", "select next/previous attempted Problem"}, {"enter", "open it"}, {"p", "Problem Picker with the weak-topics preset"}}, global...)
+	}
+	if m.tab == 3 {
+		return "Picker", append([][2]string{{"space, r", "re-roll"}, {"enter", "open the Problem"}, {"f", "filters: 800-1200 +dp -graphs"}, {"w", "weak-topics preset"}}, global...)
 	}
 	return tabs[m.tab], global
 }

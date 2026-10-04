@@ -13,6 +13,7 @@ import (
 type Filter struct {
 	MinRating, MaxRating int // 0 = unbounded
 	Include, Exclude     []string
+	AnyOf                []string // presets: at least one of these tags (prefix match)
 	Unsolved             bool
 	Search               string
 }
@@ -78,6 +79,18 @@ func (f Filter) Match(p cf.Problem, st store.Status) bool {
 	}
 	for _, t := range f.Include {
 		if !hasTagPrefix(p, t) {
+			return false
+		}
+	}
+	if len(f.AnyOf) > 0 {
+		any := false
+		for _, t := range f.AnyOf {
+			if hasTagPrefix(p, t) {
+				any = true
+				break
+			}
+		}
+		if !any {
 			return false
 		}
 	}

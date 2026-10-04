@@ -106,7 +106,7 @@ func (m Model) statsLines() []string {
 	}
 	add("Verdicts: " + strings.Join(parts, "  "))
 
-	add("", ds.Accent.Render("Attempted, not solved")+ds.Dim.Render("  (n/p select, enter open)"))
+	add("", ds.Accent.Render("Attempted, not solved")+ds.Dim.Render("  (n/N select, enter open)"))
 	if len(st.Unsolved) == 0 {
 		add(ds.Dim.Render("  none"))
 	}
@@ -144,7 +144,7 @@ func (m Model) viewStats(b *strings.Builder) string {
 	for _, l := range lines[min(m.statsScroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "j/k scroll  n/p select  enter open  ? help  q quit"
+	return "j/k scroll  n/N select  enter open  p weak-topics Picker  ? help  q quit"
 }
 
 func (m Model) updateStats(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -162,8 +162,11 @@ func (m Model) updateStats(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.statsScroll = max(0, m.statsScroll-m.page())
 	case "n":
 		m.statsSel = min(len(m.stats.Unsolved)-1, m.statsSel+1)
-	case "p":
+	case "N":
 		m.statsSel = max(0, m.statsSel-1)
+	case "p": // jump to the Picker with the weak-topics preset
+		m.tab = 3
+		return m.withWeakPreset(), nil
 	case "enter":
 		if m.statsSel < len(m.stats.Unsolved) {
 			a := m.stats.Unsolved[m.statsSel]
