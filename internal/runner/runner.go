@@ -72,11 +72,12 @@ const (
 )
 
 type Event struct {
-	Kind    EventKind
-	Cached  bool   // CompileFinished: binary reused
-	Err     string // CompileFinished: compiler output when it failed
-	Result  Result // TestFinished
-	Verdict string // Done: overall (first failing verdict, else AC; CE if compilation failed)
+	Kind        EventKind
+	Cached      bool   // CompileFinished: binary reused
+	Interpreted bool   // CompileFinished: nothing to compile
+	Err         string // CompileFinished: compiler output when it failed
+	Result      Result // TestFinished
+	Verdict     string // Done: overall (first failing verdict, else AC; CE if compilation failed)
 }
 
 // Run compiles then runs every test sequentially, streaming events. The channel is closed after Done.
@@ -92,7 +93,7 @@ func Run(ctx context.Context, spec Spec) <-chan Event {
 			ch <- Event{Kind: Done, Verdict: CE}
 			return
 		}
-		ch <- Event{Kind: CompileFinished, Cached: cached}
+		ch <- Event{Kind: CompileFinished, Cached: cached, Interpreted: len(spec.Lang.Compile) == 0}
 		overall := AC
 		for _, t := range spec.Tests {
 			if ctx.Err() != nil {

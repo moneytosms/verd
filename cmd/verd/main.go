@@ -16,12 +16,14 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/editor"
+	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/mux"
 	"github.com/moneytosms/verd/internal/refresh"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/tui"
+	"github.com/moneytosms/verd/internal/watch"
 	"github.com/moneytosms/verd/internal/workspace"
 )
 
@@ -76,6 +78,10 @@ func run(args []string, out io.Writer) error {
 			st, _ := s.ProblemState(contest, index)
 			return st.Mode
 		}
+		// A running TUI shows the run in its pane; otherwise run headless.
+		if handled, err := delegateTest(context.Background(), out, socketPath(), args[1]); handled {
+			return err
+		}
 		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, args[1])
 	case "config":
 		cfg, err := config.Load(path)
@@ -100,6 +106,13 @@ func runTUI(path string) error {
 	if cfg.Handle == "" {
 		return fmt.Errorf("no handle set: run `verd init`, then set handle in %s", path)
 	}
+	// One TUI per user: it owns the socket `verd test` delegates to.
+	srv, err := ipc.Listen(socketPath())
+	if err != nil {
+		return err
+	}
+	defer srv.Close()
+
 	s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
 	if err != nil {
 		return err
@@ -126,6 +139,22 @@ func runTUI(path string) error {
 		Ensure: func(p cf.Problem, lang string) error {
 			_, _, err := ensureSolution(cfg, p, lang)
 			return err
+		},
+		Autotest: cfg.Autotest,
+		Watch: func(ctx context.Context, p cf.Problem) (<-chan string, error) {
+			dir := workspace.New(cfg.Workspace).Dir(p.ContestID, p.Index)
+			if err := os.MkdirAll(dir, 0o755); err != nil { // so a Solution created later is still watched
+				return nil, err
+			}
+			return watch.Dir(ctx, dir, 150*time.Millisecond)
+		},
+		SolutionPath: func(p cf.Problem, lang string) string {
+			ref, err := solutionRef(cfg, p, lang)
+			if err != nil {
+				return ""
+			}
+			abs, _ := filepath.Abs(ref.Path) // watcher events are absolute
+			return abs
 		},
 		Langs:       langKeys(cfg),
 		DefaultLang: cfg.DefaultLang,
@@ -157,7 +186,16 @@ func runTUI(path string) error {
 		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
-	_, err = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data)).Run()
+	prog := tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data))
+	detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
+		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
+	}
+	mode := func(contest int, index string) string {
+		st, _ := s.ProblemState(contest, index)
+		return st.Mode
+	}
+	go srv.Serve(testHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }))
+	_, err = prog.Run()
 	return err
 }
 

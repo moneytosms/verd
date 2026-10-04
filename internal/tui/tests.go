@@ -65,6 +65,20 @@ func (m Model) startTests() (Model, tea.Cmd) {
 	return m, listen(id, ch)
 }
 
+// attachRun shows a Test Run started elsewhere (the server owns its lifetime).
+func (m Model) attachRun(ch <-chan runner.Event) (Model, tea.Cmd) {
+	if m.run != nil && m.run.cancel != nil {
+		m.run.cancel()
+	}
+	id := 1
+	if m.run != nil {
+		id = m.run.id + 1
+	}
+	m.errMsg = ""
+	m.run = &testRun{id: id, running: true}
+	return m, listen(id, ch)
+}
+
 func (m Model) stopTests() Model {
 	if m.run != nil && m.run.cancel != nil {
 		m.run.cancel()
@@ -89,6 +103,8 @@ func (m Model) onTestEvent(msg testEventMsg) (Model, tea.Cmd) {
 		switch {
 		case ev.Err != "":
 			r.compile = ev.Err
+		case ev.Interpreted:
+			r.compile = "ok (interpreted)"
 		case ev.Cached:
 			r.compile = "ok (cached)"
 		default:

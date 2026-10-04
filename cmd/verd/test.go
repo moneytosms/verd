@@ -28,20 +28,27 @@ type detailFunc func(ctx context.Context, contest int, index string) (*scrape.De
 // modeFunc returns the user's saved Comparison Mode for a Problem ("" = none saved).
 type modeFunc func(contest int, index string) string
 
-// testCmd runs `verd test <file>` headless: samples to disk, compile (cached), run, print.
-// Exit 0 only if every test is AC.
-func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string) error {
+// testPrep is a resolved, ready-to-run `verd test` request.
+type testPrep struct {
+	ref    workspace.Ref
+	spec   runner.Spec
+	header string
+}
+
+// prepareTest resolves path to a Problem, loads its detail, materializes Sample Tests and builds
+// the Runner spec. Errors are *exitError with code 2.
+func prepareTest(ctx context.Context, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string) (*testPrep, error) {
 	ws := workspace.New(cfg.Workspace)
 	ref, err := ws.Resolve(path, cfg.Lang)
 	if err != nil {
-		return &exitError{2, err.Error()}
+		return nil, &exitError{2, err.Error()}
 	}
 	d, err := detail(ctx, ref.Contest, ref.Index)
 	if err != nil {
-		return &exitError{2, fmt.Sprintf("loading %d%s: %v", ref.Contest, ref.Index, err)}
+		return nil, &exitError{2, fmt.Sprintf("loading %d%s: %v", ref.Contest, ref.Index, err)}
 	}
 	if d.Interactive {
-		return &exitError{2, fmt.Sprintf("%d%s is interactive: local run unsupported", ref.Contest, ref.Index)}
+		return nil, &exitError{2, fmt.Sprintf("%d%s is interactive: local run unsupported", ref.Contest, ref.Index)}
 	}
 	mode := ""
 	if savedMode != nil {
@@ -49,46 +56,76 @@ func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir str
 	}
 	spec, err := buildSpec(cfg, cacheDir, ref, d, runner.Mode(mode))
 	if err != nil {
-		return &exitError{2, err.Error()}
+		return nil, &exitError{2, err.Error()}
 	}
 	if len(spec.Tests) == 0 {
-		return &exitError{2, "no tests found"}
+		return nil, &exitError{2, "no tests found"}
 	}
-	fmt.Fprintf(out, "%d%s  %s  TL %d ms x%g  ML %d MB  %s\n", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, spec.Mode)
+	header := fmt.Sprintf("%d%s  %s  TL %d ms x%g  ML %d MB  %s", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, spec.Mode)
+	return &testPrep{ref, spec, header}, nil
+}
 
-	var passed, total, maxMS int
-	var maxMB float64
-	overall := runner.AC
-	for ev := range runner.Run(ctx, spec) {
-		switch ev.Kind {
-		case runner.CompileFinished:
-			switch {
-			case ev.Err != "":
-				fmt.Fprintf(out, "compile: FAILED\n%s\n", ev.Err)
-			case len(spec.Lang.Compile) == 0:
-				fmt.Fprintln(out, "compile: none (interpreted)")
-			case ev.Cached:
-				fmt.Fprintln(out, "compile: ok (cached)")
-			default:
-				fmt.Fprintln(out, "compile: ok")
-			}
-		case runner.TestFinished:
-			r := ev.Result
-			total++
-			if r.Verdict == runner.AC {
-				passed++
-			}
-			maxMS, maxMB = max(maxMS, r.TimeMS), max(maxMB, r.MemoryMB)
-			fmt.Fprintf(out, "%-10s %-3s %6d ms %7.1f MB%s\n", r.Name, r.Verdict, r.TimeMS, r.MemoryMB, detailOf(r))
-		case runner.Done:
-			overall = ev.Verdict
+// testCmd runs `verd test <file>` headless: samples to disk, compile (cached), run, print.
+// Exit 0 only if every test is AC.
+func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string) error {
+	prep, err := prepareTest(ctx, cfg, cacheDir, detail, savedMode, path)
+	if err != nil {
+		return err
+	}
+	rep := &reporter{out: out}
+	rep.header(prep.header)
+	for ev := range runner.Run(ctx, prep.spec) {
+		rep.event(ev)
+	}
+	return rep.finish()
+}
+
+// reporter prints a Test Run, whether it ran in-process or was streamed from a running TUI.
+type reporter struct {
+	out               io.Writer
+	passed, total, ms int
+	mb                float64
+	overall           string
+}
+
+func (r *reporter) header(line string) { fmt.Fprintln(r.out, line) }
+
+func (r *reporter) event(ev runner.Event) {
+	switch ev.Kind {
+	case runner.CompileFinished:
+		switch {
+		case ev.Err != "":
+			fmt.Fprintf(r.out, "compile: FAILED\n%s\n", ev.Err)
+		case ev.Interpreted:
+			fmt.Fprintln(r.out, "compile: none (interpreted)")
+		case ev.Cached:
+			fmt.Fprintln(r.out, "compile: ok (cached)")
+		default:
+			fmt.Fprintln(r.out, "compile: ok")
 		}
+	case runner.TestFinished:
+		res := ev.Result
+		r.total++
+		if res.Verdict == runner.AC {
+			r.passed++
+		}
+		r.ms, r.mb = max(r.ms, res.TimeMS), max(r.mb, res.MemoryMB)
+		fmt.Fprintf(r.out, "%-10s %-3s %6d ms %7.1f MB%s\n", res.Name, res.Verdict, res.TimeMS, res.MemoryMB, detailOf(res))
+	case runner.Done:
+		r.overall = ev.Verdict
 	}
-	if overall == runner.CE {
+}
+
+// finish prints the summary and returns the exit status: nil only if every test was AC.
+func (r *reporter) finish() error {
+	switch r.overall {
+	case runner.CE:
 		return &exitError{1, ""}
+	case "":
+		return &exitError{2, "run ended without a result"}
 	}
-	fmt.Fprintf(out, "%d/%d AC  max %d ms  max %.1f MB  %s\n", passed, total, maxMS, maxMB, overall)
-	if overall != runner.AC {
+	fmt.Fprintf(r.out, "%d/%d AC  max %d ms  max %.1f MB  %s\n", r.passed, r.total, r.ms, r.mb, r.overall)
+	if r.overall != runner.AC {
 		return &exitError{1, ""}
 	}
 	return nil

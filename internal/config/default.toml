@@ -16,6 +16,9 @@
 # Absolute/relative tolerance for the float Comparison Mode.
 # float_eps = 1e-6
 
+# Run tests automatically whenever you save the Solution.
+# autotest = true
+
 # Color theme: terminal (inherits your terminal palette) | dracula | tokyo-night
 # theme = "terminal"
 

@@ -744,3 +744,89 @@ func TestLanguageSwitchPersistsAndRuns(t *testing.T) {
 		t.Fatal("failed Ensure must not change the language")
 	}
 }
+
+func TestAutotestOnSave(t *testing.T) {
+	runs := 0
+	saves := make(chan string, 4)
+	ctxDone := make(chan struct{})
+	deps := Deps{
+		Autotest:     true,
+		DefaultLang:  "cpp",
+		Langs:        []string{"cpp"},
+		SolutionPath: func(p cf.Problem, lang string) string { return "/w/1/A/main." + lang },
+		Watch: func(ctx context.Context, p cf.Problem) (<-chan string, error) {
+			go func() { <-ctx.Done(); close(ctxDone) }()
+			return saves, nil
+		},
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		Tests: func(context.Context, cf.Problem, *scrape.Detail, RunOpts) (<-chan runner.Event, error) {
+			runs++
+			return make(chan runner.Event), nil
+		},
+	}
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	// cmd is a batch: load + watch listener
+	batch := cmd().(tea.BatchMsg)
+	var loaded tea.Msg
+	for _, c := range batch[:1] {
+		loaded = c()
+	}
+	nm, _ := m.Update(loaded)
+	m = nm.(Model)
+
+	saves <- "/w/1/A/notes.txt" // another file: ignored
+	nm, _ = m.Update(watchMsg{path: <-saves, ch: saves})
+	m = nm.(Model)
+	if runs != 0 {
+		t.Fatal("saving an unrelated file must not run tests")
+	}
+	nm, cmd = m.Update(watchMsg{path: "/w/1/A/main.cpp", ch: saves})
+	m = nm.(Model)
+	if runs != 1 || cmd == nil || !m.run.running {
+		t.Fatalf("saving the Solution should start exactly one run, runs=%d", runs)
+	}
+	// autotest = false: no run
+	deps.Autotest = false
+	m2, c2 := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	loaded = c2().(tea.BatchMsg)[0]()
+	nm, _ = m2.Update(loaded)
+	nm, _ = nm.(Model).Update(watchMsg{path: "/w/1/A/main.cpp", ch: saves})
+	if runs != 1 {
+		t.Fatal("autotest=false must not run")
+	}
+	// leaving the Problem stops the watcher
+	m, _ = send(m, "esc")
+	select {
+	case <-ctxDone:
+	case <-time.After(time.Second):
+		t.Fatal("watcher context not cancelled on esc")
+	}
+}
+
+func TestExternalRunOpensProblemAndStreams(t *testing.T) {
+	deps := Deps{Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+		return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+	}}
+	ch := make(chan runner.Event, 4)
+	ch <- runner.Event{Kind: runner.CompileFinished, Interpreted: true}
+	ch <- runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-1", Verdict: runner.AC}}
+	ch <- runner.Event{Kind: runner.Done, Verdict: runner.AC}
+	close(ch)
+
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, "", deps)
+	nm, cmd := m.Update(ExternalRun{Problem: cf.Problem{ContestID: 1, Index: "A", Name: "N"}, Events: ch})
+	m = nm.(Model)
+	if m.open == nil || cmd == nil {
+		t.Fatal("an external run should open its Problem")
+	}
+	m, next := step(t, m, cmd) // detail loads -> run attaches
+	for next != nil {
+		m, next = step(t, m, next)
+	}
+	out := plain(m)
+	if !strings.Contains(out, "sample-1") || !strings.Contains(out, "compile: ok (interpreted)") || !strings.Contains(out, "1/1 AC") {
+		t.Fatalf("external run not shown:\n%s", out)
+	}
+}

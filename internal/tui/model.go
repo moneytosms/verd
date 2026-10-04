@@ -40,6 +40,12 @@ type Deps struct {
 	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
 	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error)
+	// Watch reports saved files in the Problem's directory (debounced) until ctx is done.
+	Watch func(ctx context.Context, p cf.Problem) (<-chan string, error)
+	// SolutionPath is where the Problem's Solution in lang lives.
+	SolutionPath func(p cf.Problem, lang string) string
+	// Autotest runs a Test Run whenever the active Solution is saved.
+	Autotest bool
 	// LoadState and SaveState persist per-Problem choices (Comparison Mode).
 	LoadState func(p cf.Problem) ProblemState
 	SaveState func(p cf.Problem, s ProblemState) error
@@ -101,15 +107,17 @@ type Model struct {
 	height     int
 
 	// Problem view
-	pstate     ProblemState
-	run        *testRun
-	editorOpen bool // a split-pane editor is open; a tick is polling it
-	open       *cf.Problem
-	detail     *scrape.Detail
-	body       []string // rendered statement lines
-	scroll     int
-	loading    bool
-	errMsg     string
+	pstate      ProblemState
+	pending     *ExternalRun // run waiting for its Problem's detail to load
+	watchCancel context.CancelFunc
+	run         *testRun
+	editorOpen  bool // a split-pane editor is open; a tick is polling it
+	open        *cf.Problem
+	detail      *scrape.Detail
+	body        []string // rendered statement lines
+	scroll      int
+	loading     bool
+	errMsg      string
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
@@ -221,6 +229,26 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(tea.RequestBackgroundColor, m.refresh(0))
 }
 
+// ExternalRun attaches a Test Run started elsewhere (e.g. `verd test` from Neovim, over the
+// socket) to the TUI: the Problem opens and the panel streams the run.
+type ExternalRun struct {
+	Problem cf.Problem
+	Events  <-chan runner.Event
+}
+
+type watchMsg struct {
+	path   string
+	ch     <-chan string
+	closed bool
+}
+
+func listenWatch(ch <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		p, ok := <-ch
+		return watchMsg{path: p, ch: ch, closed: !ok}
+	}
+}
+
 type editorDoneMsg struct{ err error }
 
 type editorTickMsg struct{}
@@ -277,6 +305,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncing = false
 	case testEventMsg:
 		return m.onTestEvent(msg)
+	case ExternalRun:
+		for _, p := range m.Problems { // the server only knows the id; borrow the name
+			if p.ContestID == msg.Problem.ContestID && p.Index == msg.Problem.Index {
+				msg.Problem = p
+				break
+			}
+		}
+		if m.open == nil || m.open.ContestID != msg.Problem.ContestID || m.open.Index != msg.Problem.Index {
+			nm, cmd := m.openProblem(msg.Problem)
+			m = nm.(Model)
+			m.pending = &msg
+			return m, cmd
+		}
+		if m.detail == nil {
+			m.pending = &msg
+			return m, nil
+		}
+		return m.attachRun(msg.Events)
+	case watchMsg:
+		if msg.closed || m.open == nil {
+			return m, nil
+		}
+		cmd := listenWatch(msg.ch)
+		if m.deps.Autotest && m.detail != nil && m.deps.SolutionPath != nil && msg.path == m.deps.SolutionPath(*m.open, m.lang()) {
+			nm, run := m.startTests()
+			return nm, tea.Batch(cmd, run)
+		}
+		return m, cmd
 	case editorTickMsg:
 		if m.deps.EditorAlive != nil && m.deps.EditorAlive() {
 			return m, editorTick()
@@ -306,6 +362,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
 			m.body = strings.Split(msg.body, "\n")
+			if m.pending != nil {
+				ev := m.pending.Events
+				m.pending = nil
+				return m.attachRun(ev)
+			}
 		}
 	case tea.KeyPressMsg:
 		if m.help {
@@ -385,8 +446,31 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
+	m = m.closeProblem()
 	m.open, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, nil, nil, "", 0, true
-	return m, m.load(p, false)
+	cmds := []tea.Cmd{m.load(p, false)}
+	if m.deps.Watch != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		if ch, err := m.deps.Watch(ctx, p); err == nil {
+			m.watchCancel = cancel
+			cmds = append(cmds, listenWatch(ch))
+		} else {
+			cancel()
+		}
+	}
+	return m, tea.Batch(cmds...)
+}
+
+// closeProblem leaves the Problem view: stops its run and watcher.
+func (m Model) closeProblem() Model {
+	m = m.stopTests()
+	if m.watchCancel != nil {
+		m.watchCancel()
+		m.watchCancel = nil
+	}
+	m.pending = nil
+	m.open, m.detail, m.body, m.errMsg, m.loading = nil, nil, nil, "", false
+	return m
 }
 
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -414,8 +498,7 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	case "esc":
-		m = m.stopTests()
-		m.open, m.detail, m.body, m.errMsg, m.loading = nil, nil, nil, "", false
+		m = m.closeProblem()
 	case "r":
 		if m.offline {
 			m.errMsg = "offline: refetch needs network (ctrl+r on a list retries the connection)"

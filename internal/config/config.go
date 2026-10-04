@@ -18,6 +18,7 @@ type Config struct {
 	DefaultLang    string  `toml:"default_lang"`
 	TimeMultiplier float64 `toml:"time_multiplier"`
 	FloatEps       float64 `toml:"float_eps"`
+	Autotest       bool    `toml:"autotest"`
 	Theme          string  `toml:"theme"`
 	Split          string  `toml:"split"`
 
@@ -59,7 +60,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Theme: "terminal", Split: "auto",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Split: "auto",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
