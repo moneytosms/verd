@@ -19,6 +19,7 @@ import (
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/tui"
+	"github.com/moneytosms/verd/internal/workspace"
 )
 
 func main() {
@@ -46,7 +47,11 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		fmt.Fprintln(out, "wrote", path)
-		return nil
+		tmpls, err := workspace.InitTemplates(filepath.Join(config.Dir(), "templates"), config.Default().Lang, slices.Contains(args[1:], "--force"))
+		for _, p := range tmpls {
+			fmt.Fprintln(out, "wrote", p)
+		}
+		return err
 	case "test":
 		if len(args) != 2 {
 			return &exitError{2, "usage: verd test <file>"}
@@ -105,13 +110,15 @@ func runTUI(path string) error {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
 		OpenURL: openURL,
+		Edit:    func(p cf.Problem) (*exec.Cmd, error) { return editCmd(cfg, p) },
 		// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
 		Refresh: []func() (tui.Data, error){
 			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
 			stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
 		},
 	}
-	_, err = tea.NewProgram(tui.New(data.Problems, "", deps).WithTheme(cfg.Theme).WithData(data)).Run()
+	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
+	_, err = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data)).Run()
 	return err
 }
 
@@ -158,4 +165,28 @@ func openURL(url string) error {
 		return exec.Command("open", url).Start()
 	}
 	return exec.Command("xdg-open", url).Start()
+}
+
+// editCmd creates the Solution from the user's Template if absent and returns the nvim command.
+func editCmd(cfg config.Config, p cf.Problem) (*exec.Cmd, error) {
+	nvim, err := exec.LookPath("nvim")
+	if err != nil {
+		return nil, fmt.Errorf("nvim not found in PATH")
+	}
+	l, ok := cfg.Lang[cfg.DefaultLang]
+	if !ok {
+		return nil, fmt.Errorf("default_lang %q is not configured", cfg.DefaultLang)
+	}
+	tmpl, err := workspace.LoadTemplate(filepath.Join(config.Dir(), "templates"), cfg.DefaultLang, l)
+	if err != nil {
+		return nil, err
+	}
+	vars := workspace.NewVars(p.ContestID, p.Index, p.Name, cfg.Handle, time.Now())
+	path, line, _, err := workspace.New(cfg.Workspace).Ensure(p.ContestID, p.Index, cfg.DefaultLang, l, tmpl, vars)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(nvim, fmt.Sprintf("+%d", line), path)
+	cmd.Dir = filepath.Dir(path)
+	return cmd, nil
 }

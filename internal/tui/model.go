@@ -4,6 +4,7 @@ package tui
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 	"unicode"
@@ -23,6 +24,8 @@ type Deps struct {
 	Load    func(p cf.Problem, force bool) (*scrape.Detail, error)
 	OpenURL func(url string) error
 	Now     func() time.Time // defaults to time.Now
+	// Edit creates the Problem's Solution if needed and returns the editor command to run.
+	Edit func(p cf.Problem) (*exec.Cmd, error)
 	// Refresh stages run in order in the background; each syncs stale data from the network and
 	// returns the data now in the cache (valid even when err != nil, e.g. offline). A network
 	// failure (cf.ErrNetwork) skips the remaining stages.
@@ -189,6 +192,8 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(tea.RequestBackgroundColor, m.refresh(0))
 }
 
+type editorDoneMsg struct{ err error }
+
 type detailMsg struct {
 	p    cf.Problem
 	d    *scrape.Detail
@@ -230,6 +235,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.refresh(next)
 		}
 		m.syncing = false
+	case editorDoneMsg:
+		if msg.err != nil {
+			m.errMsg = "editor: " + msg.err.Error()
+		}
 	case detailMsg:
 		if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
 			break // user already left or switched Problems
@@ -346,6 +355,17 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.loading, m.errMsg = true, ""
 		return m, m.load(*m.open, true)
+	case "e":
+		if m.deps.Edit == nil {
+			break
+		}
+		cmd, err := m.deps.Edit(*m.open)
+		if err != nil {
+			m.errMsg = "edit: " + err.Error()
+			break
+		}
+		m.errMsg = ""
+		return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
 	case "o":
 		if open, p := m.deps.OpenURL, *m.open; open != nil {
 			return m, func() tea.Msg {
@@ -465,7 +485,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -500,7 +520,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {

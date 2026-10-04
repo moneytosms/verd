@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
@@ -394,5 +396,32 @@ func TestStatusLineAndTheme(t *testing.T) {
 	nm, _ := drac.Update(tea.BackgroundColorMsg{Color: color.White})
 	if nm.(Model).dark || nm.(Model).View().Content == drac.View().Content {
 		t.Fatal("light background must change styling")
+	}
+}
+
+func TestEditKey(t *testing.T) {
+	var got cf.Problem
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		Edit: func(p cf.Problem) (*exec.Cmd, error) { got = p; return exec.Command("true"), nil },
+	}
+	m, _ := send(New([]cf.Problem{{ContestID: 7, Index: "C", Name: "N"}}, "", deps), "enter")
+	m, cmd := send(m, "e")
+	if got.ContestID != 7 || got.Index != "C" || cmd == nil {
+		t.Fatalf("e should prepare the editor for 7C and return an exec cmd: %+v", got)
+	}
+	// editor failure surfaces in the Problem view
+	nm, _ := m.Update(editorDoneMsg{errors.New("exit status 1")})
+	if !strings.Contains(plain(nm.(Model)), "editor: exit status 1") {
+		t.Fatal("editor error not shown")
+	}
+	// Edit failing (e.g. nvim missing) shows a message and runs nothing
+	deps.Edit = func(cf.Problem) (*exec.Cmd, error) { return nil, errors.New("nvim not found in PATH") }
+	m, _ = send(New([]cf.Problem{{ContestID: 7, Index: "C"}}, "", deps), "enter")
+	m, cmd = send(m, "e")
+	if cmd != nil || !strings.Contains(plain(m), "nvim not found in PATH") {
+		t.Fatal("edit error should be shown, no exec")
 	}
 }
