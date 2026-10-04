@@ -24,8 +24,32 @@ _Avoid_: Boilerplate, snippet
 The user's source file for one Problem in one language.
 _Avoid_: Code, attempt
 
+**Workspace**:
+The user-visible directory holding every Problem's Solutions and test files.
+_Avoid_: Project dir, folder
+
+**Test Run**:
+One local execution of a Solution against a Problem's Sample Tests and Custom Tests.
+_Avoid_: Check, judge run
+
+**Local Verdict**:
+Outcome of one test in a Test Run (AC, WA, TLE, RE, MLE, CE), decided on the user's machine.
+_Avoid_: Result, status
+
+**Comparison Mode**:
+How a test's actual output is matched against its expected output (tokens, exact, float, none).
+_Avoid_: Checker, diff mode
+
+**Run Stats**:
+Time and peak memory measured for each test in a Test Run.
+_Avoid_: Metrics, perf
+
 **Submission**:
 A Solution sent to the Codeforces judge, with its judge-assigned Verdict.
+
+**Verdict**:
+The Codeforces judge's outcome for a Submission. Distinct from a Local Verdict.
+_Avoid_: Result
 _Avoid_: Attempt, upload
 
 **Problem Picker**:
