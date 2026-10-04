@@ -17,6 +17,7 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/editor"
+	"github.com/moneytosms/verd/internal/embed"
 	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/mux"
 	"github.com/moneytosms/verd/internal/refresh"
@@ -158,7 +159,12 @@ func runTUI(path string) error {
 	if err != nil {
 		return err
 	}
+	var prog *tea.Program
 	ctrl := &editor.Controller{Mux: mux.Detect(cfg.Split, os.Getenv), Bin: "nvim", SockDir: config.RuntimeDir()}
+	if cfg.Split == "embedded" {
+		// Controller calls Open from the update loop, so messages must not block on prog.Send.
+		ctrl.Mux = &embed.Adapter{Send: func(m any) { go prog.Send(m) }}
+	}
 	if bin, err := exec.LookPath("nvim"); err == nil {
 		ctrl.Bin = bin
 	}
@@ -198,6 +204,8 @@ func runTUI(path string) error {
 			abs, _ := filepath.Abs(ref.Path) // watcher events are absolute
 			return abs
 		},
+		EmbedRatio:  cfg.EmbedRatio,
+		FocusKey:    cfg.EmbedFocusKey,
 		Langs:       langKeys(cfg),
 		DefaultLang: cfg.DefaultLang,
 		EditorAlive: ctrl.Alive,
@@ -228,7 +236,7 @@ func runTUI(path string) error {
 		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
-	prog := tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data))
+	prog = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data))
 	detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
 		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
 	}

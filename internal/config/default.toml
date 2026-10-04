@@ -24,6 +24,15 @@
 
 # How Neovim opens: auto | tmux | herdr | embedded | suspend
 # split = "auto"
+#   embedded draws Neovim inside verd (opt-in, works outside tmux/herdr). Keys go to Neovim
+#   while it has focus; embed_focus_key hands them back to verd. Kitty-keyboard-only chords
+#   (e.g. ctrl+shift combinations) are not encoded.
+
+# Share of the window verd keeps when Neovim is embedded.
+# embed_ratio = 0.4
+
+# Toggles keyboard focus between verd and the embedded Neovim.
+# embed_focus_key = "ctrl+\\"
 
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.

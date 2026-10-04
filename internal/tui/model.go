@@ -47,6 +47,10 @@ type Deps struct {
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
 	Submit func(ctx context.Context, p cf.Problem, lang string) (SubmitStart, error)
+	// EmbedRatio is verd's share of the width when an editor is embedded (default 0.4);
+	// FocusKey toggles keyboard focus between verd and the editor (default ctrl+\\).
+	EmbedRatio float64
+	FocusKey   string
 	// Watch reports saved files in the Problem's directory (debounced) until ctx is done.
 	Watch func(ctx context.Context, p cf.Problem) (<-chan string, error)
 	// SolutionPath is where the Problem's Solution in lang lives.
@@ -133,6 +137,7 @@ type Model struct {
 	confirm     bool         // asking whether to submit despite failing local tests
 	pending     *ExternalRun // run waiting for its Problem's detail to load
 	watchCancel context.CancelFunc
+	embed       embedPane
 	run         *testRun
 	editorOpen  bool // a split-pane editor is open; a tick is polling it
 	open        *cf.Problem
@@ -269,6 +274,16 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// contentWidth is the width available to verd's own screen.
+func (m Model) contentWidth() int {
+	if m.embed.term != nil {
+		if left, right := m.layout(); right > 0 {
+			return left
+		}
+	}
+	return m.width
+}
+
 func (m Model) Init() tea.Cmd {
 	if len(m.deps.Refresh) == 0 {
 		return tea.RequestBackgroundColor
@@ -313,7 +328,7 @@ type detailMsg struct {
 }
 
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
-	load, width, style, loadState := m.deps.Load, m.width, m.styles().Glamour, m.deps.LoadState
+	load, width, style, loadState := m.deps.Load, m.contentWidth(), m.styles().Glamour, m.deps.LoadState
 	return func() tea.Msg {
 		if load == nil {
 			return detailMsg{p: p, err: errors.New("loading unavailable")}
@@ -332,9 +347,18 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if nm, cmd, ok := m.onEmbedMsg(msg); ok {
+		return nm, cmd
+	}
+	nm, cmd, ok := m.routeEmbedInput(msg)
+	if ok {
+		return nm, cmd
+	}
+	m = nm // a click on verd's side moves focus even though the click is also handled below
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.resizeEmbed()
 	case tea.BackgroundColorMsg:
 		m.dark = msg.IsDark()
 	case refreshedMsg:
@@ -736,7 +760,8 @@ func cleanLines(s string) []string {
 
 func (m Model) page() int { return max(1, m.height-4) }
 
-func (m Model) View() tea.View {
+// screen is verd's own screen (everything except an embedded editor pane), truncated to m.width.
+func (m Model) screen() string {
 	st := m.styles()
 	var b strings.Builder
 	names := make([]string, len(tabs))
@@ -780,7 +805,9 @@ func (m Model) View() tea.View {
 	if m.Notice != "" {
 		badges = append(badges, st.Warn.Render("["+clean(m.Notice)+"]"))
 	}
-	if m.editorOpen {
+	if b := m.embedBadge(); b != "" {
+		badges = append(badges, st.Dim.Render(b))
+	} else if m.editorOpen {
 		badges = append(badges, st.Dim.Render("[editor open]"))
 	}
 	switch {
@@ -803,9 +830,7 @@ func (m Model) View() tea.View {
 	for i, l := range lines {
 		lines[i] = xansi.Truncate(l, m.width, "…")
 	}
-	v := tea.NewView(strings.Join(lines, "\n"))
-	v.AltScreen = true
-	return v
+	return strings.Join(lines, "\n")
 }
 
 // keys lists the current screen's key bindings for the help overlay.
