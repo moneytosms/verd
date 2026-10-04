@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,41 +40,60 @@ func run() error {
 	}
 	defer s.Close()
 
-	// ponytail: blocking refresh before the TUI; background refresh is ticket #28.
 	client := cf.New(cf.BaseURL)
-	note := ""
-	if _, err := refresh.Problemset(context.Background(), s, client, time.Now()); err != nil {
-		note = "offline: " + err.Error()
-	}
-	if _, err := refresh.Submissions(context.Background(), s, client, cfg.Handle); err != nil && note == "" {
-		note = "offline: " + err.Error()
-	}
-	if _, err := refresh.Contests(context.Background(), s, client, time.Now()); err != nil && note == "" {
-		note = "offline: " + err.Error()
-	}
-	contests, err := s.Contests()
-	if err != nil {
-		return err
-	}
-	ps, err := s.Problems()
-	if err != nil {
-		return err
-	}
-	if len(ps) == 0 {
-		return fmt.Errorf("no cached problems and fetch failed: %s", note)
-	}
-	statuses, err := s.Statuses()
+	ctx := context.Background()
+	data, err := loadData(s, cfg.Handle)
 	if err != nil {
 		return err
 	}
 	deps := tui.Deps{
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
-			return refresh.Detail(context.Background(), s, client, p, force, time.Now())
+			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
 		OpenURL: openURL,
+		// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
+		Refresh: []func() (tui.Data, error){
+			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
+			stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
+		},
 	}
-	_, err = tea.NewProgram(tui.New(ps, note, deps).WithStatuses(statuses).WithContests(contests)).Run()
+	_, err = tea.NewProgram(tui.New(data.Problems, "", deps).WithData(data)).Run()
 	return err
+}
+
+// stage wraps a sync step: run it, then reload whatever is now cached.
+func stage(s *store.Store, handle string, sync func() error) func() (tui.Data, error) {
+	return func() (tui.Data, error) {
+		err := sync()
+		d, lerr := loadData(s, handle)
+		return d, errors.Join(err, lerr)
+	}
+}
+
+// loadData reads everything the UI renders from the cache.
+func loadData(s *store.Store, handle string) (tui.Data, error) {
+	d := tui.Data{Handle: handle}
+	var err error
+	if d.Problems, err = s.Problems(); err != nil {
+		return d, err
+	}
+	if d.Contests, err = s.Contests(); err != nil {
+		return d, err
+	}
+	if d.Statuses, err = s.Statuses(); err != nil {
+		return d, err
+	}
+	if d.SyncedAt, err = s.LastSync(); err != nil {
+		return d, err
+	}
+	rs, err := s.Rating()
+	if err != nil {
+		return d, err
+	}
+	if len(rs) > 0 {
+		d.Rating = rs[len(rs)-1].NewRating
+	}
+	return d, nil
 }
 
 func openURL(url string) error {

@@ -3,6 +3,7 @@ package refresh
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
@@ -13,6 +14,7 @@ import (
 const (
 	ProblemsetTTL = 24 * time.Hour
 	ContestsTTL   = time.Hour
+	RatingTTL     = 24 * time.Hour
 )
 
 // Problemset fetches and stores the problemset when the cache is older than ProblemsetTTL.
@@ -100,4 +102,42 @@ func Contests(ctx context.Context, s *store.Store, c *cf.Client, now time.Time) 
 		return false, err
 	}
 	return true, s.SaveContests(cs, now)
+}
+
+// Rating fetches and stores the rating history when the cache is older than RatingTTL.
+func Rating(ctx context.Context, s *store.Store, c *cf.Client, handle string, now time.Time) (bool, error) {
+	at, err := s.RatingSyncedAt()
+	if err != nil {
+		return false, err
+	}
+	if !at.IsZero() && now.Sub(at) < RatingTTL {
+		return false, nil
+	}
+	rs, err := c.UserRating(ctx, handle)
+	if err != nil {
+		return false, err
+	}
+	return true, s.SaveRating(rs, now)
+}
+
+// Core refreshes the stale metadata (problemset, contests, rating). A failing step does not stop
+// the others, except a network failure, which means offline: stop at once instead of timing out
+// three times. errors.Is(err, cf.ErrNetwork) means offline. Submissions sync separately: first
+// launch for a heavy user takes many pages and must not delay showing the problemset.
+func Core(ctx context.Context, s *store.Store, c *cf.Client, handle string, now time.Time) error {
+	steps := []func() error{
+		func() (err error) { _, err = Problemset(ctx, s, c, now); return },
+		func() (err error) { _, err = Contests(ctx, s, c, now); return },
+		func() (err error) { _, err = Rating(ctx, s, c, handle, now); return },
+	}
+	var errs []error
+	for _, step := range steps {
+		if err := step(); err != nil {
+			errs = append(errs, err)
+			if errors.Is(err, cf.ErrNetwork) {
+				break
+			}
+		}
+	}
+	return errors.Join(errs...)
 }

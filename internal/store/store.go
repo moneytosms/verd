@@ -24,6 +24,7 @@ var migrations embed.FS
 const (
 	keyProblemsetSync = "problemset_synced_at"
 	keyContestsSync   = "contests_synced_at"
+	keyRatingSync     = "rating_synced_at"
 )
 
 type Store struct{ db *sql.DB }
@@ -306,4 +307,61 @@ func (s *Store) Statuses() (map[string]Status, error) {
 		out[fmt.Sprintf("%d%s", c, i)] = map[bool]Status{true: StatusSolved, false: StatusAttempted}[ok]
 	}
 	return out, rows.Err()
+}
+
+// RatingSyncedAt returns the last rating history sync time; zero if never.
+func (s *Store) RatingSyncedAt() (time.Time, error) { return s.syncedAt(keyRatingSync) }
+
+// SaveRating replaces the rating history and stamps the sync time, atomically.
+func (s *Store) SaveRating(rs []cf.RatingChange, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("DELETE FROM rating_changes"); err != nil {
+		return err
+	}
+	for _, r := range rs {
+		if _, err := tx.Exec("INSERT INTO rating_changes(contest_id, old_rating, new_rating, at) VALUES(?,?,?,?)", r.ContestID, r.OldRating, r.NewRating, r.At); err != nil {
+			return err
+		}
+	}
+	if err := s.setMeta(tx, keyRatingSync, strconv.FormatInt(at.Unix(), 10)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Rating returns the rating history, oldest first.
+func (s *Store) Rating() ([]cf.RatingChange, error) {
+	rows, err := s.db.Query("SELECT contest_id, old_rating, new_rating, at FROM rating_changes ORDER BY at")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []cf.RatingChange
+	for rows.Next() {
+		var r cf.RatingChange
+		if err := rows.Scan(&r.ContestID, &r.OldRating, &r.NewRating, &r.At); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// LastSync is the oldest of the TTL-driven sync times (the staleness of the cache as a whole); zero if any never synced.
+func (s *Store) LastSync() (time.Time, error) {
+	var oldest time.Time
+	for i, f := range []func() (time.Time, error){s.ProblemsetSyncedAt, s.ContestsSyncedAt, s.RatingSyncedAt} {
+		t, err := f()
+		if err != nil || t.IsZero() {
+			return time.Time{}, err
+		}
+		if i == 0 || t.Before(oldest) {
+			oldest = t
+		}
+	}
+	return oldest, nil
 }

@@ -158,3 +158,47 @@ func TestContestsTTL(t *testing.T) {
 		t.Fatalf("%+v", cs)
 	}
 }
+
+func TestCoreOfflineKeepsCache(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		switch {
+		case strings.Contains(r.URL.Path, "problemset"):
+			w.Write([]byte(`{"status":"OK","result":{"problems":[{"contestId":1,"index":"A","name":"X"}],"problemStatistics":[]}}`))
+		case strings.Contains(r.URL.Path, "contest.list"):
+			w.Write([]byte(`{"status":"OK","result":[]}`))
+		case strings.Contains(r.URL.Path, "user.rating"):
+			w.Write([]byte(`{"status":"OK","result":[{"contestId":1,"oldRating":1000,"newRating":1100,"ratingUpdateTimeSeconds":5}]}`))
+		default:
+			w.Write([]byte(`{"status":"OK","result":[]}`))
+		}
+	}))
+	s, _ := store.Open(":memory:")
+	defer s.Close()
+	c := cf.New(srv.URL)
+	c.Interval = 0
+	now := time.Now()
+	if err := Core(context.Background(), s, c, "u", now); err != nil {
+		t.Fatal(err)
+	}
+	if at, _ := s.LastSync(); at.Unix() != now.Unix() {
+		t.Fatalf("LastSync %v", at)
+	}
+	if r, _ := s.Rating(); len(r) != 1 || r[0].NewRating != 1100 {
+		t.Fatalf("rating %+v", r)
+	}
+	// server dies; a day later everything is stale; offline error, cache intact, stops after one try
+	srv.Close()
+	hits.Store(0)
+	err := Core(context.Background(), s, c, "u", now.Add(25*time.Hour))
+	if !errors.Is(err, cf.ErrNetwork) {
+		t.Fatalf("want ErrNetwork, got %v", err)
+	}
+	if ps, _ := s.Problems(); len(ps) != 1 {
+		t.Fatal("cache must survive failed refresh")
+	}
+	if at, _ := s.LastSync(); at.Unix() != now.Unix() {
+		t.Fatalf("LastSync must not advance on failure: %v", at)
+	}
+}

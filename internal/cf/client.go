@@ -199,3 +199,17 @@ func (c *Client) Contests(ctx context.Context) ([]Contest, error) {
 	err := c.api(ctx, "contest.list", nil, &out)
 	return out, err
 }
+
+type RatingChange struct {
+	ContestID int   `json:"contestId"`
+	OldRating int   `json:"oldRating"`
+	NewRating int   `json:"newRating"`
+	At        int64 `json:"ratingUpdateTimeSeconds"`
+}
+
+// UserRating fetches a user's rating history, oldest first. Unrated users get an empty list.
+func (c *Client) UserRating(ctx context.Context, handle string) ([]RatingChange, error) {
+	var out []RatingChange
+	err := c.api(ctx, "user.rating", url.Values{"handle": {handle}}, &out)
+	return out, err
+}

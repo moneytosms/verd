@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -202,5 +203,103 @@ func TestContestsTab(t *testing.T) {
 	m, _ = send(m, "esc")
 	if m.contestOpen != nil || !strings.Contains(m.View().Content, "Upcoming") {
 		t.Fatal("esc should return to contest list")
+	}
+}
+
+func TestBackgroundRefreshDoesNotBlockInput(t *testing.T) {
+	release := make(chan struct{})
+	deps := Deps{Refresh: []func() (Data, error){func() (Data, error) {
+		<-release
+		return Data{Problems: []cf.Problem{{ContestID: 9, Index: "Z", Name: "Fresh"}}}, nil
+	}}}
+	cached := []cf.Problem{{ContestID: 1, Index: "A", Name: "Cached1"}, {ContestID: 2, Index: "A", Name: "Cached2"}}
+	m := New(cached, "", deps)
+	cmd := m.Init() // must return immediately; the blocking work lives in the cmd
+	if cmd == nil || !strings.Contains(m.View().Content, "[syncing...]") || !strings.Contains(m.View().Content, "Cached1") {
+		t.Fatal("should render cache and show syncing before refresh completes")
+	}
+	done := make(chan tea.Msg)
+	go func() { done <- cmd() }()
+	m, _ = send(m, "j") // input handled while refresh is still blocked
+	if m.cursor != 1 {
+		t.Fatal("input blocked during refresh")
+	}
+	close(release)
+	nm, _ := m.Update(<-done)
+	m = nm.(Model)
+	out := m.View().Content
+	if !strings.Contains(out, "Fresh") || strings.Contains(out, "syncing") {
+		t.Fatalf("fresh data not applied:\n%s", out)
+	}
+}
+
+func TestOfflineBadgeAndMessages(t *testing.T) {
+	now := time.Unix(1_000_000, 0)
+	cached := []cf.Problem{{ContestID: 1, Index: "A", Name: "Cached1"}}
+	loads := 0
+	deps := Deps{
+		Now:     func() time.Time { return now },
+		Refresh: []func() (Data, error){func() (Data, error) { return Data{}, nil }},
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			loads++
+			return nil, fmt.Errorf("x: %w", cf.ErrNetwork)
+		},
+	}
+	m := New(cached, "", deps)
+	nm, _ := m.Update(refreshedMsg{Data{Problems: cached, SyncedAt: now.Add(-3 * time.Hour)}, fmt.Errorf("sync: %w", cf.ErrNetwork), 0})
+	m = nm.(Model)
+	out := m.View().Content
+	if !strings.Contains(out, "Cached1") || !strings.Contains(out, "[offline, synced 3h ago]") {
+		t.Fatalf("offline render:\n%s", out)
+	}
+	nm, _ = m.Update(refreshedMsg{Data{Problems: cached}, fmt.Errorf("sync: %w", cf.ErrNetwork), 0})
+	if !strings.Contains(nm.(Model).View().Content, "[offline, never synced]") {
+		t.Fatal("never-synced badge missing")
+	}
+	// uncached statement while offline
+	m, cmd := send(m, "enter")
+	nm, _ = m.Update(cmd())
+	m = nm.(Model)
+	if out := m.View().Content; !strings.Contains(out, "statement not cached") {
+		t.Fatalf("want not-cached message:\n%s", out)
+	}
+	// refetch is network-only: explicit message, no attempt
+	before := loads
+	m, cmd = send(m, "r")
+	if cmd != nil || loads != before || !strings.Contains(m.View().Content, "offline: refetch needs network") {
+		t.Fatalf("refetch offline should explain, not try (loads %d->%d)", before, loads)
+	}
+}
+
+func TestNonNetworkSyncErrorIsNotOffline(t *testing.T) {
+	m := New(nil, "", Deps{Refresh: []func() (Data, error){func() (Data, error) { return Data{}, nil }}})
+	nm, _ := m.Update(refreshedMsg{Data{}, &cf.APIError{Comment: "handle not found"}, 0})
+	out := nm.(Model).View().Content
+	if strings.Contains(out, "offline") || !strings.Contains(out, "handle not found") {
+		t.Fatalf("api error should be a notice, not offline:\n%s", out)
+	}
+}
+
+func TestRefreshStagesRunInOrderAndStopOffline(t *testing.T) {
+	var ran []string
+	stage := func(name string, err error) func() (Data, error) {
+		return func() (Data, error) { ran = append(ran, name); return Data{}, err }
+	}
+	run := func(m Model) Model {
+		cmd := m.Init()
+		for cmd != nil {
+			nm, next := m.Update(cmd())
+			m, cmd = nm.(Model), next
+		}
+		return m
+	}
+	m := run(New(nil, "", Deps{Refresh: []func() (Data, error){stage("core", nil), stage("subs", nil)}}))
+	if strings.Join(ran, ",") != "core,subs" || m.syncing {
+		t.Fatalf("ran %v syncing=%v", ran, m.syncing)
+	}
+	ran = nil
+	m = run(New(nil, "", Deps{Refresh: []func() (Data, error){stage("core", fmt.Errorf("x: %w", cf.ErrNetwork)), stage("subs", nil)}}))
+	if strings.Join(ran, ",") != "core" || !m.offline || m.syncing {
+		t.Fatalf("offline should skip later stages: ran %v", ran)
 	}
 }

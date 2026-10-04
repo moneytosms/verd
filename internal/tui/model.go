@@ -22,11 +22,31 @@ type Deps struct {
 	Load    func(p cf.Problem, force bool) (*scrape.Detail, error)
 	OpenURL func(url string) error
 	Now     func() time.Time // defaults to time.Now
+	// Refresh stages run in order in the background; each syncs stale data from the network and
+	// returns the data now in the cache (valid even when err != nil, e.g. offline). A network
+	// failure (cf.ErrNetwork) skips the remaining stages.
+	Refresh []func() (Data, error)
+}
+
+// Data is everything the UI renders from the cache.
+type Data struct {
+	Handle   string
+	Rating   int // latest rating, 0 = unrated
+	Problems []cf.Problem
+	Contests []cf.Contest
+	Statuses map[string]store.Status
+	SyncedAt time.Time // zero = never fully synced
 }
 
 type Model struct {
+	handle   string
+	rating   int
+	syncing  bool
+	offline  bool
+	syncedAt time.Time
+
 	Problems []cf.Problem
-	Offline  string // non-empty = status note shown in the footer
+	Notice   string // transient note shown in the footer
 	deps     Deps
 	status   map[string]store.Status
 
@@ -57,7 +77,29 @@ type Model struct {
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
-	return Model{Problems: ps, visible: ps, Offline: note, deps: deps, width: 80, height: 24}
+	return Model{Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0}
+}
+
+// WithData replaces everything rendered from the cache, keeping view state.
+func (m Model) WithData(d Data) Model {
+	m.handle, m.rating, m.syncedAt = d.Handle, d.Rating, d.SyncedAt
+	m.Problems, m.status = d.Problems, d.Statuses
+	m = m.WithContests(d.Contests)
+	return m.refilter()
+}
+
+type refreshedMsg struct {
+	data  Data
+	err   error
+	stage int // index of the stage that just finished
+}
+
+func (m Model) refresh(stage int) tea.Cmd {
+	r := m.deps.Refresh[stage]
+	return func() tea.Msg {
+		d, err := r()
+		return refreshedMsg{d, err, stage}
+	}
 }
 
 // WithStatuses sets the user's solved/attempted marks (keyed "<contest><index>").
@@ -122,7 +164,12 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd {
+	if len(m.deps.Refresh) == 0 {
+		return nil
+	}
+	return m.refresh(0)
+}
 
 type detailMsg struct {
 	p    cf.Problem
@@ -150,12 +197,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+	case refreshedMsg:
+		m = m.WithData(msg.data)
+		m.offline = errors.Is(msg.err, cf.ErrNetwork)
+		if msg.stage == 0 || msg.err != nil { // later stages must not erase an earlier stage's notice
+			m.Notice = ""
+			if msg.err != nil && !m.offline {
+				m.Notice = "sync failed: " + msg.err.Error()
+			}
+		}
+		if next := msg.stage + 1; !m.offline && next < len(m.deps.Refresh) {
+			return m, m.refresh(next)
+		}
+		m.syncing = false
 	case detailMsg:
 		if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
 			break // user already left or switched Problems
 		}
 		m.loading = false
 		switch {
+		case errors.Is(msg.err, cf.ErrNetwork):
+			m.offline = true
+			if m.detail == nil {
+				m.errMsg = "offline: statement not cached. Press o to open in browser."
+			} else {
+				m.errMsg = "offline: could not refetch"
+			}
 		case errors.Is(msg.err, cf.ErrChallenge):
 			m.errMsg = "Codeforces blocked the request (Cloudflare). Press o to open in browser."
 		case msg.err != nil:
@@ -172,6 +239,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateInput(msg)
 		}
 		switch k := msg.String(); k {
+		case "ctrl+r":
+			if len(m.deps.Refresh) == 0 || m.syncing {
+				return m, nil
+			}
+			m.syncing = true
+			return m, m.refresh(0)
 		case "1", "2", "3", "4":
 			m.tab = int(k[0] - '1')
 			return m, nil
@@ -234,6 +307,10 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.open, m.detail, m.body, m.errMsg, m.loading = nil, nil, nil, "", false
 	case "r":
+		if m.offline {
+			m.errMsg = "offline: refetch needs network (ctrl+r on a list retries the connection)"
+			break
+		}
 		m.loading, m.errMsg = true, ""
 		return m, m.load(*m.open, true)
 	case "o":
@@ -321,8 +398,16 @@ func (m Model) View() tea.View {
 		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
 		footer = "1-4 tabs  q quit"
 	}
-	if m.Offline != "" {
-		footer += "  [" + clean(m.Offline) + "]"
+	if m.Notice != "" {
+		footer += "  [" + clean(m.Notice) + "]"
+	}
+	switch {
+	case m.syncing:
+		footer += "  [syncing...]"
+	case m.offline && m.syncedAt.IsZero():
+		footer += "  [offline, never synced]"
+	case m.offline:
+		footer += fmt.Sprintf("  [offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt)))
 	}
 	b.WriteString("\n" + footer)
 	v := tea.NewView(b.String())
@@ -377,4 +462,14 @@ func (m Model) viewList(b *strings.Builder) string {
 		active = append(active, "search: "+clean(m.filter.Search))
 	}
 	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  q quit"
+}
+
+func ago(d time.Duration) string {
+	switch {
+	case d >= 48*time.Hour:
+		return fmt.Sprintf("%dd", int(d.Hours())/24)
+	case d >= time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dm", int(d.Minutes()))
 }
