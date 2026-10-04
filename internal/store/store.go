@@ -1,0 +1,156 @@
+// Package store is verd's SQLite cache and state (plain database/sql, embedded migrations).
+package store
+
+import (
+	"database/sql"
+	"embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"time"
+
+	"github.com/moneytosms/verd/internal/cf"
+	_ "modernc.org/sqlite"
+)
+
+//go:embed migrations/*.sql
+var migrations embed.FS
+
+const keyProblemsetSync = "problemset_synced_at"
+
+type Store struct{ db *sql.DB }
+
+// Open opens (creating) the DB at path and applies pending migrations.
+func Open(path string) (*Store, error) {
+	if path != ":memory:" {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return nil, err
+		}
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1) // single writer; also keeps :memory: on one connection
+	s := &Store{db}
+	if err := s.migrate(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *Store) Close() error { return s.db.Close() }
+
+func (s *Store) migrate() error {
+	files, err := migrations.ReadDir("migrations")
+	if err != nil {
+		return err
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
+	var cur int
+	if err := s.db.QueryRow("PRAGMA user_version").Scan(&cur); err != nil {
+		return err
+	}
+	for i, f := range files {
+		v := i + 1
+		if v <= cur {
+			continue
+		}
+		b, _ := migrations.ReadFile("migrations/" + f.Name())
+		tx, err := s.db.Begin()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(string(b)); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("migration %s: %w", f.Name(), err)
+		}
+		if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", v)); err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Meta returns the value for key, or "" if unset.
+func (s *Store) Meta(key string) (string, error) {
+	var v string
+	err := s.db.QueryRow("SELECT value FROM meta WHERE key = ?", key).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
+func (s *Store) setMeta(tx *sql.Tx, key, value string) error {
+	_, err := tx.Exec("INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, value)
+	return err
+}
+
+// SaveProblemset replaces all problems and stamps the sync time, atomically.
+func (s *Store) SaveProblemset(ps []cf.Problem, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("DELETE FROM problems"); err != nil {
+		return err
+	}
+	st, err := tx.Prepare("INSERT INTO problems(contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?)")
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	for _, p := range ps {
+		tags, _ := json.Marshal(p.Tags)
+		if _, err := st.Exec(p.ContestID, p.Index, p.Name, p.Rating, string(tags), p.SolvedCount); err != nil {
+			return err
+		}
+	}
+	if err := s.setMeta(tx, keyProblemsetSync, strconv.FormatInt(at.Unix(), 10)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ProblemsetSyncedAt returns the last problemset sync time; zero if never.
+func (s *Store) ProblemsetSyncedAt() (time.Time, error) {
+	v, err := s.Meta(keyProblemsetSync)
+	if err != nil || v == "" {
+		return time.Time{}, err
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	return time.Unix(n, 0), err
+}
+
+// Problems returns the cached problemset, newest contest first.
+func (s *Store) Problems() ([]cf.Problem, error) {
+	rows, err := s.db.Query("SELECT contest_id, idx, name, rating, tags, solved_count FROM problems ORDER BY contest_id DESC, idx")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []cf.Problem
+	for rows.Next() {
+		var p cf.Problem
+		var tags string
+		if err := rows.Scan(&p.ContestID, &p.Index, &p.Name, &p.Rating, &tags, &p.SolvedCount); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(tags), &p.Tags); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
