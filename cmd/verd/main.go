@@ -72,7 +72,11 @@ func run(args []string, out io.Writer) error {
 		detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
 		}
-		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, args[1])
+		mode := func(contest int, index string) string {
+			st, _ := s.ProblemState(contest, index)
+			return st.Mode
+		}
+		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, args[1])
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -119,14 +123,23 @@ func runTUI(path string) error {
 		OpenURL:     openURL,
 		Edit:        func(p cf.Problem) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p) },
 		EditorAlive: ctrl.Alive,
-		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error) {
+		LoadState: func(p cf.Problem) tui.ProblemState {
+			st, _ := s.ProblemState(p.ContestID, p.Index)
+			return tui.ProblemState{Mode: st.Mode}
+		},
+		SaveState: func(p cf.Problem, st tui.ProblemState) error {
+			cur, _ := s.ProblemState(p.ContestID, p.Index)
+			cur.Mode = st.Mode
+			return s.SaveProblemState(p.ContestID, p.Index, cur, time.Now())
+		},
+		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan runner.Event, error) {
 			l, ok := cfg.Lang[cfg.DefaultLang]
 			if !ok {
 				return nil, fmt.Errorf("default_lang %q is not configured", cfg.DefaultLang)
 			}
 			ws := workspace.New(cfg.Workspace)
 			ref := workspace.Ref{Contest: p.ContestID, Index: p.Index, Lang: cfg.DefaultLang, Path: filepath.Join(ws.Dir(p.ContestID, p.Index), "main."+l.Ext)}
-			spec, err := buildSpec(cfg, config.CacheDir(), ref, d)
+			spec, err := buildSpec(cfg, config.CacheDir(), ref, d, o.Mode)
 			if err != nil {
 				return nil, fmt.Errorf("%w (press e to create one)", err)
 			}

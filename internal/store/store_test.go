@@ -49,3 +49,26 @@ func TestProblemsetRoundTrip(t *testing.T) {
 		t.Fatalf("expected replace, got %d", len(got))
 	}
 }
+
+func TestProblemStatePersistsAcrossReopen(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "verd.db")
+	s, _ := Open(path)
+	if st, err := s.ProblemState(1, "A"); err != nil || st != (ProblemState{}) {
+		t.Fatalf("unset state must be zero: %+v %v", st, err)
+	}
+	if err := s.SaveProblemState(1, "A", ProblemState{Lang: "python", Mode: "float"}, time.Unix(5, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveProblemState(1, "A", ProblemState{Lang: "python", Mode: "exact"}, time.Unix(6, 0)); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	s, _ = Open(path)
+	defer s.Close()
+	if st, _ := s.ProblemState(1, "A"); st != (ProblemState{Lang: "python", Mode: "exact"}) {
+		t.Fatalf("after reopen: %+v", st)
+	}
+	if st, _ := s.ProblemState(1, "B"); st != (ProblemState{}) {
+		t.Fatal("state is per Problem")
+	}
+}

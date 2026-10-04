@@ -50,7 +50,7 @@ func (m Model) startTests() (Model, tea.Cmd) {
 		m.run.cancel()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	ch, err := m.deps.Tests(ctx, *m.open, m.detail)
+	ch, err := m.deps.Tests(ctx, *m.open, m.detail, RunOpts{Mode: runner.Mode(m.mode())})
 	if err != nil {
 		cancel()
 		m.errMsg = "tests: " + err.Error()
@@ -132,9 +132,9 @@ func (m Model) testsPanel() []string {
 	st := m.styles()
 	r := m.run
 	if r == nil {
-		return []string{st.Dim.Render("Tests: press t to run (samples and custom tests)")}
+		return []string{st.Dim.Render(fmt.Sprintf("Tests [%s]: press t to run (samples and custom tests), c cycles mode", m.mode()))}
 	}
-	head := "Tests"
+	head := fmt.Sprintf("Tests [%s]", m.mode())
 	switch {
 	case r.running:
 		head += "  running..."

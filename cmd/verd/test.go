@@ -25,9 +25,12 @@ func (e *exitError) Error() string { return e.msg }
 // detailFunc returns a Problem's scraped detail (cache-first).
 type detailFunc func(ctx context.Context, contest int, index string) (*scrape.Detail, error)
 
+// modeFunc returns the user's saved Comparison Mode for a Problem ("" = none saved).
+type modeFunc func(contest int, index string) string
+
 // testCmd runs `verd test <file>` headless: samples to disk, compile (cached), run, print.
 // Exit 0 only if every test is AC.
-func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, path string) error {
+func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string) error {
 	ws := workspace.New(cfg.Workspace)
 	ref, err := ws.Resolve(path, cfg.Lang)
 	if err != nil {
@@ -40,15 +43,18 @@ func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir str
 	if d.Interactive {
 		return &exitError{2, fmt.Sprintf("%d%s is interactive: local run unsupported", ref.Contest, ref.Index)}
 	}
-	spec, err := buildSpec(cfg, cacheDir, ref, d)
+	mode := ""
+	if savedMode != nil {
+		mode = savedMode(ref.Contest, ref.Index)
+	}
+	spec, err := buildSpec(cfg, cacheDir, ref, d, runner.Mode(mode))
 	if err != nil {
 		return &exitError{2, err.Error()}
 	}
-	mode := spec.Mode
 	if len(spec.Tests) == 0 {
 		return &exitError{2, "no tests found"}
 	}
-	fmt.Fprintf(out, "%d%s  %s  TL %d ms x%g  ML %d MB  %s\n", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, mode)
+	fmt.Fprintf(out, "%d%s  %s  TL %d ms x%g  ML %d MB  %s\n", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, spec.Mode)
 
 	var passed, total, maxMS int
 	var maxMB float64
@@ -110,7 +116,8 @@ func firstLine(s string) string {
 }
 
 // buildSpec materializes Sample Tests next to the Solution and assembles the Runner spec.
-func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail) (runner.Spec, error) {
+// An empty mode means the Problem's default.
+func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail, mode runner.Mode) (runner.Spec, error) {
 	ws := workspace.New(cfg.Workspace)
 	if _, err := os.Stat(ref.Path); err != nil {
 		return runner.Spec{}, fmt.Errorf("no Solution at %s", ref.Path)
@@ -122,12 +129,11 @@ func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.
 	if err != nil {
 		return runner.Spec{}, err
 	}
-	mode := runner.Tokens
-	if d.Hint == "float" {
-		mode = runner.Float
+	if mode == "" {
+		mode = runner.Mode(d.DefaultMode())
 	}
 	return runner.Spec{
 		Solution: ref.Path, Lang: cfg.Lang[ref.Lang], CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
-		TimeLimitMS: d.TimeLimitMS, MemoryMB: d.MemoryLimitMB, Multiplier: cfg.TimeMultiplier, Mode: mode,
+		TimeLimitMS: d.TimeLimitMS, MemoryMB: d.MemoryLimitMB, Multiplier: cfg.TimeMultiplier, Mode: mode, FloatEps: cfg.FloatEps,
 	}, nil
 }

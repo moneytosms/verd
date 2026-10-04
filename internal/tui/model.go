@@ -32,12 +32,21 @@ type Deps struct {
 	// EditorAlive reports whether the split-pane editor is still open; polled every 500 ms.
 	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
-	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error)
+	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error)
+	// LoadState and SaveState persist per-Problem choices (Comparison Mode).
+	LoadState func(p cf.Problem) ProblemState
+	SaveState func(p cf.Problem, s ProblemState) error
 	// Refresh stages run in order in the background; each syncs stale data from the network and
 	// returns the data now in the cache (valid even when err != nil, e.g. offline). A network
 	// failure (cf.ErrNetwork) skips the remaining stages.
 	Refresh []func() (Data, error)
 }
+
+// ProblemState is the user's per-Problem choices; empty fields mean "use the default".
+type ProblemState struct{ Mode string }
+
+// RunOpts are the per-run choices handed to Deps.Tests.
+type RunOpts struct{ Mode runner.Mode }
 
 // Data is everything the UI renders from the cache.
 type Data struct {
@@ -82,6 +91,7 @@ type Model struct {
 	height     int
 
 	// Problem view
+	pstate     ProblemState
 	run        *testRun
 	editorOpen bool // a split-pane editor is open; a tick is polling it
 	open       *cf.Problem
@@ -210,14 +220,15 @@ func editorTick() tea.Cmd {
 }
 
 type detailMsg struct {
-	p    cf.Problem
-	d    *scrape.Detail
-	body string
-	err  error
+	p     cf.Problem
+	d     *scrape.Detail
+	body  string
+	state ProblemState
+	err   error
 }
 
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
-	load, width, style := m.deps.Load, m.width, m.styles().Glamour
+	load, width, style, loadState := m.deps.Load, m.width, m.styles().Glamour, m.deps.LoadState
 	return func() tea.Msg {
 		if load == nil {
 			return detailMsg{p: p, err: errors.New("loading unavailable")}
@@ -227,7 +238,11 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 			return detailMsg{p: p, err: err}
 		}
 		body, err := scrape.Render(d.Statement, width-4, style)
-		return detailMsg{p: p, d: d, body: body, err: err}
+		var state ProblemState
+		if loadState != nil {
+			state = loadState(p)
+		}
+		return detailMsg{p: p, d: d, body: body, state: state, err: err}
 	}
 }
 
@@ -279,7 +294,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.err != nil:
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
-			m.errMsg, m.detail, m.scroll = "", msg.d, 0
+			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
 			m.body = strings.Split(msg.body, "\n")
 		}
 	case tea.KeyPressMsg:
@@ -398,6 +413,16 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.loading, m.errMsg = true, ""
 		return m, m.load(*m.open, true)
+	case "c":
+		if m.detail == nil {
+			break
+		}
+		m.pstate.Mode = nextMode(m.mode())
+		if m.deps.SaveState != nil {
+			if err := m.deps.SaveState(*m.open, m.pstate); err != nil {
+				m.errMsg = "saving mode: " + err.Error()
+			}
+		}
 	case "e":
 		if m.deps.Edit == nil {
 			break
@@ -457,6 +482,28 @@ func (m Model) content() []string {
 		}
 	}
 	return lines
+}
+
+var modes = []string{"tokens", "exact", "float", "none"}
+
+func nextMode(cur string) string {
+	for i, x := range modes {
+		if x == cur {
+			return modes[(i+1)%len(modes)]
+		}
+	}
+	return modes[0]
+}
+
+// mode is the Comparison Mode in effect: the user's choice, else the Problem's parsed hint.
+func (m Model) mode() string {
+	if m.pstate.Mode != "" {
+		return m.pstate.Mode
+	}
+	if m.detail != nil {
+		return m.detail.DefaultMode()
+	}
+	return "tokens"
 }
 
 func (m Model) maxScroll() int { return max(0, len(m.content())-m.page()) }
@@ -540,7 +587,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"t", "run tests"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -578,7 +625,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  t test  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {

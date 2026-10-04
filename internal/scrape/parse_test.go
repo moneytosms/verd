@@ -56,3 +56,31 @@ func TestParseNoStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestHintDetection(t *testing.T) {
+	page := func(text string) []byte {
+		return []byte(`<div class="problem-statement"><div class="header"><div class="time-limit"><div class="property-title">t</div>1 second</div></div><div><p>` + text + `</p></div></div>`)
+	}
+	for text, want := range map[string]string{
+		"If there are multiple answers, print any of them.":                                      "none",
+		"You may output any valid permutation.":                                                  "none",
+		"Your answer is accepted if absolute or relative error does not exceed 1e-6. Print any.": "float", // float wins
+		"Print the number of ways modulo 998244353.":                                             "",
+	} {
+		d, err := Parse(page(text))
+		if err != nil || d.Hint != want {
+			t.Errorf("%q: hint %q err %v, want %q", text, d.Hint, err, want)
+		}
+		wantMode := want
+		if want == "" {
+			wantMode = "tokens"
+		}
+		if got := d.DefaultMode(); got != wantMode {
+			t.Errorf("%q: DefaultMode %q, want %q", text, got, wantMode)
+		}
+	}
+	d, _ := Parse(page("plain"))
+	if d.DefaultMode() != "tokens" {
+		t.Fatal("no hint means tokens")
+	}
+}

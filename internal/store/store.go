@@ -369,3 +369,23 @@ func (s *Store) LastSync() (time.Time, error) {
 	}
 	return oldest, nil
 }
+
+// ProblemState is the user's per-Problem choices; empty fields mean "use the default".
+type ProblemState struct{ Lang, Mode string }
+
+// ProblemState returns the saved choices, zero if none.
+func (s *Store) ProblemState(contest int, idx string) (ProblemState, error) {
+	var st ProblemState
+	err := s.db.QueryRow("SELECT lang, mode FROM problem_state WHERE contest_id = ? AND idx = ?", contest, idx).Scan(&st.Lang, &st.Mode)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ProblemState{}, nil
+	}
+	return st, err
+}
+
+func (s *Store) SaveProblemState(contest int, idx string, st ProblemState, at time.Time) error {
+	_, err := s.db.Exec(`INSERT INTO problem_state(contest_id, idx, lang, mode, last_opened) VALUES(?,?,?,?,?)
+		ON CONFLICT(contest_id, idx) DO UPDATE SET lang = excluded.lang, mode = excluded.mode, last_opened = excluded.last_opened`,
+		contest, idx, st.Lang, st.Mode, at.Unix())
+	return err
+}

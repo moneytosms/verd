@@ -442,7 +442,9 @@ func openWithTests(t *testing.T, events []runner.Event) (Model, chan runner.Even
 		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
 			return &scrape.Detail{Statement: `<div class="problem-statement"><p>hi</p></div>`, TimeLimitMS: 1000, MemoryLimitMB: 256}, nil
 		},
-		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error) { return ch, nil },
+		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error) {
+			return ch, nil
+		},
 	}
 	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, "", deps), "enter")
 	m, _ = step(t, m, cmd)
@@ -564,7 +566,7 @@ func TestInteractiveRefusesTests(t *testing.T) {
 		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
 			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`, Interactive: true}, nil
 		},
-		Tests: func(context.Context, cf.Problem, *scrape.Detail) (<-chan runner.Event, error) {
+		Tests: func(context.Context, cf.Problem, *scrape.Detail, RunOpts) (<-chan runner.Event, error) {
 			t.Fatal("must not run")
 			return nil, nil
 		},
@@ -607,5 +609,53 @@ func TestSplitPaneEditorPolling(t *testing.T) {
 	m = nm.(Model)
 	if cmd != nil || m.editorOpen || strings.Contains(plain(m), "[editor open]") {
 		t.Fatal("closed pane must stop polling and clear the badge")
+	}
+}
+
+func TestComparisonModeCyclesAndPersists(t *testing.T) {
+	saved := map[string]ProblemState{}
+	var gotOpts RunOpts
+	ch := make(chan runner.Event)
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`, Hint: "float"}, nil
+		},
+		LoadState: func(p cf.Problem) ProblemState { return saved[p.Index] },
+		SaveState: func(p cf.Problem, s ProblemState) error { saved[p.Index] = s; return nil },
+		Tests: func(_ context.Context, _ cf.Problem, _ *scrape.Detail, o RunOpts) (<-chan runner.Event, error) {
+			gotOpts = o
+			return ch, nil
+		},
+	}
+	open := func() Model {
+		m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+		m, _ = step(t, m, cmd)
+		return m
+	}
+	m := open()
+	if !strings.Contains(plain(m), "[float]") {
+		t.Fatalf("hint should pick float on first open:\n%s", plain(m))
+	}
+	m, _ = send(m, "t")
+	if gotOpts.Mode != runner.Float {
+		t.Fatalf("run should use float, got %q", gotOpts.Mode)
+	}
+	m, _ = send(m, "c") // float -> none
+	if !strings.Contains(plain(m), "[none]") || saved["A"].Mode != "none" {
+		t.Fatalf("c should cycle to none and save: %+v", saved)
+	}
+	m, _ = send(m, "c") // none -> tokens
+	m, _ = send(m, "c") // tokens -> exact
+	if saved["A"].Mode != "exact" {
+		t.Fatalf("saved %+v", saved)
+	}
+	// "restart": a fresh model opening the same Problem gets the saved mode, not the hint
+	m2 := open()
+	if !strings.Contains(plain(m2), "[exact]") {
+		t.Fatalf("saved mode must win over hint after restart:\n%s", plain(m2))
+	}
+	m2, _ = send(m2, "t")
+	if gotOpts.Mode != runner.Exact {
+		t.Fatalf("run should use exact, got %q", gotOpts.Mode)
 	}
 }

@@ -20,13 +20,15 @@ type Detail struct {
 	TimeLimitMS   int
 	MemoryLimitMB int
 	Interactive   bool
-	Hint          string // Comparison Mode hint: "float" or ""
+	Hint          string // Comparison Mode hint: "float", "none" or ""
 	Samples       []Sample
 }
 
 var (
 	floatHint = regexp.MustCompile(`(?i)absolute or relative error|absolute error|relative error`)
-	limitNum  = regexp.MustCompile(`[\d.]+`)
+	// "any of them" style Problems have many valid outputs; a plain compare would mislead.
+	anyHint  = regexp.MustCompile(`(?i)print any|output any|any of (them|these)|(multiple|several) (valid )?(answers|solutions)|if there are multiple`)
+	limitNum = regexp.MustCompile(`[\d.]+`)
 )
 
 // Parse extracts a Detail from a problem page.
@@ -52,8 +54,12 @@ func Parse(page []byte) (*Detail, error) {
 	d.Interactive = strings.Contains(text, "interactive problem") || st.Find(".section-title").FilterFunction(func(_ int, s *goquery.Selection) bool {
 		return strings.TrimSpace(s.Text()) == "Interaction"
 	}).Length() > 0
-	if floatHint.MatchString(text) {
+	switch {
+	case d.Interactive: // never run locally, so no Comparison Mode hint
+	case floatHint.MatchString(text):
 		d.Hint = "float"
+	case anyHint.MatchString(text):
+		d.Hint = "none"
 	}
 
 	var ins, outs []string
@@ -89,4 +95,12 @@ func preText(pre *goquery.Selection) string {
 	}
 	s = strings.ReplaceAll(s, "\r", "")
 	return strings.Trim(s, "\n") + "\n"
+}
+
+// DefaultMode is the Comparison Mode to start with: the parsed hint, else tokens.
+func (d *Detail) DefaultMode() string {
+	if d.Hint != "" {
+		return d.Hint
+	}
+	return "tokens"
 }
