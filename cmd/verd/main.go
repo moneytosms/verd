@@ -23,6 +23,13 @@ import (
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
+		var ee *exitError
+		if errors.As(err, &ee) {
+			if ee.msg != "" {
+				fmt.Fprintln(os.Stderr, "verd:", ee.msg)
+			}
+			os.Exit(ee.code)
+		}
 		fmt.Fprintln(os.Stderr, "verd:", err)
 		os.Exit(1)
 	}
@@ -40,6 +47,24 @@ func run(args []string, out io.Writer) error {
 		}
 		fmt.Fprintln(out, "wrote", path)
 		return nil
+	case "test":
+		if len(args) != 2 {
+			return &exitError{2, "usage: verd test <file>"}
+		}
+		cfg, err := config.Load(path)
+		if err != nil {
+			return err
+		}
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		client := cf.New(cf.BaseURL)
+		detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
+			return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
+		}
+		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, args[1])
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -52,7 +77,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force], config)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>)", args[0])
 }
 
 func runTUI(path string) error {

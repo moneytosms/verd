@@ -36,7 +36,11 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 	}
-	db, err := sql.Open("sqlite", path)
+	dsn := path
+	if path != ":memory:" {
+		dsn += "?_pragma=busy_timeout(5000)" // `verd test` may share the file with a running TUI
+	}
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}

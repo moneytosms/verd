@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,7 @@ func TestInitNoOverwrite(t *testing.T) {
 	if err := Init(p, false); err != nil {
 		t.Fatal(err)
 	}
-	if c, err := Load(p); err != nil || c != Default() {
+	if c, err := Load(p); err != nil || !reflect.DeepEqual(c, Default()) {
 		t.Fatalf("fresh init must load as defaults: %+v %v", c, err)
 	}
 	os.WriteFile(p, []byte(`handle = "mine"`), 0o644)
@@ -68,5 +69,21 @@ func TestXDGDirs(t *testing.T) {
 	t.Setenv("HOME", "/home/u")
 	if Dir() != "/home/u/.config/verd" || DataDir() != "/home/u/.local/share/verd" {
 		t.Fatalf("fallbacks: %s %s", Dir(), DataDir())
+	}
+}
+
+func TestLangMergeInheritsDefaults(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "c.toml")
+	os.WriteFile(p, []byte("[lang.cpp]\ncompile = [\"clang++\", \"-o\", \"{bin}\", \"{src}\"]\n\n[lang.rust]\next = \"rs\"\nrun = [\"x\"]\n"), 0o644)
+	c, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpp := c.Lang["cpp"]
+	if cpp.Compile[0] != "clang++" || cpp.Ext != "cpp" || cpp.CFCompilerID != 89 || len(cpp.Run) != 1 {
+		t.Fatalf("partial override must keep ext/id and keep default run: %+v", cpp)
+	}
+	if c.Lang["python"].Run[0] != "python3" || c.Lang["rust"].Ext != "rs" {
+		t.Fatalf("defaults and new langs: %+v", c.Lang)
 	}
 }

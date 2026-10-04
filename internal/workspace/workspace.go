@@ -1,0 +1,136 @@
+// Package workspace maps Problems to directories and files: <root>/<contest>/<index>/.
+package workspace
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/scrape"
+)
+
+type Workspace struct{ Root string }
+
+// New expands a leading ~ in root.
+func New(root string) Workspace {
+	if root == "~" || strings.HasPrefix(root, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			root = filepath.Join(home, strings.TrimPrefix(root, "~"))
+		}
+	}
+	return Workspace{Root: root}
+}
+
+func (w Workspace) Dir(contest int, index string) string {
+	return filepath.Join(w.Root, strconv.Itoa(contest), index)
+}
+
+// Ref identifies a Solution file.
+type Ref struct {
+	Contest int
+	Index   string
+	Lang    string // key into config Lang
+	Path    string // absolute
+}
+
+// Resolve maps a path inside the Workspace back to its Problem and language (by extension).
+func (w Workspace) Resolve(path string, langs map[string]config.Lang) (Ref, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return Ref{}, err
+	}
+	root, err := filepath.Abs(w.Root)
+	if err != nil {
+		return Ref{}, err
+	}
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return Ref{}, fmt.Errorf("%s is not inside the workspace %s", path, root)
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) < 3 {
+		return Ref{}, fmt.Errorf("%s: expected <contest>/<index>/<file> under the workspace", path)
+	}
+	contest, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return Ref{}, fmt.Errorf("%s: %q is not a contest id", path, parts[0])
+	}
+	ext := strings.TrimPrefix(filepath.Ext(abs), ".")
+	var keys []string
+	for k, l := range langs {
+		if l.Ext == ext {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return Ref{}, fmt.Errorf("%s: no configured language uses extension .%s", path, ext)
+	}
+	sort.Strings(keys) // deterministic if several languages share an extension
+	return Ref{Contest: contest, Index: parts[1], Lang: keys[0], Path: abs}, nil
+}
+
+// Test is one input/expected-output pair on disk.
+type Test struct{ Name, In, Ans string }
+
+// WriteSamples materializes Sample Tests as tests/sample-N.in/.ans (1-based), overwriting.
+func (w Workspace) WriteSamples(contest int, index string, samples []scrape.Sample) error {
+	dir := filepath.Join(w.Dir(contest, index), "tests")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	for i, s := range samples {
+		base := filepath.Join(dir, fmt.Sprintf("sample-%d", i+1))
+		if err := os.WriteFile(base+".in", []byte(s.Input), 0o644); err != nil {
+			return err
+		}
+		if err := os.WriteFile(base+".ans", []byte(s.Output), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+var testName = regexp.MustCompile(`^(sample|custom)-(\d+)\.in$`)
+
+// Tests lists complete .in/.ans pairs: samples first, then custom, each in numeric order.
+func (w Workspace) Tests(contest int, index string) ([]Test, error) {
+	dir := filepath.Join(w.Dir(contest, index), "tests")
+	ents, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	type key struct {
+		kind string
+		n    int
+	}
+	var keys []key
+	for _, e := range ents {
+		if m := testName.FindStringSubmatch(e.Name()); m != nil {
+			n, _ := strconv.Atoi(m[2])
+			keys = append(keys, key{m[1], n})
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].kind != keys[j].kind {
+			return keys[i].kind == "sample"
+		}
+		return keys[i].n < keys[j].n
+	})
+	var out []Test
+	for _, k := range keys {
+		base := filepath.Join(dir, fmt.Sprintf("%s-%d", k.kind, k.n))
+		if _, err := os.Stat(base + ".ans"); err != nil {
+			continue // incomplete pair
+		}
+		out = append(out, Test{Name: filepath.Base(base), In: base + ".in", Ans: base + ".ans"})
+	}
+	return out, nil
+}
