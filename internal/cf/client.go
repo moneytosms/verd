@@ -2,10 +2,12 @@
 package cf
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"sync"
@@ -15,7 +17,7 @@ import (
 const (
 	BaseURL   = "https://codeforces.com"
 	userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-	interval  = 2 * time.Second
+	interval  = 2 * time.Second // default Client.Interval
 )
 
 var (
@@ -38,8 +40,9 @@ type Problem struct {
 }
 
 type Client struct {
-	Base string
-	HTTP *http.Client
+	Base     string
+	HTTP     *http.Client
+	Interval time.Duration // min spacing between requests
 
 	mu    sync.Mutex
 	last  time.Time
@@ -48,15 +51,15 @@ type Client struct {
 }
 
 func New(base string) *Client {
-	return &Client{Base: base, HTTP: &http.Client{Timeout: 60 * time.Second}, now: time.Now, sleep: time.Sleep}
+	return &Client{Base: base, HTTP: &http.Client{Timeout: 60 * time.Second}, Interval: interval, now: time.Now, sleep: time.Sleep}
 }
 
-// wait blocks until at least `interval` after the previous request.
+// wait blocks until at least `Interval` after the previous request.
 func (c *Client) wait() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.last.IsZero() {
-		if d := interval - c.now().Sub(c.last); d > 0 {
+		if d := c.Interval - c.now().Sub(c.last); d > 0 {
 			c.sleep(d)
 		}
 	}
@@ -135,4 +138,24 @@ func (c *Client) Problemset(ctx context.Context) ([]Problem, error) {
 		p.SolvedCount = solved[key{p.ContestID, p.Index}]
 	}
 	return r.Problems, nil
+}
+
+// Page fetches a problem page. A Cloudflare challenge (header, 403, or interstitial body) is ErrChallenge.
+func (c *Client) Page(ctx context.Context, contest int, index string) ([]byte, error) {
+	res, err := c.Get(ctx, fmt.Sprintf("/problemset/problem/%d/%s", contest, index), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: http %d", ErrNetwork, res.StatusCode)
+	}
+	if bytes.Contains(b, []byte("Just a moment...")) || bytes.Contains(b, []byte("cf-chl")) {
+		return nil, ErrChallenge
+	}
+	return b, nil
 }

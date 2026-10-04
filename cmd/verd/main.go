@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/refresh"
+	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/tui"
 )
@@ -48,6 +51,23 @@ func run() error {
 	if len(ps) == 0 {
 		return fmt.Errorf("no cached problems and fetch failed: %s", note)
 	}
-	_, err = tea.NewProgram(tui.New(ps, note)).Run()
+	client := cf.New(cf.BaseURL)
+	deps := tui.Deps{
+		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
+			return refresh.Detail(context.Background(), s, client, p, force, time.Now())
+		},
+		OpenURL: openURL,
+	}
+	_, err = tea.NewProgram(tui.New(ps, note, deps)).Run()
 	return err
+}
+
+func openURL(url string) error {
+	switch {
+	case os.Getenv("WSL_DISTRO_NAME") != "":
+		return exec.Command("wslview", url).Start()
+	case runtime.GOOS == "darwin":
+		return exec.Command("open", url).Start()
+	}
+	return exec.Command("xdg-open", url).Start()
 }

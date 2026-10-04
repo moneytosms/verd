@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/scrape"
 	_ "modernc.org/sqlite"
 )
 
@@ -153,4 +154,52 @@ func (s *Store) Problems() ([]cf.Problem, error) {
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// SaveDetail replaces a Problem's scraped detail and Sample Tests, atomically.
+func (s *Store) SaveDetail(contest int, idx string, d *scrape.Detail, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`INSERT OR REPLACE INTO problem_details(contest_id, idx, statement, time_limit_ms, memory_limit_mb, interactive, hint, fetched_at)
+		VALUES(?,?,?,?,?,?,?,?)`, contest, idx, d.Statement, d.TimeLimitMS, d.MemoryLimitMB, d.Interactive, d.Hint, at.Unix()); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM sample_tests WHERE contest_id = ? AND idx = ?", contest, idx); err != nil {
+		return err
+	}
+	for i, sm := range d.Samples {
+		if _, err := tx.Exec("INSERT INTO sample_tests(contest_id, idx, n, input, output) VALUES(?,?,?,?,?)", contest, idx, i+1, sm.Input, sm.Output); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// Detail returns the cached detail, or nil if the Problem was never fetched.
+func (s *Store) Detail(contest int, idx string) (*scrape.Detail, error) {
+	d := &scrape.Detail{}
+	err := s.db.QueryRow("SELECT statement, time_limit_ms, memory_limit_mb, interactive, hint FROM problem_details WHERE contest_id = ? AND idx = ?", contest, idx).
+		Scan(&d.Statement, &d.TimeLimitMS, &d.MemoryLimitMB, &d.Interactive, &d.Hint)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.db.Query("SELECT input, output FROM sample_tests WHERE contest_id = ? AND idx = ? ORDER BY n", contest, idx)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sm scrape.Sample
+		if err := rows.Scan(&sm.Input, &sm.Output); err != nil {
+			return nil, err
+		}
+		d.Samples = append(d.Samples, sm)
+	}
+	return d, rows.Err()
 }
