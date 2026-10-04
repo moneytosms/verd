@@ -24,3 +24,10 @@ func TestViewAndQuit(t *testing.T) {
 		t.Fatal("q cmd should produce QuitMsg")
 	}
 }
+
+func TestControlCharsStripped(t *testing.T) {
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "evil\x1b]0;pwn\x07name", Tags: []string{"a\x1b[2Jb"}}}, "x\x1by")
+	if out := m.View().Content; strings.ContainsAny(out, "\x1b\x07") {
+		t.Fatalf("control chars leaked: %q", out)
+	}
+}

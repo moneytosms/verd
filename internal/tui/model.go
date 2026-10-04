@@ -4,6 +4,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
@@ -47,6 +48,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// clean drops control characters (ESC etc.) so server-supplied text can't inject terminal escapes.
+func clean(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
 func (m Model) page() int { return max(1, m.height-4) }
 
 func (m Model) View() tea.View {
@@ -65,11 +76,11 @@ func (m Model) View() tea.View {
 		if p.Rating > 0 {
 			rating = fmt.Sprint(p.Rating)
 		}
-		b.WriteString(fmt.Sprintf("%s%-8s %-40.40s %6s %7d  %s\n", cur, fmt.Sprintf("%d%s", p.ContestID, p.Index), p.Name, rating, p.SolvedCount, strings.Join(p.Tags, ", ")))
+		b.WriteString(fmt.Sprintf("%s%-8s %-40.40s %6s %7d  %s\n", cur, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
 	}
 	footer := fmt.Sprintf("%d problems  q quit", len(m.Problems))
 	if m.Offline != "" {
-		footer += "  [" + m.Offline + "]"
+		footer += "  [" + clean(m.Offline) + "]"
 	}
 	b.WriteString("\n" + footer)
 	v := tea.NewView(b.String())
