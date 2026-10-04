@@ -12,6 +12,7 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
+	"github.com/moneytosms/verd/internal/theme"
 )
 
 var tabs = []string{"Problems", "Contests", "Stats", "Picker"}
@@ -39,6 +40,9 @@ type Data struct {
 }
 
 type Model struct {
+	theme    theme.Theme
+	dark     bool // terminal background; dark until detected otherwise
+	help     bool
 	handle   string
 	rating   int
 	syncing  bool
@@ -77,8 +81,22 @@ type Model struct {
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
-	return Model{Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0}
+	return Model{Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0, dark: true, theme: mustTheme("terminal")}
 }
+
+func mustTheme(name string) theme.Theme { t, _ := theme.Get(name); return t }
+
+// WithTheme selects a named theme; an unknown name keeps the default and sets a notice.
+func (m Model) WithTheme(name string) Model {
+	t, ok := theme.Get(name)
+	m.theme = t
+	if !ok {
+		m.Notice = fmt.Sprintf("unknown theme %q (have: %s)", clean(name), strings.Join(theme.Names(), ", "))
+	}
+	return m
+}
+
+func (m Model) styles() theme.Styles { return m.theme.Styles(m.dark) }
 
 // WithData replaces everything rendered from the cache, keeping view state.
 func (m Model) WithData(d Data) Model {
@@ -166,9 +184,9 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) Init() tea.Cmd {
 	if len(m.deps.Refresh) == 0 {
-		return nil
+		return tea.RequestBackgroundColor
 	}
-	return m.refresh(0)
+	return tea.Batch(tea.RequestBackgroundColor, m.refresh(0))
 }
 
 type detailMsg struct {
@@ -179,7 +197,7 @@ type detailMsg struct {
 }
 
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
-	load, width := m.deps.Load, m.width
+	load, width, style := m.deps.Load, m.width, m.styles().Glamour
 	return func() tea.Msg {
 		if load == nil {
 			return detailMsg{p: p, err: errors.New("loading unavailable")}
@@ -188,7 +206,7 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 		if err != nil {
 			return detailMsg{p: p, err: err}
 		}
-		body, err := scrape.Render(d.Statement, width-4)
+		body, err := scrape.Render(d.Statement, width-4, style)
 		return detailMsg{p: p, d: d, body: body, err: err}
 	}
 }
@@ -197,6 +215,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+	case tea.BackgroundColorMsg:
+		m.dark = msg.IsDark()
 	case refreshedMsg:
 		m = m.WithData(msg.data)
 		m.offline = errors.Is(msg.err, cf.ErrNetwork)
@@ -232,6 +252,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.body = strings.Split(msg.body, "\n")
 		}
 	case tea.KeyPressMsg:
+		if m.help {
+			switch msg.String() {
+			case "?", "esc":
+				m.help = false
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
+			return m, nil
+		}
+		if msg.String() == "?" && m.input == nil {
+			m.help = true
+			return m, nil
+		}
 		if m.open != nil {
 			return m.updateProblem(msg)
 		}
@@ -377,17 +410,28 @@ func cleanLines(s string) []string {
 func (m Model) page() int { return max(1, m.height-4) }
 
 func (m Model) View() tea.View {
+	st := m.styles()
 	var b strings.Builder
 	names := make([]string, len(tabs))
 	for i, t := range tabs {
 		names[i] = t
 		if i == m.tab {
-			names[i] = "[" + t + "]"
+			names[i] = st.Accent.Render("[" + t + "]")
 		}
 	}
-	b.WriteString(" " + strings.Join(names, "  ") + "\n\n")
+	b.WriteString(" " + strings.Join(names, "  "))
+	if m.handle != "" {
+		who := clean(m.handle)
+		if m.rating > 0 {
+			who += fmt.Sprintf(" (%d)", m.rating)
+		}
+		b.WriteString("   " + st.Dim.Render(who))
+	}
+	b.WriteString("\n\n")
 	footer := ""
 	switch {
+	case m.help:
+		footer = m.viewHelp(&b)
 	case m.open != nil:
 		footer = m.viewProblem(&b)
 	case m.tab == 0:
@@ -396,23 +440,52 @@ func (m Model) View() tea.View {
 		footer = m.viewContests(&b)
 	default:
 		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
-		footer = "1-4 tabs  q quit"
+		footer = "1-4 tabs  ? help  q quit"
 	}
+	footer = st.Dim.Render(footer)
 	if m.Notice != "" {
-		footer += "  [" + clean(m.Notice) + "]"
+		footer += "  " + st.Warn.Render("["+clean(m.Notice)+"]")
 	}
 	switch {
 	case m.syncing:
-		footer += "  [syncing...]"
+		footer += "  " + st.Warn.Render("[syncing...]")
 	case m.offline && m.syncedAt.IsZero():
-		footer += "  [offline, never synced]"
+		footer += "  " + st.Warn.Render("[offline, never synced]")
 	case m.offline:
-		footer += fmt.Sprintf("  [offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt)))
+		footer += "  " + st.Warn.Render(fmt.Sprintf("[offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt))))
 	}
 	b.WriteString("\n" + footer)
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
+}
+
+// keys lists the current screen's key bindings for the help overlay.
+func (m Model) keys() (screen string, keys [][2]string) {
+	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
+	switch {
+	case m.open != nil:
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+	case m.input != nil:
+		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
+	case m.tab == 0:
+		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filter: 800-1200 +dp -graphs unsolved"}, {"/", "search by ID or name"}}, global...)
+	case m.tab == 1 && m.contestOpen != nil:
+		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"esc", "back to contests"}, {"?", "toggle help"}, {"q", "quit"}}
+	case m.tab == 1:
+		return "Contests", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "list Problems"}}, global...)
+	}
+	return tabs[m.tab], global
+}
+
+func (m Model) viewHelp(b *strings.Builder) string {
+	screen, keys := m.keys()
+	st := m.styles()
+	b.WriteString(" " + st.Accent.Render("Keys: "+screen) + "\n\n")
+	for _, k := range keys {
+		b.WriteString(fmt.Sprintf("  %-16s %s\n", k[0], k[1]))
+	}
+	return "? or esc closes"
 }
 
 func (m Model) viewProblem(b *strings.Builder) string {
@@ -421,32 +494,33 @@ func (m Model) viewProblem(b *strings.Builder) string {
 		lines = append(lines, "", "loading...")
 	}
 	if m.errMsg != "" {
-		lines = append(lines, "", clean(m.errMsg))
+		lines = append(lines, "", m.styles().Bad.Render(clean(m.errMsg)))
 	}
 	end := min(len(lines), m.scroll+m.page())
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  j/k scroll  r refetch  o browser  q quit"
+	return "esc back  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {
-	b.WriteString(fmt.Sprintf("    %-8s %-40s %6s %7s  %s\n", "ID", "Name", "Rating", "Solved", "Tags"))
+	st := m.styles()
+	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-8s %-40s %6s %7s  %s", "ID", "Name", "Rating", "Solved", "Tags")) + "\n")
 	rows := m.page() - 1
 	start := max(0, min(m.cursor-rows/2, len(m.visible)-rows))
 	for i := start; i < min(start+rows, len(m.visible)); i++ {
 		p := m.visible[i]
 		cur := " "
 		if i == m.cursor {
-			cur = ">"
+			cur = st.Accent.Render(">")
 		}
-		mark, rating := markOf(m.statusOf(p)), ratingStr(p)
+		mark, rating := m.markOf(m.statusOf(p)), ratingStr(p)
 		b.WriteString(fmt.Sprintf("%s %s %-8s %-40.40s %6s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
 	}
 	if m.input != nil {
 		b.WriteString(fmt.Sprintf("\n%c %s_", m.input.kind, m.input.text))
 		if m.inputErr != "" {
-			b.WriteString("   " + m.inputErr)
+			b.WriteString("   " + st.Bad.Render(m.inputErr))
 		}
 		return "enter apply  esc cancel"
 	}
@@ -461,7 +535,7 @@ func (m Model) viewList(b *strings.Builder) string {
 	if m.filter.Search != "" {
 		active = append(active, "search: "+clean(m.filter.Search))
 	}
-	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  q quit"
+	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  ? help  q quit"
 }
 
 func ago(d time.Duration) string {

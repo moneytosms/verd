@@ -57,7 +57,7 @@ func run() error {
 			stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
 		},
 	}
-	_, err = tea.NewProgram(tui.New(data.Problems, "", deps).WithData(data)).Run()
+	_, err = tea.NewProgram(tui.New(data.Problems, "", deps).WithTheme(cfg.Theme).WithData(data)).Run()
 	return err
 }
 

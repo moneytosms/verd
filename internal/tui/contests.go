@@ -105,11 +105,11 @@ func (m Model) viewContests(b *strings.Builder) string {
 		for i, p := range ps {
 			cur := " "
 			if i == m.cpCursor {
-				cur = ">"
+				cur = m.styles().Accent.Render(">")
 			}
-			b.WriteString(fmt.Sprintf("%s %s %-3s %-40.40s %6s\n", cur, markOf(m.statusOf(p)), clean(p.Index), clean(p.Name), ratingStr(p)))
+			b.WriteString(fmt.Sprintf("%s %s %-3s %-40.40s %6s\n", cur, m.markOf(m.statusOf(p)), clean(p.Index), clean(p.Name), ratingStr(p)))
 		}
-		return "esc back  enter open  j/k move  q quit"
+		return "esc back  enter open  j/k move  ? help  q quit"
 	}
 	if len(m.contests) == 0 {
 		b.WriteString("  no contests cached\n")
@@ -130,7 +130,7 @@ func (m Model) viewContests(b *strings.Builder) string {
 		}
 		cur := " "
 		if i == m.contestCursor {
-			cur = ">"
+			cur = m.styles().Accent.Render(">")
 		}
 		when := ""
 		switch {
@@ -143,15 +143,15 @@ func (m Model) viewContests(b *strings.Builder) string {
 		}
 		b.WriteString(fmt.Sprintf("%s %-12s %-50.50s %s\n", cur, when, clean(c.Name), fmt.Sprint(c.ID)))
 	}
-	return fmt.Sprintf("%d contests  enter Problems  q quit", len(m.contests))
+	return fmt.Sprintf("%d contests  enter Problems  ? help  q quit", len(m.contests))
 }
 
-func markOf(s store.Status) string {
+func (m Model) markOf(s store.Status) string {
 	switch s {
 	case store.StatusSolved:
-		return "✓"
+		return m.styles().Good.Render("✓")
 	case store.StatusAttempted:
-		return "✗"
+		return m.styles().Bad.Render("✗")
 	}
 	return " "
 }

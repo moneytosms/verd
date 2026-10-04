@@ -9,9 +9,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-// Render turns a stored statement into styled terminal text wrapped to width.
+// Render turns a stored statement into styled terminal text wrapped to width, using a glamour style name.
 // Order matters: TeX first (html-to-markdown would escape `_` and `\`), then markdown, then glamour.
-func Render(statementHTML string, width int) (string, error) {
+func Render(statementHTML string, width int, style string) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(statementHTML))
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func Render(statementHTML string, width int) (string, error) {
 		}
 		return r
 	}, markdown)
-	r, err := glamour.NewTermRenderer(glamour.WithStylePath("dark"), glamour.WithWordWrap(width))
+	r, err := glamour.NewTermRenderer(glamour.WithStylePath(style), glamour.WithWordWrap(width))
 	if err != nil {
 		return "", err
 	}

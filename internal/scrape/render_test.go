@@ -9,7 +9,7 @@ import (
 func TestRender(t *testing.T) {
 	b, _ := os.ReadFile("testdata/1167B.html")
 	d, _ := Parse(b)
-	out, err := Render(d.Statement, 80)
+	out, err := Render(d.Statement, 80, "dark")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestRender(t *testing.T) {
 	}
 	b, _ = os.ReadFile("testdata/1900A.html")
 	d, _ = Parse(b)
-	out, _ = Render(d.Statement, 80)
+	out, _ = Render(d.Statement, 80, "dark")
 	if !strings.Contains(out, "espresso.codeforces.com") || strings.Contains(out, "Example") {
 		t.Errorf("image link missing or samples not stripped:\n%s", out)
 	}
