@@ -1,0 +1,20 @@
+# verd config. Every key is optional; uncomment to override the default shown.
+# Print the effective (merged) config with `verd config`.
+
+# Your Codeforces handle. Required.
+# handle = "tourist"
+
+# Where Solutions and test files live: <workspace>/<contest>/<index>/
+# workspace = "~/verd"
+
+# Language used for new Solutions: cpp | c | python (or any [lang.*] key).
+# default_lang = "cpp"
+
+# Scales every Problem's time limit for local runs (slow machine: 2.0).
+# time_multiplier = 1.0
+
+# Color theme: terminal (inherits your terminal palette) | dracula | tokyo-night
+# theme = "terminal"
+
+# How Neovim opens: auto | tmux | herdr | embedded | suspend
+# split = "auto"

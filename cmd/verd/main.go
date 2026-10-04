@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,19 +22,46 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "verd:", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg, err := config.Load(filepath.Join(config.Dir(), "config.toml"))
+func run(args []string, out io.Writer) error {
+	path := filepath.Join(config.Dir(), "config.toml")
+	if len(args) == 0 {
+		return runTUI(path)
+	}
+	switch args[0] {
+	case "init":
+		if err := config.Init(path, slices.Contains(args[1:], "--force")); err != nil {
+			return err
+		}
+		fmt.Fprintln(out, "wrote", path)
+		return nil
+	case "config":
+		cfg, err := config.Load(path)
+		if err != nil {
+			return err
+		}
+		b, err := cfg.Effective()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "# %s\n%s", path, b)
+		return nil
+	}
+	return fmt.Errorf("unknown command %q (commands: init [--force], config)", args[0])
+}
+
+func runTUI(path string) error {
+	cfg, err := config.Load(path)
 	if err != nil {
 		return err
 	}
 	if cfg.Handle == "" {
-		return fmt.Errorf("no handle set: add `handle = \"...\"` to %s", filepath.Join(config.Dir(), "config.toml"))
+		return fmt.Errorf("no handle set: run `verd init`, then set handle in %s", path)
 	}
 	s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
 	if err != nil {

@@ -2,7 +2,9 @@
 package config
 
 import (
+	_ "embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,6 +20,29 @@ type Config struct {
 	Theme          string  `toml:"theme"`
 	Split          string  `toml:"split"`
 }
+
+//go:embed default.toml
+var defaultTOML []byte
+
+// ErrExists is returned by Init when the config file is already there.
+var ErrExists = errors.New("config already exists")
+
+// Init writes the commented default config to path, creating parent dirs.
+// It never overwrites an existing file unless force is set.
+func Init(path string, force bool) error {
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("%w: %s (use --force to overwrite)", ErrExists, path)
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, defaultTOML, 0o644)
+}
+
+// Effective renders the merged config as TOML.
+func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 
 func Default() Config {
 	return Config{Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, Theme: "terminal", Split: "auto"}
