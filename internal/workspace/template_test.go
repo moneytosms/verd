@@ -78,7 +78,7 @@ func TestUserTemplateWinsAndInit(t *testing.T) {
 	dir := t.TempDir()
 	langs := config.Default().Lang
 	written, err := InitTemplates(dir, langs, false)
-	if err != nil || len(written) != 3 {
+	if err != nil || len(written) != 9 {
 		t.Fatalf("%v %v", written, err)
 	}
 	os.WriteFile(filepath.Join(dir, "cpp.cpp"), []byte("mine {{cursor}}"), 0o644)
@@ -91,7 +91,7 @@ func TestUserTemplateWinsAndInit(t *testing.T) {
 	if got, _ := LoadTemplate(dir, "cpp", langs["cpp"]); got != "mine {{cursor}}" {
 		t.Fatalf("user template should win: %q", got)
 	}
-	if w, _ := InitTemplates(dir, langs, true); len(w) != 3 {
+	if w, _ := InitTemplates(dir, langs, true); len(w) != 9 {
 		t.Fatalf("--force rewrites all: %v", w)
 	}
 }

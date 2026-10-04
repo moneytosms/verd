@@ -58,6 +58,37 @@ func RenderTemplate(src string, v TemplateVars) (text string, cursorLine int, er
 // templateFile is the file name a language's Template has in the templates directory.
 func templateFile(langKey string, l config.Lang) string { return langKey + "." + l.Ext }
 
+// kinds of Template besides the Solution's own: stress-testing helpers.
+var kinds = []string{"", "gen.", "brute."}
+
+// LoadKindTemplate is LoadTemplate for "gen." or "brute." Templates.
+func LoadKindTemplate(dir, kind, langKey string, l config.Lang) (string, error) {
+	name := kind + templateFile(langKey, l)
+	if b, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+		return string(b), nil
+	}
+	b, _ := defaultTemplates.ReadFile("templates/" + name)
+	return string(b), nil
+}
+
+// EnsureKind creates <kind>main-style helper "gen.<ext>" / "brute.<ext>" in the Problem dir if absent.
+func (w Workspace) EnsureKind(contest int, index, kind string, l config.Lang, tmpl string) (string, error) {
+	path := filepath.Join(w.Dir(contest, index), kind+l.Ext)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if errors.Is(err, fs.ErrExist) {
+		return path, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	_, err = f.WriteString(tmpl)
+	return path, err
+}
+
 // LoadTemplate returns the user's Template from dir if present, else the embedded default
 // (empty if the language has none).
 func LoadTemplate(dir, langKey string, l config.Lang) (string, error) {
@@ -86,19 +117,21 @@ func InitTemplates(dir string, langs map[string]config.Lang, force bool) ([]stri
 	sort.Strings(keys)
 	var written []string
 	for _, k := range keys {
-		name := templateFile(k, langs[k])
-		b, err := defaultTemplates.ReadFile("templates/" + name)
-		if err != nil {
-			continue // no shipped default for this language
+		for _, kind := range kinds {
+			name := kind + templateFile(k, langs[k])
+			b, err := defaultTemplates.ReadFile("templates/" + name)
+			if err != nil {
+				continue // no shipped default for this language
+			}
+			path := filepath.Join(dir, name)
+			if _, err := os.Stat(path); err == nil && !force {
+				continue
+			}
+			if err := os.WriteFile(path, b, 0o644); err != nil {
+				return written, err
+			}
+			written = append(written, path)
 		}
-		path := filepath.Join(dir, name)
-		if _, err := os.Stat(path); err == nil && !force {
-			continue
-		}
-		if err := os.WriteFile(path, b, 0o644); err != nil {
-			return written, err
-		}
-		written = append(written, path)
 	}
 	return written, nil
 }

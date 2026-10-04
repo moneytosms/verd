@@ -299,3 +299,12 @@ func (r *run) runTest(t workspace.Test) Result {
 	}
 	return res
 }
+
+// Build compiles src (cached like a Test Run) and returns the argv that runs it.
+func Build(ctx context.Context, l config.Lang, src, cacheDir string) (argv []string, cached bool, err error) {
+	r := &run{spec: Spec{Solution: src, Lang: l, CacheDir: cacheDir}, ctx: ctx}
+	if cached, err = r.compile(); err != nil {
+		return nil, false, err
+	}
+	return expand(l.Run, r.vars()), cached, nil
+}

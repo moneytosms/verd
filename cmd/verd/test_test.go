@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/scrape"
@@ -124,5 +125,28 @@ func TestVerdTestHonorsSavedModeAndHint(t *testing.T) {
 	saved := func(int, string) string { return "tokens" }
 	if err := testCmd(context.Background(), &out, cfg, cache, detail, saved, path); exitCode(err) != 1 || !strings.Contains(out.String(), "tokens") {
 		t.Fatalf("saved mode should win: %v\n%s", err, out.String())
+	}
+}
+
+func TestStressCmd(t *testing.T) {
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 missing")
+	}
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	d := &scrape.Detail{TimeLimitMS: 2000, MemoryLimitMB: 256}
+	cfg, path, cache, detail := setup(t, "n=int(input())\nprint(n if n!=7 else 0)\n", "main.py", d)
+	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
+	dir := filepath.Dir(path)
+	os.WriteFile(filepath.Join(dir, "brute.py"), []byte("print(int(input()))\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "gen.py"), []byte("import sys,random\nprint(random.Random(int(sys.argv[1])).randint(1,10))\n"), 0o644)
+	var out bytes.Buffer
+	err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 500, 20*time.Second)
+	if exitCode(err) != 1 || !strings.Contains(out.String(), "MISMATCH at seed") {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	os.WriteFile(path, []byte("print(int(input()))\n"), 0o644)
+	out.Reset()
+	if err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 20, 20*time.Second); err != nil || !strings.Contains(out.String(), "no counterexample in 20") {
+		t.Fatalf("%v\n%s", err, out.String())
 	}
 }

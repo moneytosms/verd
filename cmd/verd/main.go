@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -117,6 +118,30 @@ func run(args []string, out io.Writer) error {
 			fmt.Fprint(os.Stderr, osc52(st.Text)) // clipboard over ssh/tmux where the terminal allows it
 		}
 		return printSubmit(out, st)
+	case "stress":
+		fs := flag.NewFlagSet("stress", flag.ContinueOnError)
+		iter := fs.Int("iter", 1000, "max iterations")
+		secs := fs.Int("time", 30, "max seconds")
+		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 1 {
+			return &exitError{2, "usage: verd stress [--iter N] [--time S] <file>"}
+		}
+		cfg, err := config.Load(path)
+		if err != nil {
+			return err
+		}
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		client := cf.New(cf.BaseURL)
+		detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
+			return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
+		}
+		mode := func(contest int, index string) string { st, _ := s.ProblemState(contest, index); return st.Mode }
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, time.Duration(*secs)*time.Second)
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -129,7 +154,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>, stress <file>)", args[0])
 }
 
 func runTUI(path string) error {
