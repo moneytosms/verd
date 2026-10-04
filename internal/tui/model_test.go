@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
@@ -151,5 +152,55 @@ func TestFilterSearchAndMarks(t *testing.T) {
 	m, cmd := send(m, "enter")
 	if m.open == nil || m.open.Index != "B" || cmd == nil {
 		t.Fatalf("want 2B opened, got %+v", m.open)
+	}
+}
+
+func TestContestsTab(t *testing.T) {
+	now := time.Unix(1_000_000, 0)
+	cs := []cf.Contest{
+		{ID: 10, Name: "Old Round", Phase: "FINISHED", Start: 500_000},
+		{ID: 30, Name: "Later Round", Phase: "BEFORE", Start: now.Add(50 * time.Hour).Unix()},
+		{ID: 20, Name: "Soon Round", Phase: "BEFORE", Start: now.Add(3*time.Hour + 20*time.Minute).Unix()},
+		{ID: 5, Name: "Newer Past", Phase: "FINISHED", Start: 900_000},
+	}
+	ps := []cf.Problem{
+		{ContestID: 10, Index: "B", Name: "Second"},
+		{ContestID: 10, Index: "A", Name: "First"},
+		{ContestID: 5, Index: "A", Name: "Other"},
+	}
+	deps := Deps{Now: func() time.Time { return now }, Load: func(cf.Problem, bool) (*scrape.Detail, error) { return nil, cf.ErrChallenge }}
+	m := New(ps, "", deps).WithStatuses(map[string]store.Status{"10A": store.StatusSolved, "10B": store.StatusAttempted}).WithContests(cs)
+	m, _ = send(m, "2")
+	out := m.View().Content
+	iSoon, iLater, iNew, iOld := strings.Index(out, "Soon Round"), strings.Index(out, "Later Round"), strings.Index(out, "Newer Past"), strings.Index(out, "Old Round")
+	if !(iSoon >= 0 && iSoon < iLater && iLater < iNew && iNew < iOld) {
+		t.Fatalf("order wrong (upcoming asc, then past desc):\n%s", out)
+	}
+	for _, want := range []string{"Upcoming", "Past", "in 3h 20m", "in 2d 2h", "1970-01-11"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q:\n%s", want, out)
+		}
+	}
+	// open Old Round (4th row), see Problems with status, in index order
+	for range 3 {
+		m, _ = send(m, "j")
+	}
+	m, _ = send(m, "enter")
+	out = m.View().Content
+	if !(strings.Index(out, "✓ A") > 0 && strings.Index(out, "✓ A") < strings.Index(out, "✗ B")) || strings.Contains(out, "Other") {
+		t.Fatalf("contest problems wrong:\n%s", out)
+	}
+	// open a Problem, esc returns to the contest's problems, esc again to the list
+	m, cmd := send(m, "enter")
+	if m.open == nil || m.open.Index != "A" || cmd == nil {
+		t.Fatalf("want 10A open, got %+v", m.open)
+	}
+	m, _ = send(m, "esc")
+	if m.contestOpen == nil || !strings.Contains(m.View().Content, "First") {
+		t.Fatal("esc from Problem should return to contest Problems")
+	}
+	m, _ = send(m, "esc")
+	if m.contestOpen != nil || !strings.Contains(m.View().Content, "Upcoming") {
+		t.Fatal("esc should return to contest list")
 	}
 }

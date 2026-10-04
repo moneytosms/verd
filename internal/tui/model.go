@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,6 +21,7 @@ type Deps struct {
 	// Load returns a Problem's detail, cache-first unless force.
 	Load    func(p cf.Problem, force bool) (*scrape.Detail, error)
 	OpenURL func(url string) error
+	Now     func() time.Time // defaults to time.Now
 }
 
 type Model struct {
@@ -27,6 +29,13 @@ type Model struct {
 	Offline  string // non-empty = status note shown in the footer
 	deps     Deps
 	status   map[string]store.Status
+
+	tab           int
+	contests      []cf.Contest
+	upcoming      int // contests[:upcoming] are not finished
+	contestCursor int
+	contestOpen   *cf.Contest
+	cpCursor      int
 
 	// list filtering
 	filter     Filter
@@ -162,7 +171,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.input != nil {
 			return m.updateInput(msg)
 		}
-		return m.updateList(msg)
+		switch k := msg.String(); k {
+		case "1", "2", "3", "4":
+			m.tab = int(k[0] - '1')
+			return m, nil
+		case "tab":
+			m.tab = (m.tab + 1) % len(tabs)
+			return m, nil
+		}
+		switch m.tab {
+		case 0:
+			return m.updateList(msg)
+		case 1:
+			return m.updateContests(msg)
+		}
+		if k := msg.String(); k == "q" || k == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -191,11 +217,14 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.visible) == 0 {
 			break
 		}
-		p := m.visible[m.cursor]
-		m.open, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, nil, nil, "", 0, true
-		return m, m.load(p, false)
+		return m.openProblem(m.visible[m.cursor])
 	}
 	return m, nil
+}
+
+func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
+	m.open, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, nil, nil, "", 0, true
+	return m, m.load(p, false)
 }
 
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -272,12 +301,25 @@ func (m Model) page() int { return max(1, m.height-4) }
 
 func (m Model) View() tea.View {
 	var b strings.Builder
-	b.WriteString(" " + strings.Join(tabs, "  |  ") + "\n\n")
+	names := make([]string, len(tabs))
+	for i, t := range tabs {
+		names[i] = t
+		if i == m.tab {
+			names[i] = "[" + t + "]"
+		}
+	}
+	b.WriteString(" " + strings.Join(names, "  ") + "\n\n")
 	footer := ""
-	if m.open != nil {
+	switch {
+	case m.open != nil:
 		footer = m.viewProblem(&b)
-	} else {
+	case m.tab == 0:
 		footer = m.viewList(&b)
+	case m.tab == 1:
+		footer = m.viewContests(&b)
+	default:
+		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
+		footer = "1-4 tabs  q quit"
 	}
 	if m.Offline != "" {
 		footer += "  [" + clean(m.Offline) + "]"
@@ -313,17 +355,7 @@ func (m Model) viewList(b *strings.Builder) string {
 		if i == m.cursor {
 			cur = ">"
 		}
-		mark := " "
-		switch m.statusOf(p) {
-		case store.StatusSolved:
-			mark = "✓"
-		case store.StatusAttempted:
-			mark = "✗"
-		}
-		rating := "-"
-		if p.Rating > 0 {
-			rating = fmt.Sprint(p.Rating)
-		}
+		mark, rating := markOf(m.statusOf(p)), ratingStr(p)
 		b.WriteString(fmt.Sprintf("%s %s %-8s %-40.40s %6s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
 	}
 	if m.input != nil {

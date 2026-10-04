@@ -48,6 +48,13 @@ func run() error {
 	if _, err := refresh.Submissions(context.Background(), s, client, cfg.Handle); err != nil && note == "" {
 		note = "offline: " + err.Error()
 	}
+	if _, err := refresh.Contests(context.Background(), s, client, time.Now()); err != nil && note == "" {
+		note = "offline: " + err.Error()
+	}
+	contests, err := s.Contests()
+	if err != nil {
+		return err
+	}
 	ps, err := s.Problems()
 	if err != nil {
 		return err
@@ -65,7 +72,7 @@ func run() error {
 		},
 		OpenURL: openURL,
 	}
-	_, err = tea.NewProgram(tui.New(ps, note, deps).WithStatuses(statuses)).Run()
+	_, err = tea.NewProgram(tui.New(ps, note, deps).WithStatuses(statuses).WithContests(contests)).Run()
 	return err
 }
 

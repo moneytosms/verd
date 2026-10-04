@@ -181,3 +181,21 @@ func (c *Client) UserStatus(ctx context.Context, handle string, from, count int)
 	err := c.api(ctx, "user.status", url.Values{"handle": {handle}, "from": {strconv.Itoa(from)}, "count": {strconv.Itoa(count)}}, &out)
 	return out, err
 }
+
+type Contest struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Phase    string `json:"phase"`
+	Duration int64  `json:"durationSeconds"`
+	Start    int64  `json:"startTimeSeconds"`
+}
+
+// Finished reports whether the contest is over.
+func (c Contest) Finished() bool { return c.Phase == "FINISHED" }
+
+// Contests fetches contest.list (non-gym).
+func (c *Client) Contests(ctx context.Context) ([]Contest, error) {
+	var out []Contest
+	err := c.api(ctx, "contest.list", nil, &out)
+	return out, err
+}

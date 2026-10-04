@@ -130,3 +130,31 @@ func TestSubmissionsIncremental(t *testing.T) {
 		t.Fatalf("status %v", st)
 	}
 }
+
+func TestContestsTTL(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Write([]byte(`{"status":"OK","result":[{"id":2,"name":"Soon","phase":"BEFORE","startTimeSeconds":2000,"durationSeconds":7200},{"id":1,"name":"Old","phase":"FINISHED","startTimeSeconds":1000,"durationSeconds":7200}]}`))
+	}))
+	defer srv.Close()
+	s, _ := store.Open(":memory:")
+	defer s.Close()
+	c := cf.New(srv.URL)
+	c.Interval = 0
+	now := time.Now()
+	ctx := context.Background()
+	if ok, err := Contests(ctx, s, c, now); !ok || err != nil {
+		t.Fatalf("first: %v %v", ok, err)
+	}
+	if ok, _ := Contests(ctx, s, c, now.Add(59*time.Minute)); ok {
+		t.Fatal("within 1h must not refetch")
+	}
+	if ok, _ := Contests(ctx, s, c, now.Add(61*time.Minute)); !ok || hits.Load() != 2 {
+		t.Fatalf("after 1h must refetch, hits=%d", hits.Load())
+	}
+	cs, _ := s.Contests()
+	if len(cs) != 2 || cs[0].ID != 2 || cs[1].Finished() != true {
+		t.Fatalf("%+v", cs)
+	}
+}

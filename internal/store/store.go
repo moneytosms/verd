@@ -21,7 +21,10 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-const keyProblemsetSync = "problemset_synced_at"
+const (
+	keyProblemsetSync = "problemset_synced_at"
+	keyContestsSync   = "contests_synced_at"
+)
 
 type Store struct{ db *sql.DB }
 
@@ -125,13 +128,57 @@ func (s *Store) SaveProblemset(ps []cf.Problem, at time.Time) error {
 }
 
 // ProblemsetSyncedAt returns the last problemset sync time; zero if never.
-func (s *Store) ProblemsetSyncedAt() (time.Time, error) {
-	v, err := s.Meta(keyProblemsetSync)
+func (s *Store) ProblemsetSyncedAt() (time.Time, error) { return s.syncedAt(keyProblemsetSync) }
+
+// ContestsSyncedAt returns the last contest list sync time; zero if never.
+func (s *Store) ContestsSyncedAt() (time.Time, error) { return s.syncedAt(keyContestsSync) }
+
+func (s *Store) syncedAt(key string) (time.Time, error) {
+	v, err := s.Meta(key)
 	if err != nil || v == "" {
 		return time.Time{}, err
 	}
 	n, err := strconv.ParseInt(v, 10, 64)
 	return time.Unix(n, 0), err
+}
+
+// SaveContests replaces the contest list and stamps the sync time, atomically.
+func (s *Store) SaveContests(cs []cf.Contest, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("DELETE FROM contests"); err != nil {
+		return err
+	}
+	for _, c := range cs {
+		if _, err := tx.Exec("INSERT INTO contests(id, name, phase, start_time, duration) VALUES(?,?,?,?,?)", c.ID, c.Name, c.Phase, c.Start, c.Duration); err != nil {
+			return err
+		}
+	}
+	if err := s.setMeta(tx, keyContestsSync, strconv.FormatInt(at.Unix(), 10)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Contests returns cached contests, newest start first.
+func (s *Store) Contests() ([]cf.Contest, error) {
+	rows, err := s.db.Query("SELECT id, name, phase, start_time, duration FROM contests ORDER BY start_time DESC, id DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []cf.Contest
+	for rows.Next() {
+		var c cf.Contest
+		if err := rows.Scan(&c.ID, &c.Name, &c.Phase, &c.Start, &c.Duration); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 // Problems returns the cached problemset, newest contest first.

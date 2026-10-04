@@ -10,7 +10,10 @@ import (
 	"github.com/moneytosms/verd/internal/store"
 )
 
-const ProblemsetTTL = 24 * time.Hour
+const (
+	ProblemsetTTL = 24 * time.Hour
+	ContestsTTL   = time.Hour
+)
 
 // Problemset fetches and stores the problemset when the cache is older than ProblemsetTTL.
 // It reports whether a fetch happened. On a fetch error the stale cache is left intact.
@@ -81,4 +84,20 @@ func Submissions(ctx context.Context, s *store.Store, c *cf.Client, handle strin
 			return added, nil
 		}
 	}
+}
+
+// Contests fetches and stores the contest list when the cache is older than ContestsTTL.
+func Contests(ctx context.Context, s *store.Store, c *cf.Client, now time.Time) (bool, error) {
+	at, err := s.ContestsSyncedAt()
+	if err != nil {
+		return false, err
+	}
+	if !at.IsZero() && now.Sub(at) < ContestsTTL {
+		return false, nil
+	}
+	cs, err := c.Contests(ctx)
+	if err != nil {
+		return false, err
+	}
+	return true, s.SaveContests(cs, now)
 }
