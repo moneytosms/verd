@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/store"
 )
 
 func TestViewAndQuit(t *testing.T) {
@@ -97,5 +98,58 @@ func TestOpenBrowser(t *testing.T) {
 	cmd()
 	if got != "https://codeforces.com/problemset/problem/7/C" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func typeText(m Model, text string) Model {
+	for _, r := range text {
+		nm, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+		m = nm.(Model)
+	}
+	return m
+}
+
+func TestFilterSearchAndMarks(t *testing.T) {
+	ps := []cf.Problem{
+		{ContestID: 3, Index: "A", Name: "Alpha", Rating: 800, Tags: []string{"dp"}},
+		{ContestID: 2, Index: "B", Name: "Beta", Rating: 1500, Tags: []string{"dp", "math"}},
+		{ContestID: 1, Index: "C", Name: "Gamma", Rating: 800, Tags: []string{"math"}},
+	}
+	m := New(ps, "", Deps{}).WithStatuses(map[string]store.Status{"3A": store.StatusSolved, "2B": store.StatusAttempted})
+	out := m.View().Content
+	if !strings.Contains(out, "✓ 3A") || !strings.Contains(out, "✗ 2B") || !strings.Contains(out, "3 problems") {
+		t.Fatalf("marks/count wrong:\n%s", out)
+	}
+	// filter: +dp unsolved  -> only 2B
+	m, _ = send(m, "f")
+	m = typeText(m, "+dp unsolved")
+	m, _ = send(m, "enter")
+	if len(m.visible) != 1 || m.visible[0].Index != "B" || !strings.Contains(m.View().Content, "1/3 problems") {
+		t.Fatalf("filter: %+v\n%s", m.visible, m.View().Content)
+	}
+	// search combines with the filter
+	m, _ = send(m, "/")
+	m = typeText(m, "gamma")
+	m, _ = send(m, "enter")
+	if len(m.visible) != 0 {
+		t.Fatalf("search should AND with filter: %+v", m.visible)
+	}
+	// clear search, bad filter keeps prompt open with an error
+	m, _ = send(m, "/")
+	nm, _ := m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = nm.(Model)
+	m, _ = send(m, "enter")
+	m, _ = send(m, "f")
+	nm, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
+	m = typeText(nm.(Model), "wat")
+	m, _ = send(m, "enter")
+	if m.input == nil || !strings.Contains(m.View().Content, "unknown filter") {
+		t.Fatal("bad filter should keep prompt with error")
+	}
+	// enter opens the filtered row (2B), not row 0 of the full list (3A)
+	m, _ = send(m, "esc")
+	m, cmd := send(m, "enter")
+	if m.open == nil || m.open.Index != "B" || cmd == nil {
+		t.Fatalf("want 2B opened, got %+v", m.open)
 	}
 }

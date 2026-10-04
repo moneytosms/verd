@@ -203,3 +203,60 @@ func (s *Store) Detail(contest int, idx string) (*scrape.Detail, error) {
 	}
 	return d, rows.Err()
 }
+
+// Status is the user's standing on a Problem, derived from their Submissions.
+type Status int
+
+const (
+	StatusNone Status = iota
+	StatusAttempted
+	StatusSolved
+)
+
+// SaveSubmissions upserts Submissions (a verdict can change from TESTING to final).
+func (s *Store) SaveSubmissions(subs []cf.Submission) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	st, err := tx.Prepare(`INSERT OR REPLACE INTO submissions(id, contest_id, idx, language, verdict, passed_tests, time_ms, memory_bytes, created_at)
+		VALUES(?,?,?,?,?,?,?,?,?)`)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	for _, x := range subs {
+		if _, err := st.Exec(x.ID, x.Problem.ContestID, x.Problem.Index, x.Language, x.Verdict, x.PassedTests, x.TimeMS, x.MemoryBytes, x.Created); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// KnownFinal reports whether Submission id is stored with a final verdict.
+func (s *Store) KnownFinal(id int64) (bool, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM submissions WHERE id = ? AND verdict NOT IN ('', 'TESTING')", id).Scan(&n)
+	return n > 0, err
+}
+
+// Statuses maps "<contest><index>" (e.g. "1900A") to Solved or Attempted. Unsubmitted Problems are absent.
+func (s *Store) Statuses() (map[string]Status, error) {
+	rows, err := s.db.Query("SELECT contest_id, idx, MAX(verdict = 'OK') FROM submissions GROUP BY contest_id, idx")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]Status{}
+	for rows.Next() {
+		var c int
+		var i string
+		var ok bool
+		if err := rows.Scan(&c, &i, &ok); err != nil {
+			return nil, err
+		}
+		out[fmt.Sprintf("%d%s", c, i)] = map[bool]Status{true: StatusSolved, false: StatusAttempted}[ok]
+	}
+	return out, rows.Err()
+}

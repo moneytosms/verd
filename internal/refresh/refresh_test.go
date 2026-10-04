@@ -3,9 +3,12 @@ package refresh
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -81,5 +84,49 @@ func TestDetailCachedAndChallenge(t *testing.T) {
 	}
 	if _, err := Detail(ctx, s, c, cf.Problem{ContestID: 2, Index: "B"}, false, time.Now()); !errors.Is(err, cf.ErrChallenge) {
 		t.Fatalf("uncached + challenge: %v", err)
+	}
+}
+
+func TestSubmissionsIncremental(t *testing.T) {
+	// 150 submissions, ids 150..1 newest first; serve by from/count.
+	total := 150
+	var froms []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		from, _ := strconv.Atoi(r.URL.Query().Get("from"))
+		count, _ := strconv.Atoi(r.URL.Query().Get("count"))
+		froms = append(froms, r.URL.Query().Get("from"))
+		var items []string
+		for i := from; i < from+count && i <= total; i++ {
+			id := total - i + 1
+			v := "OK"
+			if id == total {
+				v = "TESTING"
+			}
+			items = append(items, fmt.Sprintf(`{"id":%d,"creationTimeSeconds":%d,"programmingLanguage":"C++","verdict":%q,"problem":{"contestId":1,"index":"A"}}`, id, id, v))
+		}
+		fmt.Fprintf(w, `{"status":"OK","result":[%s]}`, strings.Join(items, ","))
+	}))
+	defer srv.Close()
+	s, _ := store.Open(":memory:")
+	defer s.Close()
+	c := cf.New(srv.URL)
+	c.Interval = 0
+	ctx := context.Background()
+
+	if n, err := Submissions(ctx, s, c, "u"); err != nil || n != 150 {
+		t.Fatalf("full sync: %d %v", n, err)
+	}
+	// #151 arrives; #150 (was TESTING) is now OK: both fetched, stops at known #149
+	total = 151
+	froms = nil
+	if n, err := Submissions(ctx, s, c, "u"); err != nil || n != 2 {
+		t.Fatalf("incremental sync: %d %v", n, err)
+	}
+	if len(froms) != 1 {
+		t.Fatalf("should stop on first page at known id, fetched from=%v", froms)
+	}
+	st, _ := s.Statuses()
+	if st["1A"] != store.StatusSolved {
+		t.Fatalf("status %v", st)
 	}
 }

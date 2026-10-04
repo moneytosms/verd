@@ -47,3 +47,38 @@ func Detail(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, for
 	}
 	return d, s.SaveDetail(p.ContestID, p.Index, d, now)
 }
+
+const submissionPage = 100
+
+// Submissions syncs the user's Submissions incrementally: newest pages first, stopping at the
+// first Submission already stored with a final verdict (everything older is already known).
+// ponytail: a long-ago rejudge of an old Submission is not picked up; manual full resync if it matters.
+func Submissions(ctx context.Context, s *store.Store, c *cf.Client, handle string) (int, error) {
+	added := 0
+	for from := 1; ; from += submissionPage {
+		page, err := c.UserStatus(ctx, handle, from, submissionPage)
+		if err != nil {
+			return added, err
+		}
+		var fresh []cf.Submission
+		stop := len(page) < submissionPage
+		for _, sub := range page {
+			known, err := s.KnownFinal(sub.ID)
+			if err != nil {
+				return added, err
+			}
+			if known {
+				stop = true
+				break
+			}
+			fresh = append(fresh, sub)
+		}
+		if err := s.SaveSubmissions(fresh); err != nil {
+			return added, err
+		}
+		added += len(fresh)
+		if stop {
+			return added, nil
+		}
+	}
+}

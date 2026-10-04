@@ -40,8 +40,12 @@ func run() error {
 	defer s.Close()
 
 	// ponytail: blocking refresh before the TUI; background refresh is ticket #28.
+	client := cf.New(cf.BaseURL)
 	note := ""
-	if _, err := refresh.Problemset(context.Background(), s, cf.New(cf.BaseURL), time.Now()); err != nil {
+	if _, err := refresh.Problemset(context.Background(), s, client, time.Now()); err != nil {
+		note = "offline: " + err.Error()
+	}
+	if _, err := refresh.Submissions(context.Background(), s, client, cfg.Handle); err != nil && note == "" {
 		note = "offline: " + err.Error()
 	}
 	ps, err := s.Problems()
@@ -51,14 +55,17 @@ func run() error {
 	if len(ps) == 0 {
 		return fmt.Errorf("no cached problems and fetch failed: %s", note)
 	}
-	client := cf.New(cf.BaseURL)
+	statuses, err := s.Statuses()
+	if err != nil {
+		return err
+	}
 	deps := tui.Deps{
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(context.Background(), s, client, p, force, time.Now())
 		},
 		OpenURL: openURL,
 	}
-	_, err = tea.NewProgram(tui.New(ps, note, deps)).Run()
+	_, err = tea.NewProgram(tui.New(ps, note, deps).WithStatuses(statuses)).Run()
 	return err
 }
 

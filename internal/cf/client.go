@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -158,4 +159,25 @@ func (c *Client) Page(ctx context.Context, contest int, index string) ([]byte, e
 		return nil, ErrChallenge
 	}
 	return b, nil
+}
+
+type Submission struct {
+	ID          int64  `json:"id"`
+	Created     int64  `json:"creationTimeSeconds"`
+	Language    string `json:"programmingLanguage"`
+	Verdict     string `json:"verdict"`
+	PassedTests int    `json:"passedTestCount"`
+	TimeMS      int    `json:"timeConsumedMillis"`
+	MemoryBytes int64  `json:"memoryConsumedBytes"`
+	Problem     struct {
+		ContestID int    `json:"contestId"`
+		Index     string `json:"index"`
+	} `json:"problem"`
+}
+
+// UserStatus returns up to count of a user's Submissions starting at 1-based from, newest first.
+func (c *Client) UserStatus(ctx context.Context, handle string, from, count int) ([]Submission, error) {
+	var out []Submission
+	err := c.api(ctx, "user.status", url.Values{"handle": {handle}, "from": {strconv.Itoa(from)}, "count": {strconv.Itoa(count)}}, &out)
+	return out, err
 }

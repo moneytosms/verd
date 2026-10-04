@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/store"
 )
 
 var tabs = []string{"Problems", "Contests", "Stats", "Picker"}
@@ -25,9 +26,17 @@ type Model struct {
 	Problems []cf.Problem
 	Offline  string // non-empty = status note shown in the footer
 	deps     Deps
-	cursor   int
-	width    int
-	height   int
+	status   map[string]store.Status
+
+	// list filtering
+	filter     Filter
+	filterExpr string
+	visible    []cf.Problem // Problems that pass filter
+	input      *input       // active prompt, if any
+	inputErr   string
+	cursor     int
+	width      int
+	height     int
 
 	// Problem view
 	open    *cf.Problem
@@ -39,7 +48,69 @@ type Model struct {
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
-	return Model{Problems: ps, Offline: note, deps: deps, width: 80, height: 24}
+	return Model{Problems: ps, visible: ps, Offline: note, deps: deps, width: 80, height: 24}
+}
+
+// WithStatuses sets the user's solved/attempted marks (keyed "<contest><index>").
+func (m Model) WithStatuses(st map[string]store.Status) Model {
+	m.status = st
+	return m.refilter()
+}
+
+func (m Model) statusOf(p cf.Problem) store.Status {
+	return m.status[fmt.Sprintf("%d%s", p.ContestID, p.Index)]
+}
+
+func (m Model) refilter() Model {
+	m.visible = make([]cf.Problem, 0, len(m.Problems))
+	for _, p := range m.Problems {
+		if m.filter.Match(p, m.statusOf(p)) {
+			m.visible = append(m.visible, p)
+		}
+	}
+	m.cursor = min(m.cursor, max(0, len(m.visible)-1))
+	return m
+}
+
+// input is a one-line prompt for the filter (`f`) or search (`/`).
+type input struct {
+	kind byte // 'f' or '/'
+	text string
+}
+
+func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.input, m.inputErr = nil, ""
+	case "enter":
+		if m.input.kind == '/' {
+			m.filter.Search = m.input.text
+		} else {
+			f, err := ParseFilter(m.input.text)
+			if err != nil {
+				m.inputErr = err.Error()
+				return m, nil
+			}
+			f.Search = m.filter.Search
+			m.filter, m.filterExpr = f, m.input.text
+		}
+		m.input, m.inputErr = nil, ""
+		m.cursor = 0
+		return m.refilter(), nil
+	case "backspace":
+		if r := []rune(m.input.text); len(r) > 0 {
+			m.input.text = string(r[:len(r)-1])
+		}
+	case "ctrl+u":
+		m.input.text = ""
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		if msg.Text != "" {
+			m.input.text += clean(msg.Text)
+		}
+	}
+	return m, nil
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -88,6 +159,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.open != nil {
 			return m.updateProblem(msg)
 		}
+		if m.input != nil {
+			return m.updateInput(msg)
+		}
 		return m.updateList(msg)
 	}
 	return m, nil
@@ -102,18 +176,22 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case "down", "j":
-		if m.cursor < len(m.Problems)-1 {
+		if m.cursor < len(m.visible)-1 {
 			m.cursor++
 		}
 	case "pgup":
 		m.cursor = max(0, m.cursor-m.page())
 	case "pgdown":
-		m.cursor = min(len(m.Problems)-1, m.cursor+m.page())
+		m.cursor = min(len(m.visible)-1, m.cursor+m.page())
+	case "f":
+		m.input, m.inputErr = &input{kind: 'f', text: m.filterExpr}, ""
+	case "/":
+		m.input, m.inputErr = &input{kind: '/', text: m.filter.Search}, ""
 	case "enter":
-		if len(m.Problems) == 0 {
+		if len(m.visible) == 0 {
 			break
 		}
-		p := m.Problems[m.cursor]
+		p := m.visible[m.cursor]
 		m.open, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, nil, nil, "", 0, true
 		return m, m.load(p, false)
 	}
@@ -226,20 +304,45 @@ func (m Model) viewProblem(b *strings.Builder) string {
 }
 
 func (m Model) viewList(b *strings.Builder) string {
-	b.WriteString(fmt.Sprintf("  %-8s %-40s %6s %7s  %s\n", "ID", "Name", "Rating", "Solved", "Tags"))
+	b.WriteString(fmt.Sprintf("    %-8s %-40s %6s %7s  %s\n", "ID", "Name", "Rating", "Solved", "Tags"))
 	rows := m.page() - 1
-	start := max(0, min(m.cursor-rows/2, len(m.Problems)-rows))
-	for i := start; i < min(start+rows, len(m.Problems)); i++ {
-		p := m.Problems[i]
-		cur := "  "
+	start := max(0, min(m.cursor-rows/2, len(m.visible)-rows))
+	for i := start; i < min(start+rows, len(m.visible)); i++ {
+		p := m.visible[i]
+		cur := " "
 		if i == m.cursor {
-			cur = "> "
+			cur = ">"
+		}
+		mark := " "
+		switch m.statusOf(p) {
+		case store.StatusSolved:
+			mark = "✓"
+		case store.StatusAttempted:
+			mark = "✗"
 		}
 		rating := "-"
 		if p.Rating > 0 {
 			rating = fmt.Sprint(p.Rating)
 		}
-		b.WriteString(fmt.Sprintf("%s%-8s %-40.40s %6s %7d  %s\n", cur, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
+		b.WriteString(fmt.Sprintf("%s %s %-8s %-40.40s %6s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
 	}
-	return fmt.Sprintf("%d problems  enter open  q quit", len(m.Problems))
+	if m.input != nil {
+		b.WriteString(fmt.Sprintf("\n%c %s_", m.input.kind, m.input.text))
+		if m.inputErr != "" {
+			b.WriteString("   " + m.inputErr)
+		}
+		return "enter apply  esc cancel"
+	}
+	count := fmt.Sprintf("%d problems", len(m.visible))
+	if len(m.visible) != len(m.Problems) {
+		count = fmt.Sprintf("%d/%d problems", len(m.visible), len(m.Problems))
+	}
+	var active []string
+	if m.filterExpr != "" {
+		active = append(active, "filter: "+clean(m.filterExpr))
+	}
+	if m.filter.Search != "" {
+		active = append(active, "search: "+clean(m.filter.Search))
+	}
+	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  q quit"
 }
