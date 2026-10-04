@@ -26,8 +26,11 @@ type Deps struct {
 	Load    func(p cf.Problem, force bool) (*scrape.Detail, error)
 	OpenURL func(url string) error
 	Now     func() time.Time // defaults to time.Now
-	// Edit creates the Problem's Solution if needed and returns the editor command to run.
+	// Edit creates the Problem's Solution if needed and opens it in the editor.
+	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
 	Edit func(p cf.Problem) (*exec.Cmd, error)
+	// EditorAlive reports whether the split-pane editor is still open; polled every 500 ms.
+	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
 	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error)
 	// Refresh stages run in order in the background; each syncs stale data from the network and
@@ -79,13 +82,14 @@ type Model struct {
 	height     int
 
 	// Problem view
-	run     *testRun
-	open    *cf.Problem
-	detail  *scrape.Detail
-	body    []string // rendered statement lines
-	scroll  int
-	loading bool
-	errMsg  string
+	run        *testRun
+	editorOpen bool // a split-pane editor is open; a tick is polling it
+	open       *cf.Problem
+	detail     *scrape.Detail
+	body       []string // rendered statement lines
+	scroll     int
+	loading    bool
+	errMsg     string
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
@@ -199,6 +203,12 @@ func (m Model) Init() tea.Cmd {
 
 type editorDoneMsg struct{ err error }
 
+type editorTickMsg struct{}
+
+func editorTick() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg { return editorTickMsg{} })
+}
+
 type detailMsg struct {
 	p    cf.Problem
 	d    *scrape.Detail
@@ -242,6 +252,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncing = false
 	case testEventMsg:
 		return m.onTestEvent(msg)
+	case editorTickMsg:
+		if m.deps.EditorAlive != nil && m.deps.EditorAlive() {
+			return m, editorTick()
+		}
+		m.editorOpen = false // the pane closed
 	case editorDoneMsg:
 		if msg.err != nil {
 			m.errMsg = "editor: " + msg.err.Error()
@@ -393,6 +408,13 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			break
 		}
 		m.errMsg = ""
+		if cmd == nil { // opened in a split pane: poll until it closes
+			if m.editorOpen || m.deps.EditorAlive == nil {
+				return m, nil
+			}
+			m.editorOpen = true
+			return m, editorTick()
+		}
 		return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
 	case "o":
 		if open, p := m.deps.OpenURL, *m.open; open != nil {
@@ -495,6 +517,9 @@ func (m Model) View() tea.View {
 	footer = st.Dim.Render(footer)
 	if m.Notice != "" {
 		footer += "  " + st.Warn.Render("["+clean(m.Notice)+"]")
+	}
+	if m.editorOpen {
+		footer += "  " + st.Dim.Render("[editor open]")
 	}
 	switch {
 	case m.syncing:

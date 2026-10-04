@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/editor"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,7 +68,8 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 	cfg := config.Default()
 	cfg.Workspace, cfg.Handle = t.TempDir(), "tourist"
 	p := cf.Problem{ContestID: 1900, Index: "A", Name: "Cover in Water"}
-	cmd, err := editCmd(cfg, p)
+	ctrl := &editor.Controller{Bin: "nvim"}
+	cmd, err := editOpen(cfg, ctrl, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +81,7 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 		t.Fatalf("solution %q", b)
 	}
 	os.WriteFile(path, []byte("my work"), 0o644)
-	cmd, err = editCmd(cfg, p)
+	cmd, err = editOpen(cfg, ctrl, p)
 	if err != nil || cmd.Args[1] != "+1" {
 		t.Fatalf("existing Solution: %v %v", cmd, err)
 	}
@@ -87,7 +89,7 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 		t.Fatal("overwrote existing Solution")
 	}
 	t.Setenv("PATH", t.TempDir())
-	if _, err := editCmd(cfg, p); err == nil || !strings.Contains(err.Error(), "nvim not found") {
+	if _, err := editOpen(cfg, ctrl, p); err == nil || !strings.Contains(err.Error(), "nvim not found") {
 		t.Fatalf("missing nvim: %v", err)
 	}
 }

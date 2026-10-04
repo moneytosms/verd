@@ -576,3 +576,36 @@ func TestInteractiveRefusesTests(t *testing.T) {
 		t.Fatal("interactive should be refused with a message")
 	}
 }
+
+func TestSplitPaneEditorPolling(t *testing.T) {
+	alive := true
+	opens := 0
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		Edit:        func(cf.Problem) (*exec.Cmd, error) { opens++; return nil, nil },
+		EditorAlive: func() bool { return alive },
+	}
+	m, _ := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	m, cmd := send(m, "e")
+	if cmd == nil || !m.editorOpen || !strings.Contains(plain(m), "[editor open]") {
+		t.Fatal("pane editor should start polling and show a badge")
+	}
+	// e again: focuses the existing pane (Edit is called) but must not start a second ticker
+	m, cmd = send(m, "e")
+	if opens != 2 || cmd != nil {
+		t.Fatalf("second e: opens=%d cmd=%v", opens, cmd != nil)
+	}
+	nm, cmd := m.Update(editorTickMsg{})
+	m = nm.(Model)
+	if cmd == nil || !m.editorOpen {
+		t.Fatal("alive pane keeps polling")
+	}
+	alive = false
+	nm, cmd = m.Update(editorTickMsg{})
+	m = nm.(Model)
+	if cmd != nil || m.editorOpen || strings.Contains(plain(m), "[editor open]") {
+		t.Fatal("closed pane must stop polling and clear the badge")
+	}
+}

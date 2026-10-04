@@ -1,0 +1,97 @@
+package editor
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/moneytosms/verd/internal/mux"
+)
+
+func TestSuspendWithoutMux(t *testing.T) {
+	c := &Controller{Bin: "nvim"}
+	cmd, err := c.Open("/w/1/A/main.cpp", 7)
+	if err != nil || cmd == nil || strings.Join(cmd.Args, " ") != "nvim +7 /w/1/A/main.cpp" || cmd.Dir != "/w/1/A" {
+		t.Fatalf("%v %v", cmd, err)
+	}
+	if c.Alive() {
+		t.Fatal("no pane in suspend mode")
+	}
+}
+
+func waitFor(cond func() bool) bool {
+	for i := 0; i < 80; i++ {
+		if cond() {
+			return true
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false
+}
+
+// Real tmux + real nvim: the second Open must focus the existing pane, not split again.
+func TestSecondOpenReusesPaneTmux(t *testing.T) {
+	for _, bin := range []string{"tmux", "nvim"} {
+		if _, err := exec.LookPath(bin); err != nil {
+			t.Skipf("%s not installed", bin)
+		}
+	}
+	sock := "verd-test-editor"
+	tmx := func(args ...string) string {
+		out, err := exec.Command("tmux", append([]string{"-L", sock}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("tmux %v: %v %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	tmx("new-session", "-d", "-s", "t", "-x", "120", "-y", "30")
+	t.Cleanup(func() { exec.Command("tmux", "-L", sock, "kill-server").Run() })
+	self := tmx("display-message", "-p", "-t", "t", "#{pane_id}")
+	panes := func() int { return len(strings.Fields(tmx("list-panes", "-t", "t", "-F", "#{pane_id}"))) }
+
+	dir := t.TempDir()
+	a, b := filepath.Join(dir, "a.cpp"), filepath.Join(dir, "it's b.cpp")
+	os.WriteFile(a, []byte("a\n"), 0o644)
+	os.WriteFile(b, []byte("b1\nb2\nb3\n"), 0o644)
+
+	c := &Controller{Mux: mux.NewTmux([]string{"tmux", "-L", sock}, self), Bin: "nvim", SockDir: t.TempDir()}
+	if cmd, err := c.Open(a, 1); err != nil || cmd != nil {
+		t.Fatalf("pane mode returns no foreground cmd: %v %v", cmd, err)
+	}
+	if !c.Alive() || panes() != 2 {
+		t.Fatalf("first Open should split: alive=%v panes=%d", c.Alive(), panes())
+	}
+	remote := func(expr string) string {
+		out, _ := exec.Command("nvim", "--server", c.sock, "--remote-expr", expr).Output()
+		return strings.TrimSpace(string(out))
+	}
+	if !waitFor(func() bool { return remote("expand('%:t')") == "a.cpp" }) {
+		t.Fatal("nvim did not come up on its --listen socket with a.cpp")
+	}
+
+	if cmd, err := c.Open(b, 3); err != nil || cmd != nil {
+		t.Fatalf("second Open: %v %v", cmd, err)
+	}
+	if panes() != 2 {
+		t.Fatalf("second Open must reuse the pane, got %d panes", panes())
+	}
+	if got := remote("expand('%:t') . ':' . line('.')"); got != "it's b.cpp:3" {
+		t.Fatalf("nvim should now edit b.cpp at line 3, got %q", got)
+	}
+	if active := tmx("display-message", "-p", "-t", "t", "#{pane_id}"); active == self {
+		t.Fatal("second Open should focus the editor pane")
+	}
+
+	// closing nvim is noticed
+	exec.Command("nvim", "--server", c.sock, "--remote-send", "<C-\\><C-N>:qa!<CR>").Run()
+	if !waitFor(func() bool { return !c.Alive() }) {
+		t.Fatal("Alive should turn false after nvim quits")
+	}
+	// and the next Open starts a fresh pane
+	if cmd, err := c.Open(a, 1); err != nil || cmd != nil || !c.Alive() || panes() != 2 {
+		t.Fatalf("reopen after close: %v %v alive=%v panes=%d", cmd, err, c.Alive(), panes())
+	}
+}

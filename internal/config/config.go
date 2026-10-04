@@ -76,6 +76,15 @@ func DataDir() string { return xdg("XDG_DATA_HOME", filepath.Join(".local", "sha
 // CacheDir returns $XDG_CACHE_HOME/verd, falling back to ~/.cache/verd.
 func CacheDir() string { return xdg("XDG_CACHE_HOME", ".cache") }
 
+// RuntimeDir holds sockets: $XDG_RUNTIME_DIR/verd, else /tmp/verd-<uid>. Unix socket paths are
+// limited to about 104 bytes (macOS), so a long $XDG_RUNTIME_DIR falls back to /tmp too.
+func RuntimeDir() string {
+	if d := os.Getenv("XDG_RUNTIME_DIR"); d != "" && len(d) < 60 {
+		return filepath.Join(d, "verd")
+	}
+	return filepath.Join(os.TempDir(), fmt.Sprintf("verd-%d", os.Getuid()))
+}
+
 func xdg(env, fallback string) string {
 	if d := os.Getenv(env); d != "" {
 		return filepath.Join(d, "verd")

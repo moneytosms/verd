@@ -15,6 +15,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/editor"
+	"github.com/moneytosms/verd/internal/mux"
 	"github.com/moneytosms/verd/internal/refresh"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
@@ -106,12 +108,17 @@ func runTUI(path string) error {
 	if err != nil {
 		return err
 	}
+	ctrl := &editor.Controller{Mux: mux.Detect(cfg.Split, os.Getenv), Bin: "nvim", SockDir: config.RuntimeDir()}
+	if bin, err := exec.LookPath("nvim"); err == nil {
+		ctrl.Bin = bin
+	}
 	deps := tui.Deps{
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
-		OpenURL: openURL,
-		Edit:    func(p cf.Problem) (*exec.Cmd, error) { return editCmd(cfg, p) },
+		OpenURL:     openURL,
+		Edit:        func(p cf.Problem) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p) },
+		EditorAlive: ctrl.Alive,
 		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error) {
 			l, ok := cfg.Lang[cfg.DefaultLang]
 			if !ok {
@@ -181,10 +188,10 @@ func openURL(url string) error {
 	return exec.Command("xdg-open", url).Start()
 }
 
-// editCmd creates the Solution from the user's Template if absent and returns the nvim command.
-func editCmd(cfg config.Config, p cf.Problem) (*exec.Cmd, error) {
-	nvim, err := exec.LookPath("nvim")
-	if err != nil {
+// editOpen creates the Solution from the user's Template if absent and opens it in Neovim:
+// in a split pane (nil command) or, without a multiplexer, as a foreground command to suspend for.
+func editOpen(cfg config.Config, ctrl *editor.Controller, p cf.Problem) (*exec.Cmd, error) {
+	if _, err := exec.LookPath(ctrl.Bin); err != nil {
 		return nil, fmt.Errorf("nvim not found in PATH")
 	}
 	l, ok := cfg.Lang[cfg.DefaultLang]
@@ -200,7 +207,5 @@ func editCmd(cfg config.Config, p cf.Problem) (*exec.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(nvim, fmt.Sprintf("+%d", line), path)
-	cmd.Dir = filepath.Dir(path)
-	return cmd, nil
+	return ctrl.Open(path, line)
 }
