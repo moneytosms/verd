@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/submit"
 	"image/color"
 	"os/exec"
 	"regexp"
@@ -828,5 +829,203 @@ func TestExternalRunOpensProblemAndStreams(t *testing.T) {
 	out := plain(m)
 	if !strings.Contains(out, "sample-1") || !strings.Contains(out, "compile: ok (interpreted)") || !strings.Contains(out, "1/1 AC") {
 		t.Fatalf("external run not shown:\n%s", out)
+	}
+}
+
+func submitDeps(updates chan submit.Update, onSubmit func()) Deps {
+	return Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		Submit: func(ctx context.Context, p cf.Problem, lang string) (SubmitStart, error) {
+			if onSubmit != nil {
+				onSubmit()
+			}
+			return SubmitStart{Text: "int main(){}", Notes: []string{"paste and submit at https://codeforces.com/contest/1/submit/A"}, Updates: updates}, nil
+		},
+	}
+}
+
+func openSubmit(t *testing.T, deps Deps) Model {
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	return m
+}
+
+func TestSubmitFlowAcceptedToastAutoClears(t *testing.T) {
+	updates := make(chan submit.Update, 4)
+	m := openSubmit(t, submitDeps(updates, nil))
+	m, cmd := send(m, "s")
+	m, cmd = step(t, m, cmd) // started
+	if out := plain(m); !strings.Contains(out, "waiting for your submission") || !strings.Contains(out, "paste and submit at") {
+		t.Fatalf("started state:\n%s", out)
+	}
+	updates <- submit.Update{Text: "Testing on test 3"}
+	m, cmd = stepBatch(t, m, cmd)
+	if !strings.Contains(plain(m), "Submission  Testing on test 3") {
+		t.Fatalf("progress not shown:\n%s", plain(m))
+	}
+	sub := cf.Submission{Verdict: "OK", TimeMS: 15, MemoryBytes: 3 << 20}
+	updates <- submit.Update{Text: "Accepted", Final: true, Submission: sub}
+	m, cmd = stepBatch(t, m, cmd)
+	// the toast shows on every screen, including the list
+	m, _ = send(m, "esc")
+	out := plain(m)
+	if !strings.Contains(out, "✓ Accepted 1A  15 ms  3.0 MB") {
+		t.Fatalf("success toast missing on the list:\n%s", out)
+	}
+	if m.toast == nil {
+		t.Fatal("toast should be set")
+	}
+	// an old clear must not remove a newer toast; the matching one does
+	nm, _ := m.Update(toastClearMsg{id: m.toast.id + 99})
+	if nm.(Model).toast == nil {
+		t.Fatal("stale clear removed the toast")
+	}
+	nm, _ = m.Update(toastClearMsg{id: m.toast.id})
+	if nm.(Model).toast != nil {
+		t.Fatal("success toast should clear itself")
+	}
+}
+
+// stepBatch feeds a cmd's messages (flattening tea.Batch) and returns the model plus the next listen cmd.
+func stepBatch(t *testing.T, m Model, cmd tea.Cmd) (Model, tea.Cmd) {
+	t.Helper()
+	var next tea.Cmd
+	var run func(c tea.Cmd)
+	run = func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		msg := c()
+		if b, ok := msg.(tea.BatchMsg); ok {
+			for _, c := range b {
+				run(c)
+			}
+			return
+		}
+		switch msg.(type) {
+		case subUpdateMsg, submitStartedMsg, toastClearMsg:
+			nm, n, _ := m.onSubmitMsg(msg)
+			m = nm
+			if n != nil {
+				next = n
+			}
+		}
+	}
+	run(cmd)
+	return m, next
+}
+
+func TestSubmitFailureToastIsSticky(t *testing.T) {
+	updates := make(chan submit.Update, 2)
+	m := openSubmit(t, submitDeps(updates, nil))
+	m, cmd := send(m, "s")
+	m, cmd = step(t, m, cmd)
+	updates <- submit.Update{Text: "Wrong answer on test 2", Final: true, Submission: cf.Submission{Verdict: "WRONG_ANSWER", PassedTests: 1}}
+	m, cmd = stepBatch(t, m, cmd)
+	if m.toast == nil || !m.toast.bad || cmd != nil {
+		t.Fatalf("failure toast must be set with no auto-clear: %+v", m.toast)
+	}
+	if out := plain(m); !strings.Contains(out, "✗ Wrong answer on test 2 (1A)  x dismiss") {
+		t.Fatalf("failure toast:\n%s", out)
+	}
+	// survives navigation, dismissed only by x
+	m, _ = send(m, "esc")
+	if m.toast == nil {
+		t.Fatal("sticky toast vanished")
+	}
+	m, _ = send(m, "x")
+	if m.toast != nil || strings.Contains(plain(m), "Wrong answer") {
+		t.Fatal("x should dismiss")
+	}
+}
+
+func TestSubmitConfirmWhenLocalTestsFail(t *testing.T) {
+	submits := 0
+	updates := make(chan submit.Update, 1)
+	deps := submitDeps(updates, func() { submits++ })
+	deps.Tests = func(context.Context, cf.Problem, *scrape.Detail, RunOpts) (<-chan runner.Event, error) {
+		ch := make(chan runner.Event, 2)
+		ch <- runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-1", Verdict: runner.WA}}
+		ch <- runner.Event{Kind: runner.Done, Verdict: runner.WA}
+		close(ch)
+		return ch, nil
+	}
+	m := openSubmit(t, deps)
+	m, cmd := send(m, "t")
+	for cmd != nil {
+		m, cmd = step(t, m, cmd)
+	}
+	m, cmd = send(m, "s")
+	if cmd != nil || !m.confirm || !strings.Contains(plain(m), "local tests failing (WA); submit anyway? y/n") {
+		t.Fatalf("should ask first:\n%s", plain(m))
+	}
+	m, _ = send(m, "n")
+	if m.confirm || submits != 0 {
+		t.Fatal("n must cancel without submitting")
+	}
+	m, _ = send(m, "s")
+	m, cmd = send(m, "y")
+	if cmd == nil || m.confirm {
+		t.Fatal("y should submit")
+	}
+	step(t, m, cmd)
+	if submits != 1 {
+		t.Fatalf("submits=%d", submits)
+	}
+}
+
+func TestSubmitOfflineAndErrors(t *testing.T) {
+	m := openSubmit(t, submitDeps(nil, nil))
+	nm, _ := m.Update(refreshedMsg{Data{}, fmt.Errorf("x: %w", cf.ErrNetwork), 0})
+	m = nm.(Model)
+	m, cmd := send(m, "s")
+	if cmd != nil || !strings.Contains(plain(m), "offline: submitting needs a connection") {
+		t.Fatalf("offline message:\n%s", plain(m))
+	}
+	deps := submitDeps(nil, nil)
+	deps.Submit = func(context.Context, cf.Problem, string) (SubmitStart, error) {
+		return SubmitStart{}, errors.New("no Solution at /w/1/A/main.cpp")
+	}
+	m = openSubmit(t, deps)
+	m, cmd = send(m, "s")
+	m, _ = step(t, m, cmd)
+	if out := plain(m); !strings.Contains(out, "submit: no Solution at") || m.sub != nil {
+		t.Fatalf("error should show and clear state:\n%s", out)
+	}
+}
+
+func TestExternalSubmitShowsStatus(t *testing.T) {
+	updates := make(chan submit.Update, 1)
+	m := openSubmit(t, submitDeps(nil, nil))
+	nm, cmd := m.Update(ExternalSubmit{Problem: cf.Problem{ContestID: 1, Index: "A"}, Start: SubmitStart{Updates: updates}})
+	m = nm.(Model)
+	updates <- submit.Update{Text: "Testing on test 2"}
+	m, _ = stepBatch(t, m, cmd)
+	if !strings.Contains(plain(m), "Submission  Testing on test 2") {
+		t.Fatalf("external submit not shown:\n%s", plain(m))
+	}
+}
+
+func TestSubmissionFinalReloadsMarks(t *testing.T) {
+	updates := make(chan submit.Update, 1)
+	deps := submitDeps(updates, nil)
+	deps.Reload = func() (Data, error) {
+		return Data{Problems: []cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, Statuses: map[string]store.Status{"1A": store.StatusSolved}}, nil
+	}
+	m := openSubmit(t, deps)
+	m, cmd := send(m, "s")
+	m, _ = step(t, m, cmd)
+	// a final update yields a reload command; running it re-reads the cache
+	nm, cmd := m.Update(subUpdateMsg{u: submit.Update{Text: "Accepted", Final: true, Submission: cf.Submission{Verdict: "OK"}}, ch: updates})
+	m = nm.(Model)
+	if cmd == nil {
+		t.Fatal("final update should schedule a reload")
+	}
+	nm, _ = m.Update(m.reload()())
+	m, _ = send(nm.(Model), "esc")
+	if !strings.Contains(plain(m), "✓ 1A") {
+		t.Fatalf("solved mark should appear after the Submission lands:\n%s", plain(m))
 	}
 }

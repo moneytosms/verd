@@ -25,11 +25,12 @@ var ErrRunning = errors.New("verd is already running")
 const maxPath = 100
 
 type Request struct {
-	Cmd  string `json:"cmd"` // "test"
+	Cmd  string `json:"cmd"` // "test" | "submit"
 	File string `json:"file"`
 }
 
-// Message is one streamed event. Kind: header | compile | test | done | error.
+// Message is one streamed event. Kind: header | compile | test | done | submit | error.
+// A submit message carries a status line in Text; Final marks the last one.
 type Message struct {
 	Kind        string         `json:"kind"`
 	Text        string         `json:"text,omitempty"` // header line or error message
@@ -38,6 +39,7 @@ type Message struct {
 	Err         string         `json:"err,omitempty"` // compiler output on failure
 	Result      *runner.Result `json:"result,omitempty"`
 	Verdict     string         `json:"verdict,omitempty"`
+	Final       bool           `json:"final,omitempty"` // submit: the Verdict is decided
 }
 
 // FromEvent converts a runner event to its wire form.
@@ -176,7 +178,7 @@ func Call(ctx context.Context, path string, req Request, onMsg func(Message)) (d
 			return true, nil // server closed the stream
 		}
 		onMsg(m)
-		if m.Kind == "done" || m.Kind == "error" {
+		if m.Kind == "done" || m.Kind == "error" || (m.Kind == "submit" && m.Final) {
 			return true, nil
 		}
 	}

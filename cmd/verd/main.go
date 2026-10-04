@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -83,6 +84,37 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, args[1])
+	case "submit":
+		if len(args) != 2 {
+			return &exitError{2, "usage: verd submit <file>"}
+		}
+		cfg, err := config.Load(path)
+		if err != nil {
+			return err
+		}
+		if handled, err := delegateSubmit(context.Background(), out, socketPath(), args[1]); handled {
+			return err
+		}
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		sub := newSubmitter(cfg, cf.New(cf.BaseURL), s)
+		p, lang, err := absSolutionProblem(cfg, args[1])
+		if err != nil {
+			return &exitError{2, err.Error()}
+		}
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		st, err := sub.begin(ctx, p, lang)
+		if err != nil {
+			return &exitError{2, err.Error()}
+		}
+		if fi, err := os.Stderr.Stat(); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+			fmt.Fprint(os.Stderr, osc52(st.Text)) // clipboard over ssh/tmux where the terminal allows it
+		}
+		return printSubmit(out, st)
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -95,7 +127,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>)", args[0])
 }
 
 func runTUI(path string) error {
@@ -129,7 +161,16 @@ func runTUI(path string) error {
 	if bin, err := exec.LookPath("nvim"); err == nil {
 		ctrl.Bin = bin
 	}
+	sub := newSubmitter(cfg, client, s)
 	deps := tui.Deps{
+		Submit: func(ctx context.Context, p cf.Problem, lang string) (tui.SubmitStart, error) {
+			st, err := sub.begin(ctx, p, lang)
+			if err != nil {
+				return tui.SubmitStart{}, err
+			}
+			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Updates: st.Updates}, nil
+		},
+		Reload: func() (tui.Data, error) { return loadData(s, cfg.Handle) },
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
@@ -194,7 +235,10 @@ func runTUI(path string) error {
 		st, _ := s.ProblemState(contest, index)
 		return st.Mode
 	}
-	go srv.Serve(testHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }))
+	go srv.Serve(dispatch(map[string]ipc.Handler{
+		"test":   testHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
+		"submit": submitHandler(sub, func(r tui.ExternalSubmit) { prog.Send(r) }),
+	}))
 	_, err = prog.Run()
 	return err
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/submit"
 	"github.com/moneytosms/verd/internal/tui"
 )
 
@@ -73,4 +75,85 @@ func testHandler(cfg config.Config, cacheDir string, detail detailFunc, savedMod
 		}
 		return nil
 	}
+}
+
+// submitHandler serves `submit` requests: it runs the same flow as the `s` key, streams status
+// lines to the client, and attaches the Submission to the TUI so its pane and toast show it.
+func submitHandler(sub *submitter, attach func(tui.ExternalSubmit)) ipc.Handler {
+	return func(ctx context.Context, req ipc.Request, emit func(ipc.Message)) error {
+		p, lang, err := absSolutionProblem(sub.cfg, req.File)
+		if err != nil {
+			return err
+		}
+		st, err := sub.begin(ctx, p, lang)
+		if err != nil {
+			return err
+		}
+		for _, n := range st.Notes {
+			emit(ipc.Message{Kind: "submit", Text: n})
+		}
+		shown := make(chan submit.Update, 8)
+		attach(tui.ExternalSubmit{Problem: p, Start: tui.SubmitStart{Text: st.Text, Notes: st.Notes, Updates: shown}})
+		defer close(shown)
+		for u := range st.Updates {
+			emit(ipc.Message{Kind: "submit", Text: u.Text, Final: u.Final, Verdict: u.Submission.Verdict, Err: errText(u.Err)})
+			select {
+			case shown <- u:
+			default:
+			}
+		}
+		return nil
+	}
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+// dispatch routes requests by command.
+func dispatch(handlers map[string]ipc.Handler) ipc.Handler {
+	return func(ctx context.Context, req ipc.Request, emit func(ipc.Message)) error {
+		h, ok := handlers[req.Cmd]
+		if !ok {
+			return errors.New("unknown command " + req.Cmd)
+		}
+		return h(ctx, req, emit)
+	}
+}
+
+// delegateSubmit runs `verd submit` through a running TUI. handled=false: nobody listening.
+func delegateSubmit(ctx context.Context, out io.Writer, sock, file string) (handled bool, err error) {
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return true, err
+	}
+	var srvErr string
+	var final ipc.Message
+	dialed, err := ipc.Call(ctx, sock, ipc.Request{Cmd: "submit", File: abs}, func(m ipc.Message) {
+		switch m.Kind {
+		case "error":
+			srvErr = m.Text
+		case "submit":
+			fmt.Fprintln(out, m.Text)
+			if m.Final {
+				final = m
+			}
+		}
+	})
+	switch {
+	case !dialed:
+		return false, nil
+	case err != nil:
+		return true, err
+	case srvErr != "":
+		return true, &exitError{2, srvErr}
+	case final.Verdict == "OK":
+		return true, nil
+	case !final.Final:
+		return true, &exitError{2, "tracking ended without a Verdict"}
+	}
+	return true, &exitError{1, ""}
 }

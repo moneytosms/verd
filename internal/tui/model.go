@@ -40,6 +40,10 @@ type Deps struct {
 	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
 	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error)
+	// Reload re-reads the cache (no network), e.g. after a Submission lands.
+	Reload func() (Data, error)
+	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
+	Submit func(ctx context.Context, p cf.Problem, lang string) (SubmitStart, error)
 	// Watch reports saved files in the Problem's directory (debounced) until ctx is done.
 	Watch func(ctx context.Context, p cf.Problem) (<-chan string, error)
 	// SolutionPath is where the Problem's Solution in lang lives.
@@ -108,6 +112,10 @@ type Model struct {
 
 	// Problem view
 	pstate      ProblemState
+	sub         *subState
+	toast       *toast
+	toastSeq    int
+	confirm     bool         // asking whether to submit despite failing local tests
 	pending     *ExternalRun // run waiting for its Problem's detail to load
 	watchCancel context.CancelFunc
 	run         *testRun
@@ -303,6 +311,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.refresh(next)
 		}
 		m.syncing = false
+	case submitStartedMsg, ExternalSubmit, subUpdateMsg, toastClearMsg, reloadMsg:
+		nm, cmd, _ := m.onSubmitMsg(msg)
+		return nm, cmd
 	case testEventMsg:
 		return m.onTestEvent(msg)
 	case ExternalRun:
@@ -376,6 +387,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 			}
+			return m, nil
+		}
+		if msg.String() == "x" && m.toast != nil && m.input == nil {
+			m.toast = nil
 			return m, nil
 		}
 		if msg.String() == "?" && m.input == nil {
@@ -474,6 +489,17 @@ func (m Model) closeProblem() Model {
 }
 
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.confirm {
+		switch msg.String() {
+		case "y", "enter":
+			return m.startSubmit()
+		case "n", "esc":
+			m.confirm = false
+		case "ctrl+c":
+			return m, tea.Quit
+		}
+		return m, nil
+	}
 	if r := m.run; r != nil && r.diff {
 		switch msg.String() {
 		case "esc", "d":
@@ -516,6 +542,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.errMsg = "saving mode: " + err.Error()
 			}
 		}
+	case "s":
+		return m.trySubmit()
 	case "l":
 		if len(m.deps.Langs) == 0 || m.detail == nil {
 			break
@@ -576,6 +604,7 @@ func (m Model) content() []string {
 			lim += "   [interactive: local run unsupported]"
 		}
 		lines = append(lines, lim, "")
+		lines = append(lines, m.submissionLines()...)
 		lines = append(lines, m.testsPanel()...)
 		lines = append(lines, "")
 		lines = append(lines, m.body...)
@@ -697,7 +726,11 @@ func (m Model) View() tea.View {
 		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
 		footer = "1-4 tabs  ? help  q quit"
 	}
-	footer = st.Dim.Render(footer)
+	if m.confirm {
+		footer = st.Warn.Render(m.confirmText())
+	} else {
+		footer = st.Dim.Render(footer)
+	}
 	if m.Notice != "" {
 		footer += "  " + st.Warn.Render("["+clean(m.Notice)+"]")
 	}
@@ -712,6 +745,9 @@ func (m Model) View() tea.View {
 	case m.offline:
 		footer += "  " + st.Warn.Render(fmt.Sprintf("[offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt))))
 	}
+	if t := m.viewToast(); t != "" {
+		b.WriteString("\n" + t)
+	}
 	b.WriteString("\n" + footer)
 	v := tea.NewView(b.String())
 	v.AltScreen = true
@@ -723,7 +759,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -761,7 +797,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  a add test  l lang  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  s submit  a add test  l lang  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {
