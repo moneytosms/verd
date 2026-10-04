@@ -389,3 +389,21 @@ func (s *Store) SaveProblemState(contest int, idx string, st ProblemState, at ti
 		contest, idx, st.Lang, st.Mode, at.Unix())
 	return err
 }
+
+// AllSubmissions returns every stored Submission, oldest first.
+func (s *Store) AllSubmissions() ([]cf.Submission, error) {
+	rows, err := s.db.Query("SELECT id, contest_id, idx, language, verdict, passed_tests, time_ms, memory_bytes, created_at FROM submissions ORDER BY id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []cf.Submission
+	for rows.Next() {
+		var x cf.Submission
+		if err := rows.Scan(&x.ID, &x.Problem.ContestID, &x.Problem.Index, &x.Language, &x.Verdict, &x.PassedTests, &x.TimeMS, &x.MemoryBytes, &x.Created); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	return out, rows.Err()
+}

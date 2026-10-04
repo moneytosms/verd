@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/submit"
 	"image/color"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
@@ -1027,5 +1029,91 @@ func TestSubmissionFinalReloadsMarks(t *testing.T) {
 	m, _ = send(nm.(Model), "esc")
 	if !strings.Contains(plain(m), "✓ 1A") {
 		t.Fatalf("solved mark should appear after the Submission lands:\n%s", plain(m))
+	}
+}
+
+func statsFixture() stats.Stats {
+	return stats.Stats{
+		Solved: 312, Attempted: 2, Submissions: 890, ACRate: 0.61,
+		Rating: 1523, MaxRating: 1601, Rank: "specialist",
+		RatingHistory:  []cf.RatingChange{{NewRating: 1000}, {NewRating: 1200}, {NewRating: 1100}, {NewRating: 1601}, {NewRating: 1523}},
+		SolvedByRating: map[int]int{800: 40, 900: 30, 1500: 5},
+		SolvedUnrated:  3,
+		Band:           [2]int{1323, 1823},
+		Strengths:      []stats.TagStat{{Tag: "dp", Coverage: 0.82, SolvedInBand: 41, InBand: 50}},
+		Weaknesses:     []stats.TagStat{{Tag: "geometry", Coverage: 0.1, SolvedInBand: 2, InBand: 20}},
+		Tags:           []stats.TagStat{{Tag: "dp", Solved: 41, AvgRating: 1400, FirstTryRate: 0.7}, {Tag: "math", Solved: 30, FirstTryRate: 0.5}},
+		Streak:         3, MaxStreak: 12,
+		Verdicts: map[string]int{"OK": 540, "WRONG_ANSWER": 200, "TIME_LIMIT_EXCEEDED": 12},
+		Unsolved: []stats.Attempt{{ContestID: 1900, Index: "C", Name: "Hard One", Attempts: 4}, {ContestID: 1800, Index: "B", Name: "Other", Attempts: 1}},
+	}
+}
+
+func TestStatsTab(t *testing.T) {
+	deps := Deps{Load: func(cf.Problem, bool) (*scrape.Detail, error) { return nil, cf.ErrChallenge }}
+	m := New(nil, "", deps).WithData(Data{Handle: "h", Stats: statsFixture()})
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 90})
+	m, _ = send(nm.(Model), "3")
+	out := plain(m)
+	for _, want := range []string{
+		"Solved 312", "Attempted 2", "AC 61%", "Rating 1523 (max 1601)  specialist",
+		"1601", "1000", // chart axis labels
+		"Solved by rating", "800", "3500", "+ 3 solved without a rating",
+		"Strengths and weaknesses (rating 1323-1823)", "+ dp 82% (41/50)", "- geometry 10% (2/20)",
+		"dp", "first-try", "Streak: 3 day(s), best 12", "AC 540  WA 200  TLE 12",
+		"1900C", "Hard One", "4 attempt(s)",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("stats missing %q:\n%s", want, out)
+		}
+	}
+	if !strings.ContainsAny(out, "⠀⠁⠂⠃⠄⠈⠉⠊⠐⠑⠒⠔⠠⠢⠤⡀⡠⡰⡔⢀⢠⣀") {
+		t.Errorf("rating chart not drawn:\n%s", out)
+	}
+	// select the second attempt and open it: opens that Problem, esc returns to Stats
+	m, _ = send(m, "n")
+	m, cmd := send(m, "enter")
+	if m.open == nil || m.open.ContestID != 1800 || m.open.Index != "B" || cmd == nil {
+		t.Fatalf("enter should open the selected attempt: %+v", m.open)
+	}
+	m, _ = send(m, "esc")
+	if m.tab != 2 || !strings.Contains(plain(m), "Solved 312") {
+		t.Fatal("esc should return to the Stats tab")
+	}
+}
+
+func TestStatsEmptyAndNarrow(t *testing.T) {
+	m := New(nil, "", Deps{}).WithData(Data{Stats: stats.Stats{}})
+	m, _ = send(m, "3")
+	if out := plain(m); !strings.Contains(out, "No Submissions cached yet") || !strings.Contains(out, "ctrl+r") {
+		t.Fatalf("empty state:\n%s", out)
+	}
+	// narrow pane (40 cols): no line wider than the window
+	m = New(nil, "", Deps{}).WithData(Data{Stats: statsFixture()})
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 60})
+	m = nm.(Model)
+	m, _ = send(m, "3")
+	for _, l := range strings.Split(plain(m), "\n") {
+		if n := utf8.RuneCountInString(l); n > 40 {
+			t.Errorf("line wider than 40 cols (%d): %q", n, l)
+		}
+	}
+}
+
+func TestStatsScrollsAndHelp(t *testing.T) {
+	m := New(nil, "", Deps{}).WithData(Data{Stats: statsFixture()})
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 12})
+	m = nm.(Model)
+	m, _ = send(m, "3")
+	first := plain(m)
+	for range 5 {
+		m, _ = send(m, "j")
+	}
+	if plain(m) == first || m.statsScroll != 5 {
+		t.Fatal("j should scroll the Stats view")
+	}
+	m, _ = send(m, "?")
+	if out := plain(m); !strings.Contains(out, "Keys: Stats") || !strings.Contains(out, "select an attempted Problem") {
+		t.Fatalf("help:\n%s", out)
 	}
 }

@@ -11,9 +11,11 @@ import (
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
+	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/theme"
 )
@@ -75,18 +77,22 @@ type Data struct {
 	Problems []cf.Problem
 	Contests []cf.Contest
 	Statuses map[string]store.Status
+	Stats    stats.Stats
 	SyncedAt time.Time // zero = never fully synced
 }
 
 type Model struct {
-	theme    theme.Theme
-	dark     bool // terminal background; dark until detected otherwise
-	help     bool
-	handle   string
-	rating   int
-	syncing  bool
-	offline  bool
-	syncedAt time.Time
+	stats       stats.Stats
+	statsScroll int
+	statsSel    int
+	theme       theme.Theme
+	dark        bool // terminal background; dark until detected otherwise
+	help        bool
+	handle      string
+	rating      int
+	syncing     bool
+	offline     bool
+	syncedAt    time.Time
 
 	Problems []cf.Problem
 	Notice   string // transient note shown in the footer
@@ -149,7 +155,8 @@ func (m Model) styles() theme.Styles { return m.theme.Styles(m.dark) }
 // WithData replaces everything rendered from the cache, keeping view state.
 func (m Model) WithData(d Data) Model {
 	m.handle, m.rating, m.syncedAt = d.Handle, d.Rating, d.SyncedAt
-	m.Problems, m.status = d.Problems, d.Statuses
+	m.Problems, m.status, m.stats = d.Problems, d.Statuses, d.Stats
+	m.statsSel = min(m.statsSel, max(0, len(d.Stats.Unsolved)-1))
 	m = m.WithContests(d.Contests)
 	return m.refilter()
 }
@@ -422,6 +429,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateList(msg)
 		case 1:
 			return m.updateContests(msg)
+		case 2:
+			return m.updateStats(msg)
 		}
 		if k := msg.String(); k == "q" || k == "ctrl+c" {
 			return m, tea.Quit
@@ -722,6 +731,8 @@ func (m Model) View() tea.View {
 		footer = m.viewList(&b)
 	case m.tab == 1:
 		footer = m.viewContests(&b)
+	case m.tab == 2:
+		footer = m.viewStats(&b)
 	default:
 		b.WriteString("  " + tabs[m.tab] + ": coming soon\n")
 		footer = "1-4 tabs  ? help  q quit"
@@ -731,25 +742,35 @@ func (m Model) View() tea.View {
 	} else {
 		footer = st.Dim.Render(footer)
 	}
+	// Status badges get their own line so the key hints can never push them off the pane.
+	var badges []string
 	if m.Notice != "" {
-		footer += "  " + st.Warn.Render("["+clean(m.Notice)+"]")
+		badges = append(badges, st.Warn.Render("["+clean(m.Notice)+"]"))
 	}
 	if m.editorOpen {
-		footer += "  " + st.Dim.Render("[editor open]")
+		badges = append(badges, st.Dim.Render("[editor open]"))
 	}
 	switch {
 	case m.syncing:
-		footer += "  " + st.Warn.Render("[syncing...]")
+		badges = append(badges, st.Warn.Render("[syncing...]"))
 	case m.offline && m.syncedAt.IsZero():
-		footer += "  " + st.Warn.Render("[offline, never synced]")
+		badges = append(badges, st.Warn.Render("[offline, never synced]"))
 	case m.offline:
-		footer += "  " + st.Warn.Render(fmt.Sprintf("[offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt))))
+		badges = append(badges, st.Warn.Render(fmt.Sprintf("[offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt)))))
+	}
+	if len(badges) > 0 {
+		footer += "\n" + strings.Join(badges, " ")
 	}
 	if t := m.viewToast(); t != "" {
 		b.WriteString("\n" + t)
 	}
 	b.WriteString("\n" + footer)
-	v := tea.NewView(b.String())
+	// Never let a line overflow the pane (styles are preserved by the ANSI-aware truncation).
+	lines := strings.Split(b.String(), "\n")
+	for i, l := range lines {
+		lines[i] = xansi.Truncate(l, m.width, "…")
+	}
+	v := tea.NewView(strings.Join(lines, "\n"))
 	v.AltScreen = true
 	return v
 }
@@ -768,6 +789,9 @@ func (m Model) keys() (screen string, keys [][2]string) {
 		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"esc", "back to contests"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.tab == 1:
 		return "Contests", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "list Problems"}}, global...)
+	}
+	if m.tab == 2 {
+		return "Stats", append([][2]string{{"j/k, pgup/pgdn", "scroll"}, {"n/p", "select an attempted Problem"}, {"enter", "open it"}}, global...)
 	}
 	return tabs[m.tab], global
 }

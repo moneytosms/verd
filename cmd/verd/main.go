@@ -22,6 +22,7 @@ import (
 	"github.com/moneytosms/verd/internal/refresh"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/tui"
 	"github.com/moneytosms/verd/internal/watch"
@@ -275,6 +276,11 @@ func loadData(s *store.Store, handle string) (tui.Data, error) {
 	if len(rs) > 0 {
 		d.Rating = rs[len(rs)-1].NewRating
 	}
+	subs, err := s.AllSubmissions()
+	if err != nil {
+		return d, err
+	}
+	d.Stats = stats.Compute(stats.Input{Problems: d.Problems, Submissions: subs, Rating: rs, Now: time.Now()})
 	return d, nil
 }
 

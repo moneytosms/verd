@@ -72,3 +72,19 @@ func TestProblemStatePersistsAcrossReopen(t *testing.T) {
 		t.Fatal("state is per Problem")
 	}
 }
+
+func TestAllSubmissionsRoundTrip(t *testing.T) {
+	s, _ := Open(":memory:")
+	defer s.Close()
+	a := cf.Submission{ID: 2, Created: 20, Language: "C++", Verdict: "OK", PassedTests: 5, TimeMS: 15, MemoryBytes: 1 << 20}
+	a.Problem.ContestID, a.Problem.Index = 1900, "A"
+	b := a
+	b.ID, b.Verdict = 1, "WRONG_ANSWER"
+	if err := s.SaveSubmissions([]cf.Submission{a, b}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.AllSubmissions()
+	if err != nil || len(got) != 2 || got[0].ID != 1 || !reflect.DeepEqual(got[1], a) {
+		t.Fatalf("%+v %v", got, err)
+	}
+}
