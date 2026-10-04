@@ -45,7 +45,17 @@ func main() {
 	}
 }
 
+// Set by goreleaser via -ldflags; "dev" for go install / go build.
+var (
+	version = "dev"
+	commit  = "none"
+)
+
 func run(args []string, out io.Writer) error {
+	if len(args) == 1 && (args[0] == "--version" || args[0] == "version") {
+		fmt.Fprintf(out, "verd %s (%s)\n", version, commit)
+		return nil
+	}
 	path := filepath.Join(config.Dir(), "config.toml")
 	if len(args) == 0 {
 		return runTUI(path)

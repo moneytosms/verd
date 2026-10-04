@@ -1,0 +1,17 @@
+version: 2
+project_name: verd
+builds:
+  - main: ./cmd/verd
+    binary: verd
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
+archives:
+  - formats: [tar.gz]
+    name_template: "verd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+checksum:
+  name_template: checksums.txt
+changelog:
+  use: github

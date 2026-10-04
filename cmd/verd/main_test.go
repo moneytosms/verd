@@ -137,3 +137,10 @@ func TestAddCustomAndLangHelpers(t *testing.T) {
 		t.Fatalf("python template not used: %q", b)
 	}
 }
+
+func TestVersion(t *testing.T) {
+	var out bytes.Buffer
+	if err := run([]string{"--version"}, &out); err != nil || !strings.HasPrefix(out.String(), "verd ") || !strings.Contains(out.String(), "(") {
+		t.Fatalf("%v %q", err, out.String())
+	}
+}
