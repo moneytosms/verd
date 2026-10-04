@@ -43,18 +43,42 @@ func (c *Controller) Open(path string, line int) (*exec.Cmd, error) {
 		// nvim does not answer (hung or mid-exit): fall through and open a fresh pane
 		c.Mux.Close(*c.pane)
 	}
+	return nil, c.openPane(filepath.Dir(path), fmt.Sprintf("+%d", line), path)
+}
+
+// openPane starts nvim in a new split with its --listen socket. The caller holds c.mu.
+func (c *Controller) openPane(cwd string, args ...string) error {
 	if err := os.MkdirAll(c.SockDir, 0o700); err != nil {
-		return nil, err
+		return err
 	}
 	sock := filepath.Join(c.SockDir, fmt.Sprintf("nvim-%d.sock", os.Getpid()))
 	os.Remove(sock) // stale socket from a crashed editor
-	argv := []string{c.Bin, "--listen", sock, fmt.Sprintf("+%d", line), path}
-	p, err := c.Mux.OpenEditor(filepath.Dir(path), argv)
+	p, err := c.Mux.OpenEditor(cwd, append([]string{c.Bin, "--listen", sock}, args...))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	c.pane, c.sock = &p, sock
-	return nil, nil
+	return nil
+}
+
+// OpenPair opens two files side by side (a Custom Test's .in and .ans), with the same
+// pane / suspend behavior as Open.
+func (c *Controller) OpenPair(left, right string) (*exec.Cmd, error) {
+	if c.Mux == nil {
+		cmd := exec.Command(c.Bin, "-O", left, right)
+		cmd.Dir = filepath.Dir(left)
+		return cmd, nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.pane != nil && c.Mux.Alive(*c.pane) {
+		if err := c.remote(fmt.Sprintf("execute('edit ' . fnameescape('%s') . ' | vsplit ' . fnameescape('%s'))", vimQuote(left), vimQuote(right))); err == nil {
+			c.Mux.Focus(*c.pane)
+			return nil, nil
+		}
+		c.Mux.Close(*c.pane)
+	}
+	return nil, c.openPane(filepath.Dir(left), "-O", left, right)
 }
 
 // Alive reports whether a split-pane editor is still open.
@@ -67,7 +91,12 @@ func (c *Controller) Alive() bool {
 // remoteEdit tells the running nvim to edit path at line. :edit (not --remote +N, which
 // nvim 0.12 mangles) via an expression, so the editor's current mode does not matter.
 func (c *Controller) remoteEdit(path string, line int) error {
-	expr := fmt.Sprintf("execute('edit +%d ' . fnameescape('%s'))", line, strings.ReplaceAll(path, "'", "''"))
+	return c.remote(fmt.Sprintf("execute('edit +%d ' . fnameescape('%s'))", line, vimQuote(path)))
+}
+
+func vimQuote(s string) string { return strings.ReplaceAll(s, "'", "''") }
+
+func (c *Controller) remote(expr string) error {
 	out, err := exec.Command(c.Bin, "--server", c.sock, "--remote-expr", expr).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("nvim --remote-expr: %w: %s", err, strings.TrimSpace(string(out)))

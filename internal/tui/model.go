@@ -28,7 +28,14 @@ type Deps struct {
 	Now     func() time.Time // defaults to time.Now
 	// Edit creates the Problem's Solution if needed and opens it in the editor.
 	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
-	Edit func(p cf.Problem) (*exec.Cmd, error)
+	Edit func(p cf.Problem, lang string) (*exec.Cmd, error)
+	// AddCustom creates the next Custom Test files and opens them in the editor (like Edit).
+	AddCustom func(p cf.Problem) (*exec.Cmd, error)
+	// Ensure creates the Problem's Solution in lang from its Template if absent.
+	Ensure func(p cf.Problem, lang string) error
+	// Langs are the configured language keys (sorted); DefaultLang is used until the user picks one.
+	Langs       []string
+	DefaultLang string
 	// EditorAlive reports whether the split-pane editor is still open; polled every 500 ms.
 	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
@@ -43,10 +50,13 @@ type Deps struct {
 }
 
 // ProblemState is the user's per-Problem choices; empty fields mean "use the default".
-type ProblemState struct{ Mode string }
+type ProblemState struct{ Lang, Mode string }
 
 // RunOpts are the per-run choices handed to Deps.Tests.
-type RunOpts struct{ Mode runner.Mode }
+type RunOpts struct {
+	Lang string
+	Mode runner.Mode
+}
 
 // Data is everything the UI renders from the cache.
 type Data struct {
@@ -423,24 +433,36 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.errMsg = "saving mode: " + err.Error()
 			}
 		}
+	case "l":
+		if len(m.deps.Langs) == 0 || m.detail == nil {
+			break
+		}
+		lang := nextOf(m.deps.Langs, m.lang())
+		if m.deps.Ensure != nil {
+			if err := m.deps.Ensure(*m.open, lang); err != nil {
+				m.errMsg = "language " + lang + ": " + err.Error()
+				break
+			}
+		}
+		m.pstate.Lang = lang
+		m.errMsg = ""
+		if m.deps.SaveState != nil {
+			if err := m.deps.SaveState(*m.open, m.pstate); err != nil {
+				m.errMsg = "saving language: " + err.Error()
+			}
+		}
 	case "e":
 		if m.deps.Edit == nil {
 			break
 		}
-		cmd, err := m.deps.Edit(*m.open)
-		if err != nil {
-			m.errMsg = "edit: " + err.Error()
+		cmd, err := m.deps.Edit(*m.open, m.lang())
+		return m.afterOpen(cmd, err, "edit")
+	case "a":
+		if m.deps.AddCustom == nil {
 			break
 		}
-		m.errMsg = ""
-		if cmd == nil { // opened in a split pane: poll until it closes
-			if m.editorOpen || m.deps.EditorAlive == nil {
-				return m, nil
-			}
-			m.editorOpen = true
-			return m, editorTick()
-		}
-		return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
+		cmd, err := m.deps.AddCustom(*m.open)
+		return m.afterOpen(cmd, err, "add test")
 	case "o":
 		if open, p := m.deps.OpenURL, *m.open; open != nil {
 			return m, func() tea.Msg {
@@ -486,13 +508,44 @@ func (m Model) content() []string {
 
 var modes = []string{"tokens", "exact", "float", "none"}
 
-func nextMode(cur string) string {
-	for i, x := range modes {
+func nextMode(cur string) string { return nextOf(modes, cur) }
+
+// nextOf returns the entry after cur, wrapping; the first if cur is not in the list.
+func nextOf(list []string, cur string) string {
+	for i, x := range list {
 		if x == cur {
-			return modes[(i+1)%len(modes)]
+			return list[(i+1)%len(list)]
 		}
 	}
-	return modes[0]
+	return list[0]
+}
+
+// lang is the language in effect: the user's choice if still configured, else the default.
+func (m Model) lang() string {
+	for _, l := range m.deps.Langs {
+		if l == m.pstate.Lang {
+			return l
+		}
+	}
+	return m.deps.DefaultLang
+}
+
+// afterOpen handles the result of opening files in the editor: an error message, a split pane
+// (nil cmd: poll until it closes), or a foreground editor to suspend for.
+func (m Model) afterOpen(cmd *exec.Cmd, err error, what string) (tea.Model, tea.Cmd) {
+	if err != nil {
+		m.errMsg = what + ": " + err.Error()
+		return m, nil
+	}
+	m.errMsg = ""
+	if cmd == nil {
+		if m.editorOpen || m.deps.EditorAlive == nil {
+			return m, nil
+		}
+		m.editorOpen = true
+		return m, editorTick()
+	}
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
 }
 
 // mode is the Comparison Mode in effect: the user's choice, else the Problem's parsed hint.
@@ -587,7 +640,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -625,7 +678,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  a add test  l lang  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {

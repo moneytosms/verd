@@ -50,7 +50,7 @@ func (m Model) startTests() (Model, tea.Cmd) {
 		m.run.cancel()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	ch, err := m.deps.Tests(ctx, *m.open, m.detail, RunOpts{Mode: runner.Mode(m.mode())})
+	ch, err := m.deps.Tests(ctx, *m.open, m.detail, RunOpts{Lang: m.lang(), Mode: runner.Mode(m.mode())})
 	if err != nil {
 		cancel()
 		m.errMsg = "tests: " + err.Error()
@@ -127,14 +127,22 @@ func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	return m, nil, false
 }
 
+// tag is "lang, mode" (just the mode when no language is configured).
+func (m Model) tag() string {
+	if l := m.lang(); l != "" {
+		return l + ", " + m.mode()
+	}
+	return m.mode()
+}
+
 // testsPanel renders the Tests panel lines.
 func (m Model) testsPanel() []string {
 	st := m.styles()
 	r := m.run
 	if r == nil {
-		return []string{st.Dim.Render(fmt.Sprintf("Tests [%s]: press t to run (samples and custom tests), c cycles mode", m.mode()))}
+		return []string{st.Dim.Render(fmt.Sprintf("Tests [%s]: press t to run (samples and custom tests), c mode, l language", m.tag()))}
 	}
-	head := fmt.Sprintf("Tests [%s]", m.mode())
+	head := fmt.Sprintf("Tests [%s]", m.tag())
 	switch {
 	case r.running:
 		head += "  running..."

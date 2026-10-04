@@ -22,6 +22,14 @@ func TestSuspendWithoutMux(t *testing.T) {
 	}
 }
 
+func TestOpenPairSuspend(t *testing.T) {
+	c := &Controller{Bin: "nvim"}
+	cmd, err := c.OpenPair("/w/1/A/tests/custom-1.in", "/w/1/A/tests/custom-1.ans")
+	if err != nil || strings.Join(cmd.Args, " ") != "nvim -O /w/1/A/tests/custom-1.in /w/1/A/tests/custom-1.ans" || cmd.Dir != "/w/1/A/tests" {
+		t.Fatalf("%v %v", cmd, err)
+	}
+}
+
 func waitFor(cond func() bool) bool {
 	for i := 0; i < 80; i++ {
 		if cond() {
@@ -93,5 +101,22 @@ func TestSecondOpenReusesPaneTmux(t *testing.T) {
 	// and the next Open starts a fresh pane
 	if cmd, err := c.Open(a, 1); err != nil || cmd != nil || !c.Alive() || panes() != 2 {
 		t.Fatalf("reopen after close: %v %v alive=%v panes=%d", cmd, err, c.Alive(), panes())
+	}
+
+	// a Custom Test's two files open side by side in the same pane (wait for the reopened nvim)
+	if !waitFor(func() bool { return remote("1") == "1" }) {
+		t.Fatal("reopened nvim never answered")
+	}
+	in, ans := filepath.Join(dir, "custom-1.in"), filepath.Join(dir, "custom-1.ans")
+	os.WriteFile(in, nil, 0o644)
+	os.WriteFile(ans, nil, 0o644)
+	if cmd, err := c.OpenPair(in, ans); err != nil || cmd != nil {
+		t.Fatalf("OpenPair: %v %v", cmd, err)
+	}
+	if panes() != 2 {
+		t.Fatalf("OpenPair must reuse the pane, got %d", panes())
+	}
+	if got := remote("winnr('$') . ':' . expand('%:t')"); got != "2:custom-1.ans" {
+		t.Fatalf("want 2 windows with .ans focused after vsplit, got %q", got)
 	}
 }

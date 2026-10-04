@@ -120,25 +120,30 @@ func runTUI(path string) error {
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
-		OpenURL:     openURL,
-		Edit:        func(p cf.Problem) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p) },
+		OpenURL:   openURL,
+		Edit:      func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
+		AddCustom: func(p cf.Problem) (*exec.Cmd, error) { return addCustom(cfg, ctrl, p) },
+		Ensure: func(p cf.Problem, lang string) error {
+			_, _, err := ensureSolution(cfg, p, lang)
+			return err
+		},
+		Langs:       langKeys(cfg),
+		DefaultLang: cfg.DefaultLang,
 		EditorAlive: ctrl.Alive,
 		LoadState: func(p cf.Problem) tui.ProblemState {
 			st, _ := s.ProblemState(p.ContestID, p.Index)
-			return tui.ProblemState{Mode: st.Mode}
+			return tui.ProblemState{Lang: st.Lang, Mode: st.Mode}
 		},
 		SaveState: func(p cf.Problem, st tui.ProblemState) error {
 			cur, _ := s.ProblemState(p.ContestID, p.Index)
-			cur.Mode = st.Mode
+			cur.Lang, cur.Mode = st.Lang, st.Mode
 			return s.SaveProblemState(p.ContestID, p.Index, cur, time.Now())
 		},
 		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan runner.Event, error) {
-			l, ok := cfg.Lang[cfg.DefaultLang]
-			if !ok {
-				return nil, fmt.Errorf("default_lang %q is not configured", cfg.DefaultLang)
+			ref, err := solutionRef(cfg, p, o.Lang)
+			if err != nil {
+				return nil, err
 			}
-			ws := workspace.New(cfg.Workspace)
-			ref := workspace.Ref{Contest: p.ContestID, Index: p.Index, Lang: cfg.DefaultLang, Path: filepath.Join(ws.Dir(p.ContestID, p.Index), "main."+l.Ext)}
 			spec, err := buildSpec(cfg, config.CacheDir(), ref, d, o.Mode)
 			if err != nil {
 				return nil, fmt.Errorf("%w (press e to create one)", err)
@@ -199,26 +204,4 @@ func openURL(url string) error {
 		return exec.Command("open", url).Start()
 	}
 	return exec.Command("xdg-open", url).Start()
-}
-
-// editOpen creates the Solution from the user's Template if absent and opens it in Neovim:
-// in a split pane (nil command) or, without a multiplexer, as a foreground command to suspend for.
-func editOpen(cfg config.Config, ctrl *editor.Controller, p cf.Problem) (*exec.Cmd, error) {
-	if _, err := exec.LookPath(ctrl.Bin); err != nil {
-		return nil, fmt.Errorf("nvim not found in PATH")
-	}
-	l, ok := cfg.Lang[cfg.DefaultLang]
-	if !ok {
-		return nil, fmt.Errorf("default_lang %q is not configured", cfg.DefaultLang)
-	}
-	tmpl, err := workspace.LoadTemplate(filepath.Join(config.Dir(), "templates"), cfg.DefaultLang, l)
-	if err != nil {
-		return nil, err
-	}
-	vars := workspace.NewVars(p.ContestID, p.Index, p.Name, cfg.Handle, time.Now())
-	path, line, _, err := workspace.New(cfg.Workspace).Ensure(p.ContestID, p.Index, cfg.DefaultLang, l, tmpl, vars)
-	if err != nil {
-		return nil, err
-	}
-	return ctrl.Open(path, line)
 }

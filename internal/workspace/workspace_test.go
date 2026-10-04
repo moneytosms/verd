@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/moneytosms/verd/internal/config"
@@ -65,5 +66,39 @@ func TestSamplesAndTests(t *testing.T) {
 	}
 	if ts, err := w.Tests(9, "Z"); err != nil || ts != nil {
 		t.Fatal("missing tests dir is empty, not an error")
+	}
+}
+
+func TestNextCustomSkipsExisting(t *testing.T) {
+	w := Workspace{Root: t.TempDir()}
+	n, in, ans, err := w.NextCustom(1, "A")
+	if err != nil || n != 1 || filepath.Base(in) != "custom-1.in" || filepath.Base(ans) != "custom-1.ans" {
+		t.Fatalf("%d %s %s %v", n, in, ans, err)
+	}
+	for _, p := range []string{in, ans} {
+		if st, err := os.Stat(p); err != nil || st.Size() != 0 {
+			t.Fatalf("%s should exist empty: %v", p, err)
+		}
+	}
+	os.WriteFile(in, []byte("keep"), 0o644)
+	dir := filepath.Dir(in)
+	os.WriteFile(filepath.Join(dir, "custom-7.in"), nil, 0o644) // a lone .in still counts
+	n, in2, _, err := w.NextCustom(1, "A")
+	if err != nil || n != 8 {
+		t.Fatalf("should skip past 7: %d %v", n, err)
+	}
+	if b, _ := os.ReadFile(in); string(b) != "keep" {
+		t.Fatal("existing custom test touched")
+	}
+	_ = in2
+	// created pairs are picked up by Tests, after the samples
+	w.WriteSamples(1, "A", []scrape.Sample{{Input: "1\n", Output: "1\n"}})
+	ts, _ := w.Tests(1, "A")
+	var names []string
+	for _, x := range ts {
+		names = append(names, x.Name)
+	}
+	if strings.Join(names, ",") != "sample-1,custom-1,custom-8" {
+		t.Fatalf("custom tests must run with samples: %v", names)
 	}
 }

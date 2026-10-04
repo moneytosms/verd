@@ -69,7 +69,7 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 	cfg.Workspace, cfg.Handle = t.TempDir(), "tourist"
 	p := cf.Problem{ContestID: 1900, Index: "A", Name: "Cover in Water"}
 	ctrl := &editor.Controller{Bin: "nvim"}
-	cmd, err := editOpen(cfg, ctrl, p)
+	cmd, err := editOpen(cfg, ctrl, p, "cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 		t.Fatalf("solution %q", b)
 	}
 	os.WriteFile(path, []byte("my work"), 0o644)
-	cmd, err = editOpen(cfg, ctrl, p)
+	cmd, err = editOpen(cfg, ctrl, p, "cpp")
 	if err != nil || cmd.Args[1] != "+1" {
 		t.Fatalf("existing Solution: %v %v", cmd, err)
 	}
@@ -89,7 +89,51 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 		t.Fatal("overwrote existing Solution")
 	}
 	t.Setenv("PATH", t.TempDir())
-	if _, err := editOpen(cfg, ctrl, p); err == nil || !strings.Contains(err.Error(), "nvim not found") {
+	if _, err := editOpen(cfg, ctrl, p, "cpp"); err == nil || !strings.Contains(err.Error(), "nvim not found") {
 		t.Fatalf("missing nvim: %v", err)
+	}
+}
+
+func TestAddCustomAndLangHelpers(t *testing.T) {
+	bin := t.TempDir()
+	os.WriteFile(filepath.Join(bin, "nvim"), []byte("#!/bin/sh\n"), 0o755)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Default()
+	cfg.Workspace = t.TempDir()
+	p := cf.Problem{ContestID: 5, Index: "C"}
+	ctrl := &editor.Controller{Bin: "nvim"}
+
+	cmd, err := addCustom(cfg, ctrl, p)
+	if err != nil || len(cmd.Args) != 4 || cmd.Args[1] != "-O" || filepath.Base(cmd.Args[2]) != "custom-1.in" || filepath.Base(cmd.Args[3]) != "custom-1.ans" {
+		t.Fatalf("%v %v", cmd, err)
+	}
+	cmd, _ = addCustom(cfg, ctrl, p)
+	if filepath.Base(cmd.Args[2]) != "custom-2.in" {
+		t.Fatalf("second add must not reuse custom-1: %v", cmd.Args)
+	}
+
+	if got := strings.Join(langKeys(cfg), ","); got != "c,cpp,python" {
+		t.Fatalf("langs %s", got)
+	}
+	ref, err := solutionRef(cfg, p, "python")
+	if err != nil || filepath.Base(ref.Path) != "main.py" || ref.Lang != "python" {
+		t.Fatalf("%+v %v", ref, err)
+	}
+	if _, err := solutionRef(cfg, p, "rust"); err == nil {
+		t.Fatal("unknown language must error")
+	}
+	// switching language creates that Solution; the other language's file is untouched
+	cppPath, _, _ := ensureSolution(cfg, p, "cpp")
+	os.WriteFile(cppPath, []byte("cpp work"), 0o644)
+	pyPath, _, err := ensureSolution(cfg, p, "python")
+	if err != nil || filepath.Base(pyPath) != "main.py" {
+		t.Fatalf("%s %v", pyPath, err)
+	}
+	if b, _ := os.ReadFile(cppPath); string(b) != "cpp work" {
+		t.Fatal("cpp Solution touched")
+	}
+	if b, _ := os.ReadFile(pyPath); !strings.Contains(string(b), "def main") {
+		t.Fatalf("python template not used: %q", b)
 	}
 }

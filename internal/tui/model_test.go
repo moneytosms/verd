@@ -407,7 +407,7 @@ func TestEditKey(t *testing.T) {
 		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
 			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
 		},
-		Edit: func(p cf.Problem) (*exec.Cmd, error) { got = p; return exec.Command("true"), nil },
+		Edit: func(p cf.Problem, lang string) (*exec.Cmd, error) { got = p; return exec.Command("true"), nil },
 	}
 	m, _ := send(New([]cf.Problem{{ContestID: 7, Index: "C", Name: "N"}}, "", deps), "enter")
 	m, cmd := send(m, "e")
@@ -420,7 +420,7 @@ func TestEditKey(t *testing.T) {
 		t.Fatal("editor error not shown")
 	}
 	// Edit failing (e.g. nvim missing) shows a message and runs nothing
-	deps.Edit = func(cf.Problem) (*exec.Cmd, error) { return nil, errors.New("nvim not found in PATH") }
+	deps.Edit = func(cf.Problem, string) (*exec.Cmd, error) { return nil, errors.New("nvim not found in PATH") }
 	m, _ = send(New([]cf.Problem{{ContestID: 7, Index: "C"}}, "", deps), "enter")
 	m, cmd = send(m, "e")
 	if cmd != nil || !strings.Contains(plain(m), "nvim not found in PATH") {
@@ -586,7 +586,7 @@ func TestSplitPaneEditorPolling(t *testing.T) {
 		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
 			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
 		},
-		Edit:        func(cf.Problem) (*exec.Cmd, error) { opens++; return nil, nil },
+		Edit:        func(cf.Problem, string) (*exec.Cmd, error) { opens++; return nil, nil },
 		EditorAlive: func() bool { return alive },
 	}
 	m, _ := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
@@ -657,5 +657,90 @@ func TestComparisonModeCyclesAndPersists(t *testing.T) {
 	m2, _ = send(m2, "t")
 	if gotOpts.Mode != runner.Exact {
 		t.Fatalf("run should use exact, got %q", gotOpts.Mode)
+	}
+}
+
+func TestCustomTestKey(t *testing.T) {
+	added := 0
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		AddCustom:   func(cf.Problem) (*exec.Cmd, error) { added++; return nil, nil },
+		EditorAlive: func() bool { return true },
+	}
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	m, cmd = send(m, "a")
+	if added != 1 || cmd == nil || !m.editorOpen {
+		t.Fatalf("a should create a Custom Test and open the editor: added=%d", added)
+	}
+	deps.AddCustom = func(cf.Problem) (*exec.Cmd, error) { return nil, errors.New("disk full") }
+	m, cmd = send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	m, _ = send(m, "a")
+	if !strings.Contains(plain(m), "add test: disk full") {
+		t.Fatal("error not shown")
+	}
+}
+
+func TestLanguageSwitchPersistsAndRuns(t *testing.T) {
+	saved := map[string]ProblemState{}
+	var ensured []string
+	var edited, ran string
+	ch := make(chan runner.Event)
+	deps := Deps{
+		Langs: []string{"c", "cpp", "python"}, DefaultLang: "cpp",
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		LoadState: func(p cf.Problem) ProblemState { return saved[p.Index] },
+		SaveState: func(p cf.Problem, s ProblemState) error { saved[p.Index] = s; return nil },
+		Ensure:    func(p cf.Problem, lang string) error { ensured = append(ensured, lang); return nil },
+		Edit:      func(p cf.Problem, lang string) (*exec.Cmd, error) { edited = lang; return nil, nil },
+		Tests: func(_ context.Context, _ cf.Problem, _ *scrape.Detail, o RunOpts) (<-chan runner.Event, error) {
+			ran = o.Lang
+			return ch, nil
+		},
+	}
+	open := func() Model {
+		m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+		m, _ = step(t, m, cmd)
+		return m
+	}
+	m := open()
+	if !strings.Contains(plain(m), "[cpp, tokens]") {
+		t.Fatalf("default language shown:\n%s", plain(m))
+	}
+	m, _ = send(m, "l") // cpp -> python
+	if saved["A"].Lang != "python" || len(ensured) != 1 || ensured[0] != "python" || !strings.Contains(plain(m), "[python, tokens]") {
+		t.Fatalf("switch should ensure + save python: saved=%+v ensured=%v", saved, ensured)
+	}
+	m, _ = send(m, "t")
+	if ran != "python" {
+		t.Fatalf("test run should use python, got %q", ran)
+	}
+	m, _ = send(m, "e")
+	if edited != "python" {
+		t.Fatalf("edit should open the python Solution, got %q", edited)
+	}
+	m, _ = send(m, "l") // python -> c (wraps)
+	if saved["A"].Lang != "c" {
+		t.Fatalf("wraps around: %+v", saved)
+	}
+	// restart: saved language wins; a language dropped from config falls back to the default
+	if m2 := open(); !strings.Contains(plain(m2), "[c, tokens]") {
+		t.Fatalf("saved language after restart:\n%s", plain(m2))
+	}
+	saved["A"] = ProblemState{Lang: "rust"}
+	if m3 := open(); !strings.Contains(plain(m3), "[cpp, tokens]") {
+		t.Fatalf("unconfigured saved language should fall back:\n%s", plain(m3))
+	}
+	// Ensure failing blocks the switch
+	deps.Ensure = func(cf.Problem, string) error { return errors.New("bad template") }
+	m4 := open()
+	m4, _ = send(m4, "l")
+	if !strings.Contains(plain(m4), "bad template") || saved["A"].Lang != "rust" {
+		t.Fatal("failed Ensure must not change the language")
 	}
 }

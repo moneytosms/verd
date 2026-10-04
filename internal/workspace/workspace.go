@@ -134,3 +134,36 @@ func (w Workspace) Tests(contest int, index string) ([]Test, error) {
 	}
 	return out, nil
 }
+
+var customName = regexp.MustCompile(`^custom-(\d+)\.(in|ans)$`)
+
+// NextCustom creates the next empty tests/custom-N.in/.ans pair. N is one past the highest
+// existing custom number, so existing files (even a lone .in) are never reused or overwritten.
+func (w Workspace) NextCustom(contest int, index string) (n int, in, ans string, err error) {
+	dir := filepath.Join(w.Dir(contest, index), "tests")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return 0, "", "", err
+	}
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, "", "", err
+	}
+	for _, e := range ents {
+		if m := customName.FindStringSubmatch(e.Name()); m != nil {
+			if k, _ := strconv.Atoi(m[1]); k > n {
+				n = k
+			}
+		}
+	}
+	n++
+	base := filepath.Join(dir, fmt.Sprintf("custom-%d", n))
+	in, ans = base+".in", base+".ans"
+	for _, p := range []string{in, ans} {
+		f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err != nil {
+			return 0, "", "", err
+		}
+		f.Close()
+	}
+	return n, in, ans, nil
+}
