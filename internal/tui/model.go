@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/theme"
@@ -26,6 +28,8 @@ type Deps struct {
 	Now     func() time.Time // defaults to time.Now
 	// Edit creates the Problem's Solution if needed and returns the editor command to run.
 	Edit func(p cf.Problem) (*exec.Cmd, error)
+	// Tests starts a Test Run of the Problem's Solution and streams its events.
+	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error)
 	// Refresh stages run in order in the background; each syncs stale data from the network and
 	// returns the data now in the cache (valid even when err != nil, e.g. offline). A network
 	// failure (cf.ErrNetwork) skips the remaining stages.
@@ -75,6 +79,7 @@ type Model struct {
 	height     int
 
 	// Problem view
+	run     *testRun
 	open    *cf.Problem
 	detail  *scrape.Detail
 	body    []string // rendered statement lines
@@ -235,6 +240,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.refresh(next)
 		}
 		m.syncing = false
+	case testEventMsg:
+		return m.onTestEvent(msg)
 	case editorDoneMsg:
 		if msg.err != nil {
 			m.errMsg = "editor: " + msg.err.Error()
@@ -343,10 +350,31 @@ func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if r := m.run; r != nil && r.diff {
+		switch msg.String() {
+		case "esc", "d":
+			r.diff = false
+		case "j", "down":
+			r.diffOff++
+		case "k", "up":
+			r.diffOff = max(0, r.diffOff-1)
+		case "pgdown":
+			r.diffOff += m.page()
+		case "pgup":
+			r.diffOff = max(0, r.diffOff-m.page())
+		case "q", "ctrl+c":
+			return m.stopTests(), tea.Quit
+		}
+		return m, nil
+	}
+	if nm, cmd, handled := m.updateTests(msg); handled {
+		return nm, cmd
+	}
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	case "esc":
+		m = m.stopTests()
 		m.open, m.detail, m.body, m.errMsg, m.loading = nil, nil, nil, "", false
 	case "r":
 		if m.offline {
@@ -396,6 +424,8 @@ func (m Model) content() []string {
 			lim += "   [interactive: local run unsupported]"
 		}
 		lines = append(lines, lim, "")
+		lines = append(lines, m.testsPanel()...)
+		lines = append(lines, "")
 		lines = append(lines, m.body...)
 		for i, s := range d.Samples {
 			lines = append(lines, "", fmt.Sprintf("Sample %d input:", i+1))
@@ -485,7 +515,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"t", "run tests"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -509,6 +539,9 @@ func (m Model) viewHelp(b *strings.Builder) string {
 }
 
 func (m Model) viewProblem(b *strings.Builder) string {
+	if m.run != nil && m.run.diff {
+		return m.diffView(b)
+	}
 	lines := m.content()
 	if m.loading {
 		lines = append(lines, "", "loading...")
@@ -520,7 +553,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  t test  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {

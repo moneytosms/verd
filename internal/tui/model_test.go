@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/moneytosms/verd/internal/runner"
 	"image/color"
 	"os/exec"
 	"regexp"
@@ -423,5 +425,154 @@ func TestEditKey(t *testing.T) {
 	m, cmd = send(m, "e")
 	if cmd != nil || !strings.Contains(plain(m), "nvim not found in PATH") {
 		t.Fatal("edit error should be shown, no exec")
+	}
+}
+
+// drain feeds a command's message (and its follow-up commands) back into the model.
+func step(t *testing.T, m Model, cmd tea.Cmd) (Model, tea.Cmd) {
+	t.Helper()
+	nm, next := m.Update(cmd())
+	return nm.(Model), next
+}
+
+func openWithTests(t *testing.T, events []runner.Event) (Model, chan runner.Event) {
+	t.Helper()
+	ch := make(chan runner.Event, len(events)+1)
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"><p>hi</p></div>`, TimeLimitMS: 1000, MemoryLimitMB: 256}, nil
+		},
+		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error) { return ch, nil },
+	}
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	for _, ev := range events {
+		ch <- ev
+	}
+	return m, ch
+}
+
+func TestTestsPanelStreams(t *testing.T) {
+	wa := runner.Result{Name: "sample-2", Verdict: runner.WA, TimeMS: 5, MemoryMB: 3, Expected: "1\n10\n", Output: "1\n11\n", Mismatch: &runner.Mismatch{Line: 2, Col: 1, Want: "10", Got: "11"}}
+	m, ch := openWithTests(t, []runner.Event{
+		{Kind: runner.CompileStarted},
+		{Kind: runner.CompileFinished, Cached: true},
+		{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-1", Verdict: runner.AC, TimeMS: 8, MemoryMB: 31.9}},
+		{Kind: runner.TestFinished, Result: wa},
+		{Kind: runner.Done, Verdict: runner.WA},
+	})
+	if !strings.Contains(plain(m), "press t to run") {
+		t.Fatal("idle panel should hint t")
+	}
+	m, cmd := send(m, "t")
+	if !strings.Contains(plain(m), "running...") {
+		t.Fatal("run should show running")
+	}
+	// panel updates per streamed event
+	m, cmd = step(t, m, cmd) // CompileStarted
+	if !strings.Contains(plain(m), "compile: compiling...") {
+		t.Fatalf("compile start not shown:\n%s", plain(m))
+	}
+	m, cmd = step(t, m, cmd) // CompileFinished
+	m, cmd = step(t, m, cmd) // sample-1
+	out := plain(m)
+	if !strings.Contains(out, "compile: ok (cached)") || !strings.Contains(out, "sample-1") || !strings.Contains(out, "31.9 MB") || strings.Contains(out, "sample-2") {
+		t.Fatalf("after first test only sample-1 should show:\n%s", out)
+	}
+	m, cmd = step(t, m, cmd) // sample-2 WA
+	if out := plain(m); !strings.Contains(out, "sample-2") || !strings.Contains(out, `line 2 col 1: want "10" got "11"`) {
+		t.Fatalf("WA row missing:\n%s", out)
+	}
+	m, cmd = step(t, m, cmd) // Done
+	close(ch)
+	m, cmd = step(t, m, cmd) // closed
+	if cmd != nil {
+		t.Fatal("stream end should stop listening")
+	}
+	if out := plain(m); !strings.Contains(out, "1/2 AC") || strings.Contains(out, "running...") {
+		t.Fatalf("summary missing:\n%s", out)
+	}
+
+	// diff overlay on the failing test: select it, d
+	m, _ = send(m, "n")
+	m, _ = send(m, "d")
+	out = plain(m)
+	for _, want := range []string{"Diff: sample-2", "first mismatch at line 2 col 1", "expected", "actual", "10", "11", "showing 2/2 lines"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("diff missing %q:\n%s", want, out)
+		}
+	}
+	// mismatching line is highlighted (styled), matching line is not
+	raw := m.View().Content
+	if !strings.Contains(raw, "\x1b[") || strings.Count(raw, "10") < 1 {
+		t.Fatal("no styling in diff")
+	}
+	m, _ = send(m, "esc")
+	if m.run == nil || m.run.diff || m.open == nil {
+		t.Fatal("esc closes the diff, not the Problem")
+	}
+	// d on a passing test does nothing
+	m, _ = send(m, "p")
+	if m, _ = send(m, "d"); m.run.diff {
+		t.Fatal("no diff for AC")
+	}
+	// leaving the Problem drops the run
+	m, _ = send(m, "esc")
+	if m.run != nil {
+		t.Fatal("run should be dropped on esc")
+	}
+}
+
+func TestDiffTruncatesLargeOutput(t *testing.T) {
+	var want, got []string
+	for i := 0; i < 500; i++ {
+		want = append(want, "line")
+		got = append(got, "line")
+	}
+	got[400] = "BAD"
+	res := runner.Result{Name: "sample-1", Verdict: runner.WA, Expected: strings.Join(want, "\n"), Output: strings.Join(got, "\n"), Mismatch: &runner.Mismatch{Line: 401, Col: 1, Want: "line", Got: "BAD"}}
+	m, ch := openWithTests(t, []runner.Event{{Kind: runner.TestFinished, Result: res}})
+	m, cmd := send(m, "t")
+	m, _ = step(t, m, cmd)
+	_ = ch
+	m, _ = send(m, "d")
+	out := plain(m)
+	if !strings.Contains(out, "of 500 lines") && !strings.Contains(out, "/500 lines") {
+		t.Fatalf("truncation hint missing:\n%s", out)
+	}
+	if !strings.Contains(out, "BAD") {
+		t.Fatalf("diff should start near the first mismatch:\n%s", out)
+	}
+	if strings.Count(out, "\n") > 40 {
+		t.Fatalf("diff not truncated: %d lines", strings.Count(out, "\n"))
+	}
+}
+
+func TestStaleRunEventsIgnored(t *testing.T) {
+	m, _ := openWithTests(t, nil)
+	m, _ = send(m, "t")
+	old := m.run.id
+	m, _ = send(m, "t") // restart: new run id
+	nm, cmd := m.Update(testEventMsg{id: old, ev: runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "old"}}})
+	if cmd != nil || strings.Contains(plain(nm.(Model)), "old") {
+		t.Fatal("events from a replaced run must be dropped")
+	}
+}
+
+func TestInteractiveRefusesTests(t *testing.T) {
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`, Interactive: true}, nil
+		},
+		Tests: func(context.Context, cf.Problem, *scrape.Detail) (<-chan runner.Event, error) {
+			t.Fatal("must not run")
+			return nil, nil
+		},
+	}
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	m, _ = send(m, "t")
+	if !strings.Contains(plain(m), "local run unsupported") {
+		t.Fatal("interactive should be refused with a message")
 	}
 }

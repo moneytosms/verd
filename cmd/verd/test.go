@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -39,20 +40,13 @@ func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir str
 	if d.Interactive {
 		return &exitError{2, fmt.Sprintf("%d%s is interactive: local run unsupported", ref.Contest, ref.Index)}
 	}
-	if err := ws.WriteSamples(ref.Contest, ref.Index, d.Samples); err != nil {
-		return &exitError{2, err.Error()}
-	}
-	tests, err := ws.Tests(ref.Contest, ref.Index)
+	spec, err := buildSpec(cfg, cacheDir, ref, d)
 	if err != nil {
 		return &exitError{2, err.Error()}
 	}
-	mode := runner.Tokens
-	if d.Hint == "float" {
-		mode = runner.Float
-	}
-	spec := runner.Spec{
-		Solution: ref.Path, Lang: cfg.Lang[ref.Lang], CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
-		TimeLimitMS: d.TimeLimitMS, MemoryMB: d.MemoryLimitMB, Multiplier: cfg.TimeMultiplier, Mode: mode,
+	mode := spec.Mode
+	if len(spec.Tests) == 0 {
+		return &exitError{2, "no tests found"}
 	}
 	fmt.Fprintf(out, "%d%s  %s  TL %d ms x%g  ML %d MB  %s\n", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, mode)
 
@@ -87,9 +81,6 @@ func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir str
 	if overall == runner.CE {
 		return &exitError{1, ""}
 	}
-	if total == 0 {
-		return &exitError{2, "no tests found"}
-	}
 	fmt.Fprintf(out, "%d/%d AC  max %d ms  max %.1f MB  %s\n", passed, total, maxMS, maxMB, overall)
 	if overall != runner.AC {
 		return &exitError{1, ""}
@@ -116,4 +107,27 @@ func firstLine(s string) string {
 		s = s[:i] + " ..."
 	}
 	return s
+}
+
+// buildSpec materializes Sample Tests next to the Solution and assembles the Runner spec.
+func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail) (runner.Spec, error) {
+	ws := workspace.New(cfg.Workspace)
+	if _, err := os.Stat(ref.Path); err != nil {
+		return runner.Spec{}, fmt.Errorf("no Solution at %s", ref.Path)
+	}
+	if err := ws.WriteSamples(ref.Contest, ref.Index, d.Samples); err != nil {
+		return runner.Spec{}, err
+	}
+	tests, err := ws.Tests(ref.Contest, ref.Index)
+	if err != nil {
+		return runner.Spec{}, err
+	}
+	mode := runner.Tokens
+	if d.Hint == "float" {
+		mode = runner.Float
+	}
+	return runner.Spec{
+		Solution: ref.Path, Lang: cfg.Lang[ref.Lang], CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
+		TimeLimitMS: d.TimeLimitMS, MemoryMB: d.MemoryLimitMB, Multiplier: cfg.TimeMultiplier, Mode: mode,
+	}, nil
 }

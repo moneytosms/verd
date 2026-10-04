@@ -16,6 +16,7 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/refresh"
+	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/tui"
@@ -111,6 +112,19 @@ func runTUI(path string) error {
 		},
 		OpenURL: openURL,
 		Edit:    func(p cf.Problem) (*exec.Cmd, error) { return editCmd(cfg, p) },
+		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail) (<-chan runner.Event, error) {
+			l, ok := cfg.Lang[cfg.DefaultLang]
+			if !ok {
+				return nil, fmt.Errorf("default_lang %q is not configured", cfg.DefaultLang)
+			}
+			ws := workspace.New(cfg.Workspace)
+			ref := workspace.Ref{Contest: p.ContestID, Index: p.Index, Lang: cfg.DefaultLang, Path: filepath.Join(ws.Dir(p.ContestID, p.Index), "main."+l.Ext)}
+			spec, err := buildSpec(cfg, config.CacheDir(), ref, d)
+			if err != nil {
+				return nil, fmt.Errorf("%w (press e to create one)", err)
+			}
+			return runner.Run(ctx, spec), nil
+		},
 		// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
 		Refresh: []func() (tui.Data, error){
 			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
