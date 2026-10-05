@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"html"
 	"strings"
 	"unicode"
 
@@ -20,6 +21,13 @@ func Render(statementHTML string, width int, style string) (string, error) {
 	st.Find(".header, .sample-tests").Remove() // shown separately
 	st.Find(".section-title").Each(func(_ int, s *goquery.Selection) {
 		s.ReplaceWithHtml("<h3>" + s.Text() + "</h3>")
+	})
+	// HTML <sup>/<sub> (10<sup>9</sup>) would flatten to "109": use Unicode scripts like the TeX path.
+	st.Find("sup").Each(func(_ int, s *goquery.Selection) {
+		s.ReplaceWithHtml(html.EscapeString(script(s.Text(), supFrom, supTo, "^")))
+	})
+	st.Find("sub").Each(func(_ int, s *goquery.Selection) {
+		s.ReplaceWithHtml(html.EscapeString(script(s.Text(), subFrom, subTo, "_")))
 	})
 	// Images can't render in a terminal: replace with alt text + OSC 8 link.
 	st.Find("img").Each(func(_ int, s *goquery.Selection) {

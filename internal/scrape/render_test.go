@@ -29,3 +29,15 @@ func TestRender(t *testing.T) {
 		t.Errorf("image link missing or samples not stripped:\n%s", out)
 	}
 }
+
+func TestRenderSuperAndSubscripts(t *testing.T) {
+	out, err := Render(`<div class="problem-statement"><p>n &le; 10<sup class="upper-index">9</sup>, a<sub class="lower-index">i</sub>, 2<sup>k+1</sup></p></div>`, 80, "notty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"10⁹", "aᵢ", "2ᵏ⁺¹"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in %q", want, out)
+		}
+	}
+}

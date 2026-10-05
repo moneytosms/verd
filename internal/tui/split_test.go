@@ -148,3 +148,10 @@ func TestLiveSearchFiltersWhileTypingAndEscUndoes(t *testing.T) {
 		t.Fatal("enter keeps the search")
 	}
 }
+
+func TestSplitViewHasNoTabs(t *testing.T) {
+	m := splitModel(t, Deps{})
+	if strings.Contains(m.View().Content, "\t") {
+		t.Fatal("tabs break column alignment")
+	}
+}
