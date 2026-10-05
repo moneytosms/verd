@@ -53,3 +53,31 @@ func TestFilterCombinations(t *testing.T) {
 		}
 	}
 }
+
+func TestFuzzySearch(t *testing.T) {
+	p := cf.Problem{ContestID: 4, Index: "A", Name: "Watermelon", Tags: []string{"brute force", "math"}}
+	for _, tc := range []struct {
+		q, mode string
+		want    bool
+	}{
+		{"wmln", "all", true}, // subsequence
+		{"4a", "all", true},
+		{"water 4a", "all", true}, // words AND
+		{"#math", "all", true},    // tag shortcut
+		{"#dp", "all", false},
+		{"wmln", "tag", false}, // field-restricted
+		{"mat", "tag", true},
+		{"mat", "name", false},
+		{"4a", "id", true},
+		{"zzz", "all", false},
+	} {
+		if _, ok := searchScore(tc.q, tc.mode, p); ok != tc.want {
+			t.Errorf("%q in %s: got %v", tc.q, tc.mode, ok)
+		}
+	}
+	a, _ := fuzzyScore("water", "Watermelon")
+	b, _ := fuzzyScore("water", "Wide Antelope Tiger Eats Rice")
+	if a <= b {
+		t.Errorf("contiguous prefix must beat scattered: %d vs %d", a, b)
+	}
+}

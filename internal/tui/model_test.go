@@ -349,7 +349,7 @@ func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
 	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "X"}}, "", Deps{})
 	m, _ = send(m, "?")
 	out := plain(m)
-	for _, want := range []string{"Keys: Problems", "filter", "search by ID or name", "open Problem"} {
+	for _, want := range []string{"Keys: Problems", "filter", "live fuzzy search", "open Problem"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list help missing %q:\n%s", want, out)
 		}

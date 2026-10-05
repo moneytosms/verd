@@ -16,6 +16,7 @@ type Filter struct {
 	AnyOf                []string // presets: at least one of these tags (prefix match)
 	Unsolved             bool
 	Search               string
+	SearchMode           string // "all" (default), "name", "tag" or "id"
 }
 
 // ParseFilter parses e.g. "800-1200 +dp -graphs unsolved". Tags match by prefix, `_` stands for a space
@@ -102,11 +103,18 @@ func (f Filter) Match(p cf.Problem, st store.Status) bool {
 	if f.Unsolved && st == store.StatusSolved {
 		return false
 	}
-	if q := strings.ToLower(strings.TrimSpace(f.Search)); q != "" {
-		id := strings.ToLower(fmt.Sprintf("%d%s", p.ContestID, p.Index))
-		if !strings.Contains(id, q) && !strings.Contains(strings.ToLower(p.Name), q) {
-			return false
-		}
+	_, ok := f.Score(p)
+	return ok
+}
+
+// Score is the fuzzy search score of p (0 with no search) and whether it matches the search.
+func (f Filter) Score(p cf.Problem) (int, bool) {
+	if strings.TrimSpace(f.Search) == "" {
+		return 0, true
 	}
-	return true
+	mode := f.SearchMode
+	if mode == "" {
+		mode = "all"
+	}
+	return searchScore(f.Search, mode, p)
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -208,10 +209,20 @@ func (m Model) statusOf(p cf.Problem) store.Status {
 
 func (m Model) refilter() Model {
 	m.visible = make([]cf.Problem, 0, len(m.Problems))
+	scores := map[string]int{}
 	for _, p := range m.Problems {
 		if m.filter.Match(p, m.statusOf(p)) {
 			m.visible = append(m.visible, p)
+			if m.filter.Search != "" {
+				scores[fmt.Sprintf("%d%s", p.ContestID, p.Index)], _ = m.filter.Score(p)
+			}
 		}
+	}
+	if m.filter.Search != "" { // best match first; stable keeps the list order among equals
+		sort.SliceStable(m.visible, func(i, j int) bool {
+			a, b := m.visible[i], m.visible[j]
+			return scores[fmt.Sprintf("%d%s", a.ContestID, a.Index)] > scores[fmt.Sprintf("%d%s", b.ContestID, b.Index)]
+		})
 	}
 	m.cursor = min(m.cursor, max(0, len(m.visible)-1))
 	return m
@@ -219,8 +230,9 @@ func (m Model) refilter() Model {
 
 // input is a one-line prompt for the filter (`f`) or search (`/`).
 type input struct {
-	kind byte // 'f' or '/'
+	kind byte // 'f', '/' or 'p'
 	text string
+	prev string // '/' only: the search to restore on esc
 }
 
 // onTab runs when a tab becomes active.
@@ -278,7 +290,23 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.input.text += clean(msg.Text)
 		}
 	}
+	if m.input != nil && m.input.kind == '/' {
+		return m.liveSearch(), nil
+	}
 	return m, nil
+}
+
+func (m Model) searchMode() string {
+	if m.filter.SearchMode == "" {
+		return "all"
+	}
+	return m.filter.SearchMode
+}
+
+// liveSearch applies the search prompt's text to the list as the user types.
+func (m Model) liveSearch() Model {
+	m.filter.Search, m.cursor = m.input.text, 0
+	return m.refilter()
 }
 
 // contentWidth is the width available to verd's own screen.
@@ -535,7 +563,7 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "f":
 		m.input, m.inputErr = &input{kind: 'f', text: m.filterExpr}, ""
 	case "/":
-		m.input, m.inputErr = &input{kind: '/', text: m.filter.Search}, ""
+		m.input, m.inputErr = &input{kind: '/', text: m.filter.Search, prev: m.filter.Search}, ""
 	case "enter":
 		if len(m.visible) == 0 {
 			break
@@ -867,7 +895,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
-		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filter: 800-1200 +dp -graphs unsolved"}, {"/", "search by ID or name"}}, global...)
+		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filter: 800-1200 +dp -graphs unsolved"}, {"/", "live fuzzy search (tab: all/name/tag/id; #dp matches tags)"}}, global...)
 	case m.tab == 1 && m.contestOpen != nil:
 		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"esc", "back to contests"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.tab == 1:
@@ -928,6 +956,10 @@ func (m Model) viewList(b *strings.Builder) string {
 		b.WriteString(fmt.Sprintf("%s %s %-8s %-40.40s %6s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
 	}
 	if m.input != nil {
+		if m.input.kind == '/' {
+			b.WriteString(fmt.Sprintf("\n/ %s_   %s", m.input.text, st.Accent.Render("["+m.searchMode()+"]")))
+			return fmt.Sprintf("%d matches  type to search (fuzzy, #tag)  tab mode: all/name/tag/id  enter keep  esc undo", len(m.visible))
+		}
 		b.WriteString(fmt.Sprintf("\n%c %s_", m.input.kind, m.input.text))
 		if m.inputErr != "" {
 			b.WriteString("   " + st.Bad.Render(m.inputErr))
@@ -943,7 +975,7 @@ func (m Model) viewList(b *strings.Builder) string {
 		active = append(active, "filter: "+clean(m.filterExpr))
 	}
 	if m.filter.Search != "" {
-		active = append(active, "search: "+clean(m.filter.Search))
+		active = append(active, fmt.Sprintf("search[%s]: %s", m.searchMode(), clean(m.filter.Search)))
 	}
 	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  ? help  q quit"
 }
