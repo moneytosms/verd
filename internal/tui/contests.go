@@ -131,23 +131,29 @@ func (m Model) viewContests(b *strings.Builder) string {
 			section = "Upcoming"
 		}
 		if section != lastSection {
-			b.WriteString(" " + section + "\n")
+			b.WriteString(" " + st.Accent2.Render(strings.ToUpper(section)) + "\n")
 			lastSection = section
 		}
-		cur := " "
-		if i == m.contestCursor {
-			cur = m.styles().Accent.Render(">")
-		}
 		when := ""
+		whenStyle := st.Dim
 		switch {
 		case c.Finished():
 			when = time.Unix(c.Start, 0).Format("2006-01-02")
 		case c.Phase == "BEFORE":
-			when = countdown(time.Unix(c.Start, 0).Sub(now))
+			d := time.Unix(c.Start, 0).Sub(now)
+			when = countdown(d)
+			whenStyle = st.Good
+			if d < 24*time.Hour {
+				whenStyle = st.Warn
+			}
 		default:
-			when = "running"
+			when, whenStyle = "running", st.Bad
 		}
-		b.WriteString(fmt.Sprintf("%s %-12s %s %s\n", cur, when, fit(clean(c.Name), max(30, min(72, m.contentWidth()-24))), st.Dim.Render(fmt.Sprint(c.ID))))
+		line := "  " + whenStyle.Render(fmt.Sprintf("%-12s", when)) + " " + fit(clean(c.Name), max(30, min(72, m.contentWidth()-24))) + " " + st.Dim.Render(fmt.Sprint(c.ID))
+		if i == m.contestCursor {
+			line = paintRow(st.Accent.Render("▌")+" "+strings.TrimPrefix(line, "  "), m.contentWidth(), st.Selected)
+		}
+		b.WriteString(line + "\n")
 	}
 	return fmt.Sprintf("%d contests  enter Problems  ? help  q quit", len(m.contests))
 }

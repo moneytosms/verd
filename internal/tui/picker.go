@@ -115,17 +115,23 @@ func (m Model) updatePicker(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) viewPicker(b *strings.Builder) string {
 	st := m.styles()
-	b.WriteString(" " + st.Accent.Render("Problem Picker") + "\n\n")
+	w := min(m.contentWidth()-2, 90)
+	var card []string
 	switch {
 	case m.picked != nil:
 		p := *m.picked
-		b.WriteString(fmt.Sprintf("  %d%s  %s\n", p.ContestID, clean(p.Index), clean(p.Name)))
-		b.WriteString(fmt.Sprintf("  rating %s   solved by %d\n", ratingStr(p), p.SolvedCount))
-		b.WriteString("  " + st.Dim.Render(clean(strings.Join(p.Tags, ", "))) + "\n")
+		card = append(card, st.Accent.Render(fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)))+"  "+clean(p.Name), "")
+		card = append(card, st.Dim.Render("rating ")+m.ratingText(p)+st.Dim.Render("    solved by ")+fmt.Sprint(p.SolvedCount))
+		card = append(card, m.tagChips(p, w-6))
 	case m.pickInit:
-		b.WriteString("  " + st.Bad.Render("No Problem matches these filters.") + "\n")
-		b.WriteString("  " + st.Dim.Render("Press f to change them (e.g. widen the rating range) or r to retry.") + "\n")
+		card = append(card, st.Bad.Render("No Problem matches these filters."), st.Dim.Render("Press f to change them (e.g. widen the rating range) or r to retry."))
+	default:
+		card = append(card, st.Dim.Render("press space to draw a Problem"))
 	}
+	for _, l := range box("Problem Picker", card, "enter open · space re-roll", w, len(card)+2, true, st) {
+		b.WriteString(" " + l + "\n")
+	}
+	b.WriteString("\n")
 	f := m.pickFilter
 	desc := fmt.Sprintf("rating %d-%d", f.MinRating, f.MaxRating)
 	if m.pickPreset != "" {

@@ -210,7 +210,7 @@ func TestContestsTab(t *testing.T) {
 	if !(iSoon >= 0 && iSoon < iLater && iLater < iNew && iNew < iOld) {
 		t.Fatalf("order wrong (upcoming asc, then past desc):\n%s", out)
 	}
-	for _, want := range []string{"Upcoming", "Past", "in 3h 20m", "in 2d 2h", "1970-01-11"} {
+	for _, want := range []string{"UPCOMING", "PAST", "in 3h 20m", "in 2d 2h", "1970-01-11"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}
@@ -234,7 +234,7 @@ func TestContestsTab(t *testing.T) {
 		t.Fatal("esc from Problem should return to contest Problems")
 	}
 	m, _ = send(m, "esc")
-	if m.contestOpen != nil || !strings.Contains(plain(m), "Upcoming") {
+	if m.contestOpen != nil || !strings.Contains(plain(m), "UPCOMING") {
 		t.Fatal("esc should return to contest list")
 	}
 }

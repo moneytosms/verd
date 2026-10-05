@@ -82,7 +82,17 @@ func (m Model) statsLines() []string {
 		if t.AvgRating > 0 {
 			avg = fmt.Sprintf("%.0f", t.AvgRating)
 		}
-		add(fmt.Sprintf("  %-26.26s %6d %6s %8.0f%%", clean(t.Tag), t.Solved, avg, t.FirstTryRate*100))
+		bar := strings.Repeat("█", max(1, t.Solved*14/max(1, st.Tags[0].Solved)))
+		rate := fmt.Sprintf("%8.0f%%", t.FirstTryRate*100)
+		switch {
+		case t.FirstTryRate >= 0.85:
+			rate = ds.Good.Render(rate)
+		case t.FirstTryRate >= 0.7:
+			rate = ds.Warn.Render(rate)
+		default:
+			rate = ds.Bad.Render(rate)
+		}
+		add(fmt.Sprintf("  %-26.26s %6d %6s %s  %s", clean(t.Tag), t.Solved, avg, rate, ds.Accent.Render(bar)))
 	}
 
 	add("", fmt.Sprintf("Streak: %d day(s), best %d", st.Streak, st.MaxStreak))
@@ -111,11 +121,11 @@ func (m Model) statsLines() []string {
 		add(ds.Dim.Render("  none"))
 	}
 	for i, a := range st.Unsolved {
-		cur := "  "
+		line := fmt.Sprintf("  %d%-3s %-34.34s %d attempt(s)", a.ContestID, clean(a.Index), clean(a.Name), a.Attempts)
 		if i == m.statsSel {
-			cur = ds.Accent.Render("> ")
+			line = paintRow(ds.Accent.Render("▌ ")+strings.TrimPrefix(line, "  "), m.contentWidth()-2, ds.Selected)
 		}
-		add(fmt.Sprintf("%s%d%-3s %-34.34s %d attempt(s)", cur, a.ContestID, clean(a.Index), clean(a.Name), a.Attempts))
+		add(line)
 	}
 	return out
 }
