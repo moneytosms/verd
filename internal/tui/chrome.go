@@ -112,4 +112,3 @@ func (m Model) hintBar(s string, w int) string {
 
 // badge is a small coloured tag for the status line.
 func badge(s lipgloss.Style, text string) string { return s.Render("● " + text) }
-

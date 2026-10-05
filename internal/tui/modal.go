@@ -36,17 +36,6 @@ func (m Model) modalSize(maxW, maxH int) (w, h int) {
 	return max(20, min(m.width-4, maxW)), max(6, min(m.height-4, maxH))
 }
 
-func (m Model) helpBox() []string {
-	screen, keys := m.keys()
-	st := m.styles()
-	w, h := m.modalSize(84, 40)
-	var body []string
-	for _, k := range keys {
-		body = append(body, fmt.Sprintf("%s %s", st.Accent.Render(fmt.Sprintf("%-16s", k[0])), k[1]))
-	}
-	return box("Keys: "+screen, body, "q close", w, min(h, len(body)+2), true, st)
-}
-
 // diffBox is the side-by-side expected/actual view of one test.
 func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra string) []string {
 	st := m.styles()

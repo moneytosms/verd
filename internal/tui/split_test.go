@@ -220,3 +220,31 @@ func TestSortOrdersTheList(t *testing.T) {
 		t.Fatalf("hardest first, unrated last: %v", m.visible)
 	}
 }
+
+func TestHelpPagesAndSettingsKeys(t *testing.T) {
+	m := New(nil, "", Deps{})
+	m, _ = send(m, "5")
+	m, _ = send(m, "?")
+	out := plain(m)
+	for _, want := range []string{"Keys: Settings", "This screen", "Everywhere", "Mouse", "Guide", "config.toml"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("help missing %q:\n%s", want, out)
+		}
+	}
+	m, _ = send(m, "right")
+	if !strings.Contains(plain(m), "switch tab") {
+		t.Fatalf("page 2 lists the global keys:\n%s", plain(m))
+	}
+	m, _ = send(m, "right")
+	if !strings.Contains(plain(m), "click a tab") {
+		t.Fatal("page 3 describes the mouse")
+	}
+	m, _ = send(m, "right")
+	if !strings.Contains(plain(m), "Pick") || !strings.Contains(plain(m), "Submit") {
+		t.Fatal("page 4 is the guide")
+	}
+	m, _ = send(m, "q")
+	if m.help {
+		t.Fatal("q closes help")
+	}
+}

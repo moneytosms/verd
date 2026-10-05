@@ -121,6 +121,8 @@ type Model struct {
 	theme       theme.Theme
 	dark        bool // terminal background; dark until detected otherwise
 	help        bool
+	helpPage    int
+	helpScroll  int
 	handle      string
 	rating      int
 	syncing     bool
@@ -168,13 +170,13 @@ type Model struct {
 	bodyW       int // width the statement was rendered at
 	tm          *testMgr
 	fm          *filterMgr
-	sortBy      string // "", "rating", "-rating", "solved", "id"
+	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
 	setEdit     *settingEdit
 	setNote     string
 	bgMode      string // background setting: auto, dark or light
-	subModal    bool // the Submission modal is open
+	subModal    bool   // the Submission modal is open
 	detail      *scrape.Detail
 	body        []string // rendered statement lines
 	scroll      int
@@ -620,20 +622,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.help {
-			switch msg.String() {
-			case "?", "esc", "q":
-				m.help = false
-			case "ctrl+c":
-				return m, tea.Quit
-			}
-			return m, nil
+			return m.updateHelp(msg)
 		}
 		if msg.String() == "x" && m.toast != nil && m.input == nil {
 			m.toast = nil
 			return m, nil
 		}
 		if msg.String() == "?" && m.input == nil {
-			m.help = true
+			m.help, m.helpPage, m.helpScroll = true, 0, 0
 			return m, nil
 		}
 		if m.open != nil {
@@ -1043,30 +1039,6 @@ func (m Model) screen() string {
 		}
 	}
 	return strings.Join(lines, "\n")
-}
-
-// keys lists the current screen's key bindings for the help overlay.
-func (m Model) keys() (screen string, keys [][2]string) {
-	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
-	switch {
-	case m.open != nil:
-		return "Problem", [][2]string{{"tab, shift+tab", "move between statement, tests and detail panes"}, {"j/k, pgup/pgdn, g/G", "scroll the pane, or move the test selection"}, {"e", "edit Solution in Neovim"}, {"T", "manage tests: view, add, edit, copy, delete"}, {"a", "add a Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"S", "stress test (esc cancels, w saves counterexample)"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select next/previous test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"q", "close a modal; quit when none is open"}, {"?", "toggle help"}}
-	case m.input != nil:
-		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
-	case m.tab == 0:
-		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filters: rating, status, sort, tags (modal)"}, {":", "filter expression: 800-1200 +dp -graphs unsolved"}, {"X", "clear all filters"}, {"/", "live fuzzy search (tab: all/name/tag/id; #dp matches tags)"}}, global...)
-	case m.tab == 1 && m.contestOpen != nil:
-		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"esc", "back to contests"}, {"?", "toggle help"}, {"q", "quit"}}
-	case m.tab == 1:
-		return "Contests", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "list Problems"}}, global...)
-	}
-	if m.tab == 2 {
-		return "Stats", append([][2]string{{"j/k, pgup/pgdn", "scroll"}, {"n/N", "select next/previous attempted Problem"}, {"enter", "open it"}, {"p", "Problem Picker with the weak-topics preset"}}, global...)
-	}
-	if m.tab == 3 {
-		return "Picker", append([][2]string{{"space, r", "re-roll"}, {"enter", "open the Problem"}, {"f", "filters: 800-1200 +dp -graphs"}, {"w", "weak-topics preset"}}, global...)
-	}
-	return tabs[m.tab], global
 }
 
 func (m Model) viewProblem(b *strings.Builder) string {

@@ -356,7 +356,6 @@ func (m Model) filterBox() []string {
 	return box("Filters", body, note, w, min(h, len(body)+2), true, st)
 }
 
-
 // fmGrid is the tag grid's geometry: columns, cell width, rows per column and the first tag shown.
 func (m Model) fmGrid() (cols, cw, perCol, start int) {
 	w, h := m.modalSize(96, 30)

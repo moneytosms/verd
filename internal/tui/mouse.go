@@ -181,6 +181,15 @@ func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
 
 func (m Model) clickInModal(rx, ry int) (tea.Model, tea.Cmd) {
 	switch {
+	case m.help && ry == 1:
+		x := 1
+		for i, p := range helpPages {
+			w := len([]rune(p)) + 2
+			if rx >= x && rx < x+w+2 {
+				m.helpPage, m.helpScroll = i, 0
+			}
+			x += w + 1
+		}
 	case m.tm != nil && m.tm.ed == nil:
 		lw := min(30, min(m.width-4, 100)/3)
 		if rx > 0 && rx <= lw+1 && ry >= 1 {
@@ -260,7 +269,10 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 	case m.strs != nil && m.strs.diff:
 		m.strs.diffOff = max(0, m.strs.diffOff+d)
 		return m, nil
-	case m.help || m.subModal:
+	case m.help:
+		m.helpScroll = max(0, m.helpScroll+d/3)
+		return m, nil
+	case m.subModal:
 		return m, nil
 	case m.tab == 1 && m.contestOpen != nil && m.open == nil:
 		ps := m.contestProblems(*m.contestOpen)
