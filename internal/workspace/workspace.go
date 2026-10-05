@@ -2,6 +2,7 @@
 package workspace
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -184,4 +185,67 @@ func (w Workspace) SaveCustom(contest int, index, input, ans string) (string, er
 		return "", err
 	}
 	return fmt.Sprintf("custom-%d", n), nil
+}
+
+// CustomTest is a Custom Test with its contents.
+type CustomTest struct{ Name, Input, Want string }
+
+// Customs lists the Problem's Custom Tests in numeric order, with their contents.
+func (w Workspace) Customs(contest int, index string) ([]CustomTest, error) {
+	ts, err := w.Tests(contest, index)
+	if err != nil {
+		return nil, err
+	}
+	var out []CustomTest
+	for _, t := range ts {
+		if !strings.HasPrefix(t.Name, "custom-") {
+			continue
+		}
+		in, err := os.ReadFile(t.In)
+		if err != nil {
+			return nil, err
+		}
+		ans, err := os.ReadFile(t.Ans)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, CustomTest{t.Name, string(in), string(ans)})
+	}
+	return out, nil
+}
+
+// SaveCase writes the Custom Test called name (a new one when name is empty) and returns its name.
+func (w Workspace) SaveCase(contest int, index, name, input, want string) (string, error) {
+	if name == "" {
+		return w.SaveCustom(contest, index, input, want)
+	}
+	if !customFile.MatchString(name) {
+		return "", fmt.Errorf("%q is not a Custom Test name", name)
+	}
+	base := filepath.Join(w.Dir(contest, index), "tests", name)
+	if err := os.MkdirAll(filepath.Dir(base), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(base+".in", []byte(input), 0o644); err != nil {
+		return "", err
+	}
+	return name, os.WriteFile(base+".ans", []byte(want), 0o644)
+}
+
+var customFile = regexp.MustCompile(`^custom-\d+$`)
+
+// DeleteCustom removes a Custom Test's files; samples cannot be deleted.
+func (w Workspace) DeleteCustom(contest int, index, name string) error {
+	if !customFile.MatchString(name) {
+		return fmt.Errorf("%q is not a Custom Test name", name)
+	}
+	base := filepath.Join(w.Dir(contest, index), "tests", name)
+	return errors.Join(removeIfExists(base+".in"), removeIfExists(base+".ans"))
+}
+
+func removeIfExists(p string) error {
+	if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

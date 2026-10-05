@@ -49,6 +49,12 @@ type Deps struct {
 	Stress func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan stress.Event, error)
 	// SaveCounterexample stores a stress counterexample as the next Custom Test and returns its name.
 	SaveCounterexample func(p cf.Problem, input, want string) (string, error)
+	// Customs lists the Problem's Custom Tests with their contents.
+	Customs func(p cf.Problem) ([]Case, error)
+	// SaveCase writes a Custom Test (a new one when name is empty) and returns its name.
+	SaveCase func(p cf.Problem, name, input, want string) (string, error)
+	// DeleteCase removes a Custom Test.
+	DeleteCase func(p cf.Problem, name string) error
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
@@ -149,6 +155,13 @@ type Model struct {
 	run         *testRun
 	editorOpen  bool // a split-pane editor is open; a tick is polling it
 	open        *cf.Problem
+	cases       []Case // Sample Tests then Custom Tests of the open Problem
+	tsel        int    // selected row of the Tests pane
+	pane        int    // focused pane of the split Problem view
+	detScroll   int
+	bodyW       int // width the statement was rendered at
+	tm          *testMgr
+	subModal    bool // the Submission modal is open
 	detail      *scrape.Detail
 	body        []string // rendered statement lines
 	scroll      int
@@ -366,13 +379,14 @@ func editorTick() tea.Cmd {
 type detailMsg struct {
 	p     cf.Problem
 	d     *scrape.Detail
+	w     int // width body was rendered at
 	body  string
 	state ProblemState
 	err   error
 }
 
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
-	load, width, style, loadState := m.deps.Load, m.contentWidth(), m.styles().Glamour, m.deps.LoadState
+	load, width, style, loadState := m.deps.Load, m.stmtWidth()+4, m.styles().Glamour, m.deps.LoadState
 	return func() tea.Msg {
 		if load == nil {
 			return detailMsg{p: p, err: errors.New("loading unavailable")}
@@ -386,11 +400,32 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 		if loadState != nil {
 			state = loadState(p)
 		}
-		return detailMsg{p: p, d: d, body: body, state: state, err: err}
+		return detailMsg{p: p, d: d, w: width - 4, body: body, state: state, err: err}
 	}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	nm, cmd := m.update(msg)
+	if mm, ok := nm.(Model); ok {
+		nm = mm.rewrap()
+	}
+	return nm, cmd
+}
+
+// rewrap re-renders the statement when the pane it lives in changed width (resize, layout switch).
+func (m Model) rewrap() Model {
+	if m.detail == nil || m.open == nil || m.bodyW == 0 || m.stmtWidth() == m.bodyW {
+		return m
+	}
+	w := m.stmtWidth()
+	if body, err := scrape.Render(m.detail.Statement, w, m.styles().Glamour); err == nil {
+		m.body, m.bodyW = strings.Split(body, "\n"), w
+		m.scroll = min(m.scroll, m.maxScroll())
+	}
+	return m
+}
+
+func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if nm, cmd, ok := m.onEmbedMsg(msg); ok {
 		return nm, cmd
 	}
@@ -481,19 +516,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
-			m.body = strings.Split(msg.body, "\n")
+			m.body, m.bodyW = strings.Split(msg.body, "\n"), msg.w
+			m = m.loadCases()
 			if m.pending != nil {
 				r := *m.pending
 				m.pending = nil
 				return m.attachExternal(r)
 			}
 		}
+	case tea.PasteMsg:
+		if m.tm != nil && m.tm.ed != nil {
+			m.tm.ed.insert(clean(msg.Content))
+		} else if m.input != nil {
+			m.input.text += clean(msg.Content)
+			if m.input.kind == '/' {
+				m = m.liveSearch()
+			}
+		}
 	case tea.KeyPressMsg:
+		if m.tm != nil {
+			return m.updateTM(msg)
+		}
+		if m.subModal {
+			switch msg.String() {
+			case "q", "esc", "enter":
+				m.subModal = false
+			case "ctrl+c":
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		if m.help {
 			switch msg.String() {
-			case "?", "esc":
+			case "?", "esc", "q":
 				m.help = false
-			case "q", "ctrl+c":
+			case "ctrl+c":
 				return m, tea.Quit
 			}
 			return m, nil
@@ -615,7 +672,7 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	if r := m.run; r != nil && r.diff {
 		switch msg.String() {
-		case "esc", "d":
+		case "esc", "d", "q":
 			r.diff = false
 		case "j", "down":
 			r.diffOff++
@@ -625,7 +682,7 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			r.diffOff += m.page()
 		case "pgup":
 			r.diffOff = max(0, r.diffOff-m.page())
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m.stopTests(), tea.Quit
 		}
 		return m, nil
@@ -687,12 +744,14 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		cmd, err := m.deps.Edit(*m.open, m.lang())
 		return m.afterOpen(cmd, err, "edit")
+	case "T":
+		m = m.openTM(false)
 	case "a":
-		if m.deps.AddCustom == nil {
-			break
-		}
-		cmd, err := m.deps.AddCustom(*m.open)
-		return m.afterOpen(cmd, err, "add test")
+		m = m.openTM(true)
+	case "tab":
+		m.pane = (m.pane + 1) % panes
+	case "shift+tab":
+		m.pane = (m.pane + panes - 1) % panes
 	case "o":
 		if open, p := m.deps.OpenURL, *m.open; open != nil {
 			return m, func() tea.Msg {
@@ -701,15 +760,36 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "up", "k":
-		m.scroll = max(0, m.scroll-1)
+		m = m.moveInPane(-1)
 	case "down", "j":
-		m.scroll = min(m.maxScroll(), m.scroll+1)
+		m = m.moveInPane(1)
 	case "pgup":
-		m.scroll = max(0, m.scroll-m.page())
+		m = m.moveInPane(-m.page())
 	case "pgdown":
-		m.scroll = min(m.maxScroll(), m.scroll+m.page())
+		m = m.moveInPane(m.page())
+	case "home", "g":
+		m = m.moveInPane(-1 << 30)
+	case "end", "G":
+		m = m.moveInPane(1 << 30)
 	}
 	return m, nil
+}
+
+// moveInPane scrolls the focused pane (or moves the test selection) by d lines.
+func (m Model) moveInPane(d int) Model {
+	if _, _, ok := m.split(); ok {
+		switch m.pane {
+		case paneTests:
+			m.tsel = max(0, min(m.tsel+d, len(m.rows())-1))
+			m.detScroll = 0
+			return m
+		case paneDetail:
+			m.detScroll = max(0, m.detScroll+d)
+			return m
+		}
+	}
+	m.scroll = max(0, min(m.scroll+d, m.maxScroll()))
+	return m
 }
 
 // content is the whole Problem view as lines: header, statement, Sample Tests.
@@ -791,7 +871,12 @@ func (m Model) mode() string {
 	return "tokens"
 }
 
-func (m Model) maxScroll() int { return max(0, len(m.content())-m.page()) }
+func (m Model) maxScroll() int {
+	if _, _, ok := m.split(); ok {
+		return max(0, len(m.stmtLines())-(m.paneHeight()-2))
+	}
+	return max(0, len(m.content())-m.page())
+}
 
 // clean drops control characters (ESC etc.) so server-supplied text can't inject terminal escapes.
 func clean(s string) string {
@@ -835,8 +920,6 @@ func (m Model) screen() string {
 	b.WriteString("\n\n")
 	footer := ""
 	switch {
-	case m.help:
-		footer = m.viewHelp(&b)
 	case m.open != nil:
 		footer = m.viewProblem(&b)
 	case m.tab == 0:
@@ -883,6 +966,12 @@ func (m Model) screen() string {
 	for i, l := range lines {
 		lines[i] = xansi.Truncate(l, m.width, "…")
 	}
+	if bx := m.modalBox(); bx != nil {
+		lines = overlay(lines, bx, m.width, m.height-3) // keep the footer and toast visible
+		for i, l := range lines {
+			lines[i] = xansi.Truncate(l, m.width, "")
+		}
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -891,7 +980,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"S", "stress test (esc cancels, w saves counterexample)"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"tab, shift+tab", "move between statement, tests and detail panes"}, {"j/k, pgup/pgdn, g/G", "scroll the pane, or move the test selection"}, {"e", "edit Solution in Neovim"}, {"T", "manage tests: view, add, edit, copy, delete"}, {"a", "add a Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"S", "stress test (esc cancels, w saves counterexample)"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select next/previous test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"q", "close a modal; quit when none is open"}, {"?", "toggle help"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -910,22 +999,9 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	return tabs[m.tab], global
 }
 
-func (m Model) viewHelp(b *strings.Builder) string {
-	screen, keys := m.keys()
-	st := m.styles()
-	b.WriteString(" " + st.Accent.Render("Keys: "+screen) + "\n\n")
-	for _, k := range keys {
-		b.WriteString(fmt.Sprintf("  %-16s %s\n", k[0], k[1]))
-	}
-	return "? or esc closes"
-}
-
 func (m Model) viewProblem(b *strings.Builder) string {
-	if s := m.strs; s != nil && s.diff {
-		return m.diffView(b, s.counterexample(), &s.diffOff, &s.diffInit, s.saveHint())
-	}
-	if r := m.run; r != nil && r.diff {
-		return m.diffView(b, r.results[r.sel], &r.diffOff, &r.diffInit, "")
+	if lw, rw, ok := m.split(); ok {
+		return m.viewSplit(b, lw, rw)
 	}
 	lines := m.content()
 	if m.loading {
@@ -943,7 +1019,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 
 func (m Model) viewList(b *strings.Builder) string {
 	st := m.styles()
-	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-8s %-40s %6s %7s  %s", "ID", "Name", "Rating", "Solved", "Tags")) + "\n")
+	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-8s %s %6s %7s  %s", "ID", fit("Name", max(20, min(46, (m.contentWidth()-34)/2))), "Rating", "Solved", "Tags")) + "\n")
 	rows := m.page() - 1
 	start := max(0, min(m.cursor-rows/2, len(m.visible)-rows))
 	for i := start; i < min(start+rows, len(m.visible)); i++ {
@@ -952,8 +1028,9 @@ func (m Model) viewList(b *strings.Builder) string {
 		if i == m.cursor {
 			cur = st.Accent.Render(">")
 		}
-		mark, rating := m.markOf(m.statusOf(p)), ratingStr(p)
-		b.WriteString(fmt.Sprintf("%s %s %-8s %-40.40s %6s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), clean(p.Name), rating, p.SolvedCount, clean(strings.Join(p.Tags, ", "))))
+		mark := m.markOf(m.statusOf(p))
+		nameW := max(20, min(46, (m.contentWidth()-34)/2))
+		b.WriteString(fmt.Sprintf("%s %s %-8s %s %s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), fit(clean(p.Name), nameW), m.ratingText(p), p.SolvedCount, st.Dim.Render(clean(strings.Join(p.Tags, ", ")))))
 	}
 	if m.input != nil {
 		if m.input.kind == '/' {

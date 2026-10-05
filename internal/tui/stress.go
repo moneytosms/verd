@@ -118,7 +118,7 @@ func (m Model) saveStress() Model {
 func (m Model) updateStressOverlay(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	s := m.strs
 	switch msg.String() {
-	case "esc", "d":
+	case "esc", "d", "q":
 		s.diff = false
 	case "w":
 		m = m.saveStress()
@@ -130,7 +130,7 @@ func (m Model) updateStressOverlay(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		s.diffOff += m.page()
 	case "pgup":
 		s.diffOff = max(0, s.diffOff-m.page())
-	case "q", "ctrl+c":
+	case "ctrl+c":
 		return m.stopStress().stopTests(), tea.Quit
 	}
 	return m, nil

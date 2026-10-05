@@ -50,9 +50,9 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.contestOpen != nil {
 		ps := m.contestProblems(*m.contestOpen)
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
-		case "esc":
+		case "esc", "q":
 			m.contestOpen, m.cpCursor = nil, 0
 		case "up", "k":
 			m.cpCursor = max(0, m.cpCursor-1)
@@ -95,25 +95,31 @@ func countdown(d time.Duration) string {
 	return fmt.Sprintf("in %dm", max(1, int(d.Minutes())))
 }
 
-func (m Model) viewContests(b *strings.Builder) string {
-	if c := m.contestOpen; c != nil {
-		b.WriteString(fmt.Sprintf(" %d  %s\n\n", c.ID, clean(c.Name)))
-		ps := m.contestProblems(*c)
-		if len(ps) == 0 {
-			b.WriteString("  no Problems cached for this contest\n")
-		}
-		for i, p := range ps {
-			cur := " "
-			if i == m.cpCursor {
-				cur = m.styles().Accent.Render(">")
-			}
-			b.WriteString(fmt.Sprintf("%s %s %-3s %-40.40s %6s\n", cur, m.markOf(m.statusOf(p)), clean(p.Index), clean(p.Name), ratingStr(p)))
-		}
-		return "esc back  enter open  j/k move  ? help  q quit"
+// contestBox is the modal listing one contest's cached Problems.
+func (m Model) contestBox() []string {
+	c := m.contestOpen
+	st := m.styles()
+	w, _ := m.modalSize(90, 30)
+	ps := m.contestProblems(*c)
+	var body []string
+	if len(ps) == 0 {
+		body = append(body, st.Dim.Render("no Problems cached for this contest"))
 	}
+	for i, p := range ps {
+		cur := " "
+		if i == m.cpCursor {
+			cur = st.Accent.Render(">")
+		}
+		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), m.ratingText(p)))
+	}
+	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, "enter open  j/k move  q close", w, len(body)+2, true, st)
+}
+
+func (m Model) viewContests(b *strings.Builder) string {
 	if len(m.contests) == 0 {
 		b.WriteString("  no contests cached\n")
 	}
+	st := m.styles()
 	rows := m.page() - 2
 	start := max(0, min(m.contestCursor-rows/2, len(m.contests)-rows))
 	now := m.clock()
@@ -141,7 +147,7 @@ func (m Model) viewContests(b *strings.Builder) string {
 		default:
 			when = "running"
 		}
-		b.WriteString(fmt.Sprintf("%s %-12s %-50.50s %s\n", cur, when, clean(c.Name), fmt.Sprint(c.ID)))
+		b.WriteString(fmt.Sprintf("%s %-12s %s %s\n", cur, when, fit(clean(c.Name), max(30, m.contentWidth()-24)), st.Dim.Render(fmt.Sprint(c.ID))))
 	}
 	return fmt.Sprintf("%d contests  enter Problems  ? help  q quit", len(m.contests))
 }

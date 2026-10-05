@@ -503,7 +503,7 @@ func TestTestsPanelStreams(t *testing.T) {
 	m, _ = send(m, "n")
 	m, _ = send(m, "d")
 	out = plain(m)
-	for _, want := range []string{"Diff: sample-2", "first mismatch at line 2 col 1", "expected", "actual", "10", "11", "showing 2/2 lines"} {
+	for _, want := range []string{"Diff: sample-2", "first mismatch at line 2 col 1", "expected", "actual", "10", "11", "1-2/2"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("diff missing %q:\n%s", want, out)
 		}
@@ -543,7 +543,7 @@ func TestDiffTruncatesLargeOutput(t *testing.T) {
 	_ = ch
 	m, _ = send(m, "d")
 	out := plain(m)
-	if !strings.Contains(out, "of 500 lines") && !strings.Contains(out, "/500 lines") {
+	if !strings.Contains(out, "/500") {
 		t.Fatalf("truncation hint missing:\n%s", out)
 	}
 	if !strings.Contains(out, "BAD") {
@@ -664,27 +664,47 @@ func TestComparisonModeCyclesAndPersists(t *testing.T) {
 	}
 }
 
-func TestCustomTestKey(t *testing.T) {
+func TestCustomTestKeys(t *testing.T) {
 	added := 0
+	var saved []string
 	deps := Deps{
 		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
 			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
 		},
-		AddCustom:   func(cf.Problem) (*exec.Cmd, error) { added++; return nil, nil },
+		AddCustom: func(cf.Problem) (*exec.Cmd, error) { added++; return nil, nil },
+		SaveCase: func(_ cf.Problem, name, in, want string) (string, error) {
+			saved = append(saved, name+"|"+in+"|"+want)
+			return "custom-1", nil
+		},
 		EditorAlive: func() bool { return true },
 	}
 	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
 	m, _ = step(t, m, cmd)
-	m, cmd = send(m, "a")
-	if added != 1 || cmd == nil || !m.editorOpen {
-		t.Fatalf("a should create a Custom Test and open the editor: added=%d", added)
-	}
-	deps.AddCustom = func(cf.Problem) (*exec.Cmd, error) { return nil, errors.New("disk full") }
-	m, cmd = send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
-	m, _ = step(t, m, cmd)
+	// a opens the manager straight into the in-place editor; typing fills Input, tab moves to Expected
 	m, _ = send(m, "a")
-	if !strings.Contains(plain(m), "add test: disk full") {
-		t.Fatal("error not shown")
+	if m.tm == nil || m.tm.ed == nil {
+		t.Fatal("a should open the editor for a new test")
+	}
+	for _, k := range []string{"7", "enter", "8", "tab", "5", "6"} {
+		m, _ = send(m, k)
+	}
+	m, _ = send(m, "ctrl+s")
+	if len(saved) != 1 || saved[0] != "|7\n8\n|56\n" || m.tm.ed != nil {
+		t.Fatalf("saved %q", saved)
+	}
+	// E hands a new pair to the external editor
+	m, cmd = send(m, "E")
+	if added != 1 || cmd == nil || !m.editorOpen {
+		t.Fatalf("E should open the external editor: added=%d", added)
+	}
+	// q closes the modal, not verd
+	m, _ = send(m, "T")
+	if m.tm == nil {
+		t.Fatal("T opens the manager")
+	}
+	m, cmd = send(m, "q")
+	if m.tm != nil || cmd != nil {
+		t.Fatal("q must close the modal")
 	}
 }
 
@@ -930,6 +950,10 @@ func TestSubmitFailureToastIsSticky(t *testing.T) {
 	if m.toast == nil || !m.toast.bad || cmd != nil {
 		t.Fatalf("failure toast must be set with no auto-clear: %+v", m.toast)
 	}
+	if out := plain(m); !strings.Contains(out, "Submission 1A") || !strings.Contains(out, "✗ Wrong answer on test 2") {
+		t.Fatalf("the Submission modal should show the failure:\n%s", out)
+	}
+	m, _ = send(m, "q") // q closes the modal, leaving the toast
 	if out := plain(m); !strings.Contains(out, "✗ Wrong answer on test 2 (1A)  x dismiss") {
 		t.Fatalf("failure toast:\n%s", out)
 	}
@@ -1027,7 +1051,8 @@ func TestSubmissionFinalReloadsMarks(t *testing.T) {
 		t.Fatal("final update should schedule a reload")
 	}
 	nm, _ = m.Update(m.reload()())
-	m, _ = send(nm.(Model), "esc")
+	m, _ = send(nm.(Model), "q") // close the Submission modal
+	m, _ = send(m, "esc")
 	if !strings.Contains(plain(m), "✓ 1A") {
 		t.Fatalf("solved mark should appear after the Submission lands:\n%s", plain(m))
 	}

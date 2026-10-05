@@ -125,3 +125,35 @@ func TestNewMakesRelativeRootAbsolute(t *testing.T) {
 		t.Fatalf("%q want %q", got, wd)
 	}
 }
+
+func TestCustomsSaveCaseAndDelete(t *testing.T) {
+	w := New(t.TempDir())
+	w.WriteSamples(1, "A", []scrape.Sample{{Input: "1\n", Output: "1\n"}})
+	a, _ := w.SaveCase(1, "A", "", "2\n", "4\n") // new
+	b, _ := w.SaveCase(1, "A", "", "3\n", "9\n")
+	if a != "custom-1" || b != "custom-2" {
+		t.Fatalf("%s %s", a, b)
+	}
+	if _, err := w.SaveCase(1, "A", "custom-1", "5\n", "25\n"); err != nil { // overwrite
+		t.Fatal(err)
+	}
+	cs, _ := w.Customs(1, "A")
+	if len(cs) != 2 || cs[0].Input != "5\n" || cs[0].Want != "25\n" || cs[1].Name != "custom-2" {
+		t.Fatalf("%+v", cs)
+	}
+	if err := w.DeleteCustom(1, "A", "sample-1"); err == nil {
+		t.Fatal("samples must not be deletable")
+	}
+	if err := w.DeleteCustom(1, "A", "../x"); err == nil {
+		t.Fatal("path escape must be rejected")
+	}
+	if err := w.DeleteCustom(1, "A", "custom-1"); err != nil {
+		t.Fatal(err)
+	}
+	if cs, _ = w.Customs(1, "A"); len(cs) != 1 || cs[0].Name != "custom-2" {
+		t.Fatalf("%+v", cs)
+	}
+	if ts, _ := w.Tests(1, "A"); len(ts) != 2 { // sample-1 + custom-2
+		t.Fatalf("%+v", ts)
+	}
+}

@@ -29,6 +29,9 @@ type subState struct {
 	problem cf.Problem
 	status  string
 	notes   []string
+	final   bool   // the Verdict is in
+	ok      bool   // ...and it is Accepted
+	detail  string // time and memory of the final Verdict
 }
 
 type toast struct {
@@ -87,7 +90,7 @@ func (m Model) trySubmit() (Model, tea.Cmd) {
 func (m Model) startSubmit() (Model, tea.Cmd) {
 	p, lang, submit := *m.open, m.lang(), m.deps.Submit
 	m.confirm, m.errMsg = false, ""
-	m.sub = &subState{problem: p, status: "preparing..."}
+	m.sub, m.subModal = &subState{problem: p, status: "preparing..."}, true
 	return m, func() tea.Msg {
 		st, err := submit(context.Background(), p, lang)
 		return submitStartedMsg{p: p, start: st, err: err}
@@ -96,7 +99,7 @@ func (m Model) startSubmit() (Model, tea.Cmd) {
 
 // begin shows a started submit and returns the cmds that copy the Solution and follow the updates.
 func (m Model) beginTracking(p cf.Problem, st SubmitStart) (Model, tea.Cmd) {
-	m.sub = &subState{problem: p, status: "waiting for your submission on Codeforces...", notes: st.Notes}
+	m.sub, m.subModal = &subState{problem: p, status: "waiting for your submission on Codeforces...", notes: st.Notes}, true
 	cmds := []tea.Cmd{listenSub(st.Updates)}
 	if st.Text != "" {
 		cmds = append(cmds, tea.SetClipboard(st.Text))
@@ -108,7 +111,7 @@ func (m Model) onSubmitMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case submitStartedMsg:
 		if msg.err != nil {
-			m.sub = nil
+			m.sub, m.subModal = nil, false
 			m.errMsg = "submit: " + msg.err.Error()
 			return m, nil, true
 		}
@@ -124,6 +127,13 @@ func (m Model) onSubmitMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		m.sub.status = msg.u.Text
 		if !msg.u.Final {
 			return m, listenSub(msg.ch), true
+		}
+		m.sub.final = true
+		if s := msg.u.Submission; msg.u.Err == nil {
+			m.sub.ok = s.Verdict == "OK"
+			if s.TimeMS > 0 || s.MemoryBytes > 0 {
+				m.sub.detail = fmt.Sprintf("%d ms  %.1f MB", s.TimeMS, float64(s.MemoryBytes)/(1<<20))
+			}
 		}
 		id := fmt.Sprintf("%d%s", m.sub.problem.ContestID, m.sub.problem.Index)
 		reload := m.reload()

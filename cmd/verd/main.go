@@ -308,6 +308,20 @@ func runTUI(path string) error {
 			}
 			return stress.Run(ctx, spec), nil
 		},
+		Customs: func(p cf.Problem) ([]tui.Case, error) {
+			cs, err := workspace.New(cfg.Workspace).Customs(p.ContestID, p.Index)
+			out := make([]tui.Case, len(cs))
+			for i, c := range cs {
+				out[i] = tui.Case{Name: c.Name, Input: c.Input, Want: c.Want, Custom: true}
+			}
+			return out, err
+		},
+		SaveCase: func(p cf.Problem, name, input, want string) (string, error) {
+			return workspace.New(cfg.Workspace).SaveCase(p.ContestID, p.Index, name, input, want)
+		},
+		DeleteCase: func(p cf.Problem, name string) error {
+			return workspace.New(cfg.Workspace).DeleteCustom(p.ContestID, p.Index, name)
+		},
 		SaveCounterexample: func(p cf.Problem, input, want string) (string, error) {
 			return workspace.New(cfg.Workspace).SaveCustom(p.ContestID, p.Index, input, want)
 		},

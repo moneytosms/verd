@@ -17,7 +17,6 @@ type testRun struct {
 	compile  string // "", "compiling...", "ok", "ok (cached)", or compiler output
 	results  []runner.Result
 	overall  string
-	sel      int
 	diff     bool
 	diffOff  int
 	diffInit bool
@@ -62,6 +61,7 @@ func (m Model) startTests() (Model, tea.Cmd) {
 	}
 	m.errMsg = ""
 	m.run = &testRun{id: id, cancel: cancel, running: true}
+	m = m.loadCases()
 	return m, listen(id, ch)
 }
 
@@ -125,17 +125,13 @@ func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 		nm, cmd := m.startTests()
 		return nm, cmd, true
 	case "n":
-		if r != nil && r.sel < len(r.results)-1 {
-			r.sel++
-		}
-		return m, nil, r != nil
+		m.tsel = min(m.tsel+1, max(0, len(m.rows())-1))
+		return m, nil, true
 	case "p":
-		if r != nil && r.sel > 0 {
-			r.sel--
-		}
-		return m, nil, r != nil
+		m.tsel = max(0, m.tsel-1)
+		return m, nil, true
 	case "d":
-		if r != nil && r.sel < len(r.results) && r.results[r.sel].Verdict != runner.AC {
+		if row, ok := m.selected(); ok && r != nil && row.Res != nil && row.Res.Verdict != runner.AC {
 			r.diff, r.diffInit = true, false
 		}
 		return m, nil, r != nil
@@ -183,7 +179,7 @@ func (m Model) testsPanel() []string {
 	passed := 0
 	for i, res := range r.results {
 		cur := "  "
-		if i == r.sel {
+		if i == m.tsel {
 			cur = st.Accent.Render("> ")
 		}
 		line := fmt.Sprintf("%s%-10s %s %6d ms %7.1f MB", cur, res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
@@ -220,40 +216,6 @@ func (m Model) verdictStyle(v string) string {
 		return st.Dim.Render(fmt.Sprintf("%-3s", v))
 	}
 	return st.Bad.Render(fmt.Sprintf("%-3s", v))
-}
-
-// diffView renders the side-by-side diff overlay for the selected test.
-func (m Model) diffView(b *strings.Builder, res runner.Result, diffOff *int, diffInit *bool, extra string) string {
-	st := m.styles()
-	want, got := cleanLines(res.Expected), cleanLines(res.Output)
-	b.WriteString(" " + st.Accent.Render(fmt.Sprintf("Diff: %s  %s", res.Name, res.Verdict)) + "\n")
-	if res.Mismatch != nil {
-		mm := res.Mismatch
-		b.WriteString(fmt.Sprintf(" first mismatch at line %d col %d: want %q got %q\n", mm.Line, mm.Col, clean(clip(mm.Want, 40)), clean(clip(mm.Got, 40))))
-	}
-	rows := max(3, m.height-8)
-	total := max(len(want), len(got))
-	if !*diffInit { // start near the first mismatch
-		*diffInit = true
-		*diffOff = 0
-		if res.Mismatch != nil {
-			*diffOff = max(0, res.Mismatch.Line-1-rows/3)
-		}
-	}
-	off := min(*diffOff, max(0, total-rows))
-	w := max(10, (m.width-6)/2)
-	b.WriteString(" " + st.Dim.Render(fmt.Sprintf("%-*s | %s", w, "expected", "actual")) + "\n")
-	end := min(total, off+rows)
-	for i := off; i < end; i++ {
-		l, a := cell(want, i, w), cell(got, i, w)
-		hit := res.Mismatch != nil && i == res.Mismatch.Line-1
-		if hit {
-			l, a = st.Bad.Render(l), st.Bad.Render(a)
-		}
-		b.WriteString(fmt.Sprintf(" %s | %s\n", l, a))
-	}
-	hint := fmt.Sprintf("showing %d/%d lines from line %d", end-off, total, min(off+1, total))
-	return hint + extra + "  j/k scroll  esc close"
 }
 
 // cell returns line i of ls, padded or clipped to w columns.
