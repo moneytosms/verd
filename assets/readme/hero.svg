@@ -17,32 +17,41 @@
 <g transform="translate(332 392)"><rect width="40" height="28" rx="6" fill="#f7768e" fill-opacity="0.14" stroke="#f7768e" stroke-opacity="0.55"/><text x="20.0" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#f7768e">CE</text></g>
 <text x="64" y="466" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#565f89">linux · macos · tmux · herdr · neovim · go</text>
 <g transform="translate(600 52)">
-<rect width="548" height="346" rx="12" fill="#16161e" stroke="#292e42"/>
+<rect width="548" height="400" rx="12" fill="#16161e" stroke="#292e42"/>
 <path d="M0 12a12 12 0 0 1 12-12h524a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
 <circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
 <text x="274.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">verd  ~/verd/1/A</text>
 <text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
 <text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
-<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tourist (3979)</text>
+<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">s-m-s (1634)</text>
 <text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1A  Theatre Square</text>
 <text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> time 1 s   memory 256 MB</text>
 <text x="25.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Tests [cpp, tokens]  </text>
-<text x="189.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" font-weight="700" xml:space="preserve">AC </text>
-<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   compile: ok (cached)</text>
+<text x="189.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" font-weight="700" xml:space="preserve">WA </text>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   compile: ok</text>
 <text x="25.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">&gt; </text>
 <text x="41.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">sample-1   </text>
 <text x="127.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
-<text x="150.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      4 ms     3.1 MB</text>
+<text x="150.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      3 ms     1.4 MB</text>
 <text x="18.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   custom-1   </text>
-<text x="127.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
-<text x="150.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      5 ms     3.0 MB</text>
+<text x="127.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">WA </text>
+<text x="150.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      4 ms     1.4 MB  line 1 col 1: want …</text>
 <text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   custom-2   </text>
 <text x="127.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
-<text x="150.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      5 ms     3.2 MB</text>
-<text x="25.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  3/3 AC  max 5 ms  max 3.2 MB   n/p select  d diff</text>
-<text x="25.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Stress [cpp, tokens]</text>
-<text x="25.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">  mismatch at seed 7</text>
-<text x="18.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   saved as custom-3</text>
-<text x="18.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">esc back  e edit  s submit  a add test  l lang  t test  S stress …</text>
+<text x="150.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      2 ms     1.4 MB</text>
+<text x="25.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  2/3 AC  max 4 ms  max 1.4 MB   n/p select  d diff</text>
+<text x="41.4" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">Theatre Square in the capital city of Berland has a …</text>
+<text x="41.4" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">with the size </text>
+<text x="150.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">n</text>
+<text x="158.4" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> × </text>
+<text x="181.8" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">m</text>
+<text x="189.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> meters. On the occasion of the city&#x27;s …</text>
+<text x="41.4" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">decision was taken to pave the Square with square granite …</text>
+<text x="41.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">Each flagstone is of the size </text>
+<text x="275.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">a</text>
+<text x="283.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> × </text>
+<text x="306.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">a</text>
+<text x="314.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">.</text>
+<text x="18.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">esc back  e edit  s submit  a add test  l lang  t test  S stress …</text>
 </g>
 </svg>

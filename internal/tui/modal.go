@@ -48,7 +48,7 @@ func (m Model) helpBox() []string {
 // diffBox is the side-by-side expected/actual view of one test.
 func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra string) []string {
 	st := m.styles()
-	w, h := m.modalSize(130, 36)
+	w, h := m.modalSize(100, 36)
 	want, got := cleanLines(res.Expected), cleanLines(res.Output)
 	var body []string
 	if res.Mismatch != nil {

@@ -9,13 +9,15 @@
 | Risk | None. | Account risk, see below. |
 | Verdict tracking | Yes | Yes |
 
-Verdicts are tracked the same way in both modes: verd polls your public `user.status` for a Submission newer than the one it saw before you submitted, and shows `Testing on test 7`, `Accepted`, `Wrong answer on test 2`, and so on. Each update is saved, so the Problem is marked solved without a refresh. Tracking stops at a final Verdict or after 5 minutes.
+Verdicts are tracked the same way in both modes: verd polls your public `user.status` for a Submission newer than the one it saw before you submitted, and shows `Testing on test 7`, `Accepted`, `Wrong answer on test 2`, and so on. Each update is saved, so the Problem is marked solved without a refresh. In the TUI the status opens in a Submission modal (`q` closes it, tracking continues) and ends with a green `✓ Accepted` or a red `✗ Wrong answer on test N`, plus time and memory. Tracking stops at a final Verdict or after 5 minutes.
 
 ## Browser mode
 
 1. The Solution is copied with the first tool found: `pbcopy` (macOS), `clip.exe` (WSL), `wl-copy` (Wayland), `xclip` or `xsel` (X11). An OSC 52 sequence is also sent for terminals that support it, which works over ssh and tmux.
 2. The submit page opens with `open`, `wslview` / `explorer.exe`, or `xdg-open`.
 3. Paste, choose the language, submit.
+
+Browser mode cannot preselect the language: the Codeforces submit page takes no language in its URL, so you pick it yourself (Codeforces remembers your last choice). To have verd choose the compiler for you, use direct mode, which sends the language's `cf_compiler_id` (see [Configuration](./config.md#languages)).
 
 If no clipboard or opener is found, verd says so and prints the URL.
 

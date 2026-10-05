@@ -231,7 +231,7 @@ func (m Model) updateTM(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) tmBox() []string {
 	st := m.styles()
 	t := m.tm
-	w := min(m.width-4, 112)
+	w := min(m.width-4, 100)
 	h := min(m.height-4, 30)
 	if t.ed != nil {
 		longest := max(len(t.ed.buf[0]), len(t.ed.buf[1]))

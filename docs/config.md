@@ -7,7 +7,7 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `handle` | none, **required** | Your Codeforces handle. Solved marks, stats and Verdict tracking use it. |
-| `workspace` | `"~/verd"` | Where Solutions and tests live: `<workspace>/<contest>/<index>/`. |
+| `workspace` | `"~/verd"` | Where Solutions and tests live: `<workspace>/<contest>/<index>/`. A relative value such as `"."` is resolved against the directory verd is started in; `verd --here` does the same for one run. |
 | `default_lang` | `"cpp"` | Language for new Solutions. Any `[lang.*]` key. |
 | `time_multiplier` | `1.0` | Scales every Problem's time limit for local runs. Use `2.0` on a slow machine. |
 | `float_eps` | `1e-6` | Absolute/relative tolerance for the `float` Comparison Mode. |

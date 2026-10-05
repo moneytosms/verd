@@ -27,10 +27,10 @@
 ## See it
 
 <p align="center">
-  <img src="./assets/readme/screens.svg" width="100%" alt="The Problems tab with solved marks, and the stress counterexample diff overlay.">
+  <img src="./assets/readme/screens.svg" width="100%" alt="Live fuzzy search on the Problems tab; the split Problem view with the statement on the left and tests with input, expected and output on the right; and the test manager modal.">
 </p>
 
-These are real frames rendered by verd's own model (Tokyo Night theme), not mock-ups.
+These are real frames rendered by verd's own model (Tokyo Night theme), not mock-ups. The Problem view splits when the terminal is at least 100 columns wide; `tab` moves between its panes, and small things (help, diffs, the test manager, a Submission) open in modals you close with `q`.
 
 ## Install
 
@@ -48,12 +48,13 @@ You also need: `nvim` for editing, a compiler or interpreter for your languages 
 verd init                       # writes ~/.config/verd/config.toml and starter Templates
 $EDITOR ~/.config/verd/config.toml   # set: handle = "your_codeforces_handle"
 verd                            # open the TUI
+verd --here                     # same, but keep Solutions in the current directory
 ```
 
 1. **Pick.** On the Problems tab press `enter` on a Problem, or press `4` for the Picker and `w` for your weak topics.
 2. **Edit.** Press `e`. Neovim opens beside verd on `~/verd/<contest>/<index>/main.cpp`, created from your Template.
 3. **Test.** Press `t` (or just save, `autotest` is on by default). Press `n`/`p` to select a test and `d` for a diff on a failing one.
-4. **Add a case.** Press `a` to create the next `custom-N.in` / `.ans` pair.
+4. **Manage cases.** Press `a` to add a Custom Test in place, or `T` for the test manager: edit, copy (samples too), delete.
 5. **Stress.** Press `S`. The first time, verd creates `gen.cpp` and `brute.cpp` and opens them; fill them in and press `S` again. It runs until it finds a counterexample, and `w` saves it as a Custom Test.
 6. **Submit.** Press `s`. The Solution is copied, the submit page opens, and the Verdict streams into the pane.
 
@@ -88,7 +89,7 @@ More in [docs/neovim.md](./docs/neovim.md).
 
 | Command | What it does |
 | --- | --- |
-| `verd` | Open the TUI. |
+| `verd [--here]` | Open the TUI. `--here` keeps Solutions in the current directory (`<dir>/<contest>/<index>/`) instead of the configured Workspace. |
 | `verd init [--force]` | Write the default config and Templates. |
 | `verd config` | Print the effective, merged config. |
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
