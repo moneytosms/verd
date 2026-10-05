@@ -233,7 +233,7 @@ func runTUI(path string) error {
 			if err != nil {
 				return tui.SubmitStart{}, err
 			}
-			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Updates: st.Updates}, nil
+			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Updates: st.Updates}, nil
 		},
 		Reload: func() (tui.Data, error) { return loadData(s, cfg.Handle) },
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {

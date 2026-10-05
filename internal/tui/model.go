@@ -259,7 +259,17 @@ func (m Model) onTab() Model {
 func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
+		if m.input.kind == '/' { // live search: esc undoes it
+			m.filter.Search, m.cursor = m.input.prev, 0
+			m.input, m.inputErr = nil, ""
+			return m.refilter(), nil
+		}
 		m.input, m.inputErr = nil, ""
+	case "tab":
+		if m.input.kind == '/' {
+			m.filter.SearchMode = nextOf(searchModes, m.searchMode())
+			return m.liveSearch(), nil
+		}
 	case "enter":
 		if m.input.kind == 'p' {
 			f, err := ParseFilter(m.input.text)
@@ -277,7 +287,8 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.roll(), nil
 		}
 		if m.input.kind == '/' {
-			m.filter.Search = m.input.text
+			m.input, m.inputErr = nil, ""
+			return m, nil // already applied live
 		} else {
 			f, err := ParseFilter(m.input.text)
 			if err != nil {

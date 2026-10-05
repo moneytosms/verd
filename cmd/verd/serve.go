@@ -95,7 +95,7 @@ func submitHandler(sub *submitter, attach func(tui.ExternalSubmit)) ipc.Handler 
 			emit(ipc.Message{Kind: "submit", Text: n})
 		}
 		shown := make(chan submit.Update, 8)
-		attach(tui.ExternalSubmit{Problem: p, Start: tui.SubmitStart{Text: st.Text, Notes: st.Notes, Updates: shown}})
+		attach(tui.ExternalSubmit{Problem: p, Start: tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Updates: shown}})
 		defer close(shown)
 		for u := range st.Updates {
 			emit(ipc.Message{Kind: "submit", Text: u.Text, Final: u.Final, Verdict: u.Submission.Verdict, Err: errText(u.Err)})

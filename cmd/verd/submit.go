@@ -72,6 +72,7 @@ type Started struct {
 	Problem cf.Problem
 	Text    string
 	Notes   []string
+	Direct  bool // sent straight to Codeforces; nothing was copied or opened
 	Updates <-chan submit.Update
 }
 
@@ -103,7 +104,7 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		if err := s.direct(ctx, p.ContestID, p.Index, s.cfg.Lang[lang].CFCompilerID, src); err != nil {
 			st.Notes = append(st.Notes, "direct submit failed, using the browser: "+err.Error())
 		} else {
-			sent = true
+			sent, st.Direct = true, true
 			st.Notes = append(st.Notes, "submitted directly")
 		}
 	}

@@ -147,7 +147,7 @@ func (m Model) viewContests(b *strings.Builder) string {
 		default:
 			when = "running"
 		}
-		b.WriteString(fmt.Sprintf("%s %-12s %s %s\n", cur, when, fit(clean(c.Name), max(30, m.contentWidth()-24)), st.Dim.Render(fmt.Sprint(c.ID))))
+		b.WriteString(fmt.Sprintf("%s %-12s %s %s\n", cur, when, fit(clean(c.Name), max(30, min(72, m.contentWidth()-24))), st.Dim.Render(fmt.Sprint(c.ID))))
 	}
 	return fmt.Sprintf("%d contests  enter Problems  ? help  q quit", len(m.contests))
 }

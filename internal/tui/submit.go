@@ -16,6 +16,7 @@ import (
 type SubmitStart struct {
 	Text    string   // the Solution, for an OSC 52 clipboard copy
 	Notes   []string // non-fatal: clipboard/opener problems, where to paste
+	Direct  bool     // already sent to Codeforces: no paste step, and nothing to copy
 	Updates <-chan submit.Update
 }
 
@@ -99,9 +100,13 @@ func (m Model) startSubmit() (Model, tea.Cmd) {
 
 // begin shows a started submit and returns the cmds that copy the Solution and follow the updates.
 func (m Model) beginTracking(p cf.Problem, st SubmitStart) (Model, tea.Cmd) {
-	m.sub, m.subModal = &subState{problem: p, status: "waiting for your submission on Codeforces...", notes: st.Notes}, true
+	status := "waiting for your submission on Codeforces..."
+	if st.Direct {
+		status = "submitted, waiting for the Verdict..."
+	}
+	m.sub, m.subModal = &subState{problem: p, status: status, notes: st.Notes}, true
 	cmds := []tea.Cmd{listenSub(st.Updates)}
-	if st.Text != "" {
+	if st.Text != "" && !st.Direct {
 		cmds = append(cmds, tea.SetClipboard(st.Text))
 	}
 	return m, tea.Batch(cmds...)
