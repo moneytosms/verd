@@ -1,50 +1,339 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1382" viewBox="0 0 1200 1382" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2058" viewBox="0 0 1200 2058" role="img" aria-labelledby="t d">
 <title id="t">verd screens</title>
-<desc id="d">Top: the Problems tab with live fuzzy search. Middle: the split Problem view with the statement on the left and the tests, with the selected test input, expected and actual output, on the right. Bottom: the test manager modal.</desc>
-<rect width="1200" height="1382" rx="22" fill="#1a1b26"/>
+<desc id="d">Four frames of the verd TUI: the Problems list with filter chips, the filter modal with a tag picker, the split Problem view with tests and the selected test input, expected and output, and the Settings tab with a theme gallery.</desc>
+<rect width="1200" height="2058" rx="22" fill="#1a1b26"/>
 <g transform="translate(40 40)">
-<rect width="1120" height="238" rx="12" fill="#16161e" stroke="#292e42"/>
+<rect width="1120" height="292" rx="12" fill="#16161e" stroke="#292e42"/>
 <path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
 <circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
-<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Live fuzzy search: type &#x27;math&#x27;, the list re-ranks as you type (tab: all/name/tag/id)</text>
-<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
-<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
-<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">s-m-s (1634)</text>
-<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    ID       Name                                           Rating  Solved  Tags</text>
-<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">&gt;</text>
-<text x="33.6" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">✓</text>
-<text x="41.4" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1A       Theatre Square                                 </text>
-<text x="486.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1000</text>
-<text x="532.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  213000  </text>
-<text x="610.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">math</text>
-<text x="18.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    4A       Watermelon                                     </text>
-<text x="486.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   800</text>
-<text x="532.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  735000  </text>
-<text x="610.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">brute force, math</text>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Problems: filter chips, sort, colored ratings and tags (click a row, wheel to scroll)</text>
+<rect x="18.0" y="45" width="46.8" height="18" fill="#7aa2f7"/>
+<rect x="64.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="72.6" y="45" width="93.6" height="18" fill="#7aa2f7"/>
+<rect x="166.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="174.0" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="181.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="189.6" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="267.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="275.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="283.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="291.0" y="45" width="54.6" height="18" fill="#1f2335"/>
+<rect x="345.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="353.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="361.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="369.0" y="45" width="62.4" height="18" fill="#1f2335"/>
+<rect x="431.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="439.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="447.0" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="454.8" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="532.8" y="45" width="413.4" height="18" fill="#1f2335"/>
+<rect x="946.2" y="45" width="39.0" height="18" fill="#1f2335"/>
+<rect x="985.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="993.0" y="45" width="31.2" height="18" fill="#1f2335"/>
+<rect x="1024.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<text x="18.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> verd </text>
+<text x="72.6" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> 1 Problems </text>
+<text x="181.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">2</text>
+<text x="189.6" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Contests </text>
+<text x="283.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">3</text>
+<text x="291.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Stats </text>
+<text x="361.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">4</text>
+<text x="369.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Picker </text>
+<text x="447.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">5</text>
+<text x="454.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Settings </text>
+<text x="946.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">s-m-s</text>
+<text x="993.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">1634</text>
+<text x="18.0" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
+<rect x="158.4" y="81" width="140.4" height="18" fill="#2f3549"/>
+<rect x="314.4" y="81" width="46.8" height="18" fill="#2f3549"/>
+<rect x="369.0" y="81" width="226.2" height="18" fill="#2f3549"/>
+<text x="25.8" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">7 of 12 problems</text>
+<text x="158.4" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve"> rating 1000–1700 </text>
+<text x="306.6" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">+</text>
+<text x="314.4" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve"> math </text>
+<text x="369.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve"> sort: rating, easiest first </text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    ID       Name                                           Rating  Solved  Tags</text>
+<text x="33.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">✓</text>
+<text x="41.4" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1A       Theatre Square                                 </text>
+<text x="486.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1000</text>
+<text x="532.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  213000  </text>
+<text x="610.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
 <text x="18.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1352C    K-th Not Divisible by n                        </text>
 <text x="486.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1200</text>
 <text x="532.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   60000  </text>
-<text x="610.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">binary search, math</text>
-<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1475B    New Year&#x27;s Number                              </text>
-<text x="486.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1300</text>
-<text x="532.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   52000  </text>
-<text x="610.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">brute force, dp, math</text>
-<text x="33.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">✗</text>
-<text x="41.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1426E    Rock, Paper, Scissors                          </text>
-<text x="486.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1500</text>
-<text x="532.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    9000  </text>
-<text x="610.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">brute force, constructive algorithms, flows, math</text>
-<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">/ math_   </text>
-<text x="96.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[all]</text>
+<text x="610.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">binary search</text>
+<text x="712.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="727.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
+<rect x="18.0" y="153" width="7.8" height="18" fill="#2f3549"/>
+<rect x="25.8" y="153" width="7.8" height="18" fill="#2f3549"/>
+<rect x="33.6" y="153" width="7.8" height="18" fill="#2f3549"/>
+<rect x="41.4" y="153" width="7.8" height="18" fill="#2f3549"/>
+<rect x="49.2" y="153" width="62.4" height="18" fill="#2f3549"/>
+<rect x="111.6" y="153" width="374.4" height="18" fill="#2f3549"/>
+<rect x="486.0" y="153" width="46.8" height="18" fill="#2f3549"/>
+<rect x="532.8" y="153" width="78.0" height="18" fill="#2f3549"/>
+<rect x="610.8" y="153" width="85.8" height="18" fill="#2f3549"/>
+<rect x="696.6" y="153" width="15.6" height="18" fill="#2f3549"/>
+<rect x="712.2" y="153" width="15.6" height="18" fill="#2f3549"/>
+<rect x="727.8" y="153" width="15.6" height="18" fill="#2f3549"/>
+<rect x="743.4" y="153" width="31.2" height="18" fill="#2f3549"/>
+<rect x="774.6" y="153" width="257.4" height="18" fill="#2f3549"/>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">▌</text>
+<text x="33.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" font-weight="700" xml:space="preserve">✓</text>
+<text x="49.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">1475B   </text>
+<text x="111.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve"> New Year&#x27;s Number                              </text>
+<text x="486.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">  1300</text>
+<text x="532.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">   52000  </text>
+<text x="610.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">brute force</text>
+<text x="696.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" font-weight="700" xml:space="preserve">, </text>
+<text x="712.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">dp</text>
+<text x="727.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" font-weight="700" xml:space="preserve">, </text>
+<text x="743.4" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" font-weight="700" xml:space="preserve">math</text>
+<text x="18.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1560D    Make a Power of Two                            </text>
+<text x="486.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1400</text>
+<text x="532.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   33000  </text>
+<text x="610.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve">greedy</text>
+<text x="657.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="673.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
+<text x="704.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="720.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve">strings</text>
+<text x="33.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">✗</text>
+<text x="41.4" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1426E    Rock, Paper, Scissors                          </text>
+<text x="486.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1500</text>
+<text x="532.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    9000  </text>
+<text x="610.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">brute force</text>
+<text x="696.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="712.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">constructive algorithms</text>
+<text x="891.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="907.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">flows</text>
+<text x="946.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="961.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
+<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1730B    Meeting on the Line                            </text>
+<text x="486.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1500</text>
+<text x="532.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   15000  </text>
+<text x="610.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">binary search</text>
+<text x="712.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="727.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve">greedy</text>
+<text x="774.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="790.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
+<text x="821.4" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="837.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">sortings</text>
+<text x="18.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1699C    The Third Problem                              </text>
+<text x="486.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1700</text>
+<text x="532.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   12000  </text>
+<text x="610.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">combinatorics</text>
+<text x="712.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">, </text>
+<text x="727.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">math</text>
+<rect x="18.0" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="25.8" y="261" width="23.4" height="18" fill="#1f2335"/>
+<rect x="49.2" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="57.0" y="261" width="31.2" height="18" fill="#1f2335"/>
+<rect x="88.2" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="103.8" y="261" width="39.0" height="18" fill="#1f2335"/>
+<rect x="142.8" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="150.6" y="261" width="31.2" height="18" fill="#1f2335"/>
+<rect x="181.8" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="197.4" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="205.2" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="213.0" y="261" width="54.6" height="18" fill="#1f2335"/>
+<rect x="267.6" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="283.2" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="291.0" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="298.8" y="261" width="46.8" height="18" fill="#1f2335"/>
+<rect x="345.6" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="361.2" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="369.0" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="376.8" y="261" width="78.0" height="18" fill="#1f2335"/>
+<rect x="454.8" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="470.4" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="478.2" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="486.0" y="261" width="39.0" height="18" fill="#1f2335"/>
+<rect x="525.0" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="540.6" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="548.4" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="556.2" y="261" width="31.2" height="18" fill="#1f2335"/>
+<rect x="587.4" y="261" width="15.6" height="18" fill="#1f2335"/>
+<rect x="603.0" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="610.8" y="261" width="7.8" height="18" fill="#1f2335"/>
+<rect x="618.6" y="261" width="31.2" height="18" fill="#1f2335"/>
+<rect x="649.8" y="261" width="382.2" height="18" fill="#1f2335"/>
+<text x="25.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">j/k</text>
+<text x="57.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">move</text>
+<text x="103.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">enter</text>
+<text x="150.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">open</text>
+<text x="197.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">f</text>
+<text x="213.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">filters</text>
+<text x="283.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">/</text>
+<text x="298.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">search</text>
+<text x="361.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">:</text>
+<text x="376.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">expression</text>
+<text x="470.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">X</text>
+<text x="486.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">clear</text>
+<text x="540.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">?</text>
+<text x="556.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">help</text>
+<text x="603.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">q</text>
+<text x="618.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">quit</text>
 </g>
-<g transform="translate(40 302)">
-<rect width="1120" height="598" rx="12" fill="#16161e" stroke="#292e42"/>
+<g transform="translate(40 356)">
+<rect width="1120" height="454" rx="12" fill="#16161e" stroke="#292e42"/>
 <path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
 <circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
-<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Problem view: statement left, tests and the selected test&#x27;s input, expected and output right</text>
-<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
-<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
-<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">s-m-s (1634)</text>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">f opens the filters: rating, status, sort, and a tag picker with + and − (q or esc closes)</text>
+<text x="18.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> verd   1 Problems   2 Contests   3 Stats   4 Picker   5 Settings                                                      s-m-s 1634 </text>
+<text x="18.0" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">─────────────────</text>
+<text x="150.6" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╭─ Filters ────────────────────────────────────────────────────────────────────────────────────</text>
+<text x="891.6" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╮</text>
+<text x="899.4" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">─────────────────</text>
+<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> 7 of 12 problems</text>
+<text x="150.6" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">Rating   </text>
+<text x="252.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">[ 1000 ]</text>
+<text x="314.4" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  to  </text>
+<text x="361.2" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">[ 1700 ]                                                            </text>
+<text x="891.6" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    ID       Name</text>
+<text x="150.6" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">Status   </text>
+<text x="252.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">any                                                                               </text>
+<text x="891.6" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  ✓ 1A       Thea</text>
+<text x="150.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">Sort     </text>
+<text x="252.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">rating, easiest first                                                             </text>
+<text x="891.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    1352C    K-th</text>
+<text x="150.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="891.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">▌ ✓ 1475B    New </text>
+<text x="150.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="166.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">▌ Tags</text>
+<text x="213.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  type to search · space cycles + / − / off</text>
+<text x="571.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">▏</text>
+<text x="891.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<rect x="181.8" y="171" width="7.8" height="18" fill="#2f3549"/>
+<rect x="189.6" y="171" width="171.6" height="18" fill="#2f3549"/>
+<rect x="361.2" y="171" width="31.2" height="18" fill="#2f3549"/>
+<rect x="392.4" y="171" width="15.6" height="18" fill="#2f3549"/>
+<text x="18.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    1560D    Make</text>
+<text x="150.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" font-weight="700" xml:space="preserve">+</text>
+<text x="189.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve"> math                 </text>
+<text x="361.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" font-weight="700" xml:space="preserve">   8</text>
+<text x="891.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  ✗ 1426E    Rock</text>
+<text x="150.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> greedy               </text>
+<text x="361.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   4</text>
+<text x="891.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="899.4" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> flows, math</text>
+<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    1730B    Meet</text>
+<text x="150.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> brute force          </text>
+<text x="361.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   3</text>
+<text x="891.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    1699C    The </text>
+<text x="150.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> constructive algorit…</text>
+<text x="361.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   3</text>
+<text x="891.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> binary search        </text>
+<text x="361.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   2</text>
+<text x="891.6" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> j/k move  enter </text>
+<text x="150.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> sortings             </text>
+<text x="361.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   2</text>
+<text x="891.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> bitmasks             </text>
+<text x="361.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> combinatorics        </text>
+<text x="361.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> dp                   </text>
+<text x="361.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> flows                </text>
+<text x="361.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> games                </text>
+<text x="361.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> implementation       </text>
+<text x="361.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> strings              </text>
+<text x="361.2" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="181.8" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">·</text>
+<text x="189.6" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> trees                </text>
+<text x="361.2" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">   1</text>
+<text x="891.6" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="150.6" y="436" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╰───────────────────────────────────────────────── 7 match  tab field  ctrl+u reset  esc close ╯</text>
+</g>
+<g transform="translate(40 834)">
+<rect width="1120" height="580" rx="12" fill="#16161e" stroke="#292e42"/>
+<path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
+<circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Problem view: statement left; tests with input, expected and output right (tab moves between panes)</text>
+<rect x="18.0" y="45" width="46.8" height="18" fill="#7aa2f7"/>
+<rect x="64.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="72.6" y="45" width="93.6" height="18" fill="#7aa2f7"/>
+<rect x="166.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="174.0" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="181.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="189.6" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="267.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="275.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="283.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="291.0" y="45" width="54.6" height="18" fill="#1f2335"/>
+<rect x="345.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="353.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="361.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="369.0" y="45" width="62.4" height="18" fill="#1f2335"/>
+<rect x="431.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="439.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="447.0" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="454.8" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="532.8" y="45" width="413.4" height="18" fill="#1f2335"/>
+<rect x="946.2" y="45" width="39.0" height="18" fill="#1f2335"/>
+<rect x="985.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="993.0" y="45" width="31.2" height="18" fill="#1f2335"/>
+<rect x="1024.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<text x="18.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> verd </text>
+<text x="72.6" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> 1 Problems </text>
+<text x="181.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">2</text>
+<text x="189.6" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Contests </text>
+<text x="283.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">3</text>
+<text x="291.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Stats </text>
+<text x="361.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">4</text>
+<text x="369.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Picker </text>
+<text x="447.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">5</text>
+<text x="454.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Settings </text>
+<text x="946.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">s-m-s</text>
+<text x="993.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">1634</text>
+<text x="18.0" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
 <text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╭─ 1A  Theatre Square ──────────────────────────────────────────────────────</text>
 <text x="610.8" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╮</text>
 <text x="626.4" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╭─ Problem ────────────────────────────────────────</text>
@@ -199,149 +488,373 @@
 <text x="610.8" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
 <text x="626.4" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
 <text x="1024.2" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="610.8" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="1024.2" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="544" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="610.8" y="544" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="544" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="1024.2" y="544" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰───────────────────────────────────────────────────────────────────────────╯</text>
-<text x="626.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰──────────────────────────────────────────────────╯</text>
+<text x="18.0" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰───────────────────────────────────────────────────────────────────────────╯</text>
+<text x="626.4" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰──────────────────────────────────────────────────╯</text>
+<rect x="18.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="25.8" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="49.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="57.0" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="88.2" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="103.8" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="127.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="135.0" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="166.2" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="181.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="189.6" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="197.4" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="228.6" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="244.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="252.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="259.8" y="549" width="39.0" height="18" fill="#1f2335"/>
+<rect x="298.8" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="314.4" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="322.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="330.0" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="353.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="369.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="376.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="384.6" y="549" width="46.8" height="18" fill="#1f2335"/>
+<rect x="431.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="447.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="454.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="462.6" y="549" width="46.8" height="18" fill="#1f2335"/>
+<rect x="509.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="525.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="532.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="540.6" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="571.8" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="587.4" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="595.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="603.0" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="634.2" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="649.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="657.6" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="665.4" y="549" width="54.6" height="18" fill="#1f2335"/>
+<rect x="720.0" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="735.6" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="759.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="766.8" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="798.0" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="813.6" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="821.4" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="829.2" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="860.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="876.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="883.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="891.6" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="922.8" y="549" width="109.2" height="18" fill="#1f2335"/>
+<text x="25.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">tab</text>
+<text x="57.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">pane</text>
+<text x="103.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">j/k</text>
+<text x="135.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">move</text>
+<text x="181.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">e</text>
+<text x="197.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">edit</text>
+<text x="244.2" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">T</text>
+<text x="259.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tests</text>
+<text x="314.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">t</text>
+<text x="330.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">run</text>
+<text x="369.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">s</text>
+<text x="384.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">submit</text>
+<text x="447.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">S</text>
+<text x="462.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">stress</text>
+<text x="525.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">c</text>
+<text x="540.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">mode</text>
+<text x="587.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">l</text>
+<text x="603.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">lang</text>
+<text x="649.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">o</text>
+<text x="665.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">browser</text>
+<text x="735.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">esc</text>
+<text x="766.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">back</text>
+<text x="813.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">?</text>
+<text x="829.2" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">help</text>
+<text x="876.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">q</text>
+<text x="891.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">quit</text>
 </g>
-<g transform="translate(40 924)">
-<rect width="1120" height="418" rx="12" fill="#16161e" stroke="#292e42"/>
+<g transform="translate(40 1438)">
+<rect width="1120" height="580" rx="12" fill="#16161e" stroke="#292e42"/>
 <path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
 <circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
-<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">T opens the test manager: add, edit, copy, delete (q closes)</text>
-<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
-<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
-<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">s-m-s (1634)</text>
-<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╭─ 1A  Theatre Square ──────────────────────────────────────────────────────</text>
-<text x="610.8" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╮</text>
-<text x="626.4" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╭─ Problem ────────────────────────────────────────</text>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Settings (5): change the theme live, plus language, editor and submit mode</text>
+<rect x="18.0" y="45" width="46.8" height="18" fill="#7aa2f7"/>
+<rect x="64.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="72.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="80.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="88.2" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="166.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="174.0" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="181.8" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="189.6" y="45" width="78.0" height="18" fill="#1f2335"/>
+<rect x="267.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="275.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="283.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="291.0" y="45" width="54.6" height="18" fill="#1f2335"/>
+<rect x="345.6" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="353.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="361.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="369.0" y="45" width="62.4" height="18" fill="#1f2335"/>
+<rect x="431.4" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="439.2" y="45" width="93.6" height="18" fill="#7aa2f7"/>
+<rect x="532.8" y="45" width="413.4" height="18" fill="#1f2335"/>
+<rect x="946.2" y="45" width="39.0" height="18" fill="#1f2335"/>
+<rect x="985.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<rect x="993.0" y="45" width="31.2" height="18" fill="#1f2335"/>
+<rect x="1024.2" y="45" width="7.8" height="18" fill="#1f2335"/>
+<text x="18.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> verd </text>
+<text x="80.4" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">1</text>
+<text x="88.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Problems </text>
+<text x="181.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">2</text>
+<text x="189.6" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Contests </text>
+<text x="283.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">3</text>
+<text x="291.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Stats </text>
+<text x="361.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">4</text>
+<text x="369.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> Picker </text>
+<text x="439.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1a1b26" font-weight="700" xml:space="preserve"> 5 Settings </text>
+<text x="946.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">s-m-s</text>
+<text x="993.0" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">1634</text>
+<text x="18.0" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
+<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╭─ Settings ─────────────────────────────────────────────────────────────────</text>
+<text x="618.6" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╮</text>
+<text x="634.2" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╭─ About ─────────────────────────────────────────</text>
 <text x="1024.2" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╮</text>
-<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="610.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="642.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">rating </text>
-<text x="696.6" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">1000  </text>
-<text x="743.4" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">✓ solved</text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="41.4" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">APPEARANCE</text>
+<text x="618.6" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="649.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Theme</text>
 <text x="1024.2" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">Theatre Square in the capital city of Berland has a rectangular shape</text>
-<text x="610.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="642.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">limits </text>
-<text x="696.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">1 s · 256 MB                              </text>
+<rect x="33.6" y="117" width="163.8" height="18" fill="#2f3549"/>
+<rect x="197.4" y="117" width="15.6" height="18" fill="#2f3549"/>
+<rect x="213.0" y="117" width="85.8" height="18" fill="#2f3549"/>
+<rect x="298.8" y="117" width="15.6" height="18" fill="#2f3549"/>
+<rect x="314.4" y="117" width="296.4" height="18" fill="#2f3549"/>
+<text x="18.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="33.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">   Theme             </text>
+<text x="197.4" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" font-weight="700" xml:space="preserve">‹ </text>
+<text x="213.0" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">tokyo-night</text>
+<text x="298.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" font-weight="700" xml:space="preserve"> ›</text>
+<text x="618.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
 <text x="1024.2" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">with the size </text>
-<text x="158.4" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">n</text>
-<text x="166.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> × </text>
-<text x="189.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">m</text>
-<text x="197.4" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> meters. On the occasion of the city&#x27;s</text>
-<text x="610.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="642.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tags   </text>
-<text x="696.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">math</text>
+<text x="18.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Background        </text>
+<text x="197.4" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">‹ </text>
+<text x="213.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">dark</text>
+<text x="244.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ›</text>
+<text x="618.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="642.0" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> Colors for the whole interface. Changes apply   </text>
 <text x="1024.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">anniversary, a decision was taken to pave the Square with square</text>
-<text x="610.8" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰──────────────────────────────────────────────────╯</text>
-<text x="18.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">granite flagstones. Each flagstone is of the size </text>
-<text x="439.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">a</text>
-<text x="447.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> × </text>
-<text x="470.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">a</text>
-<text x="478.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">.</text>
-<text x="610.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="626.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╭─ Tests [cpp, tokens] ────────────────────────────</text>
-<text x="1024.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╮</text>
-<text x="18.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="135.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╭─ Tests ──────────────────────────────────────────────────────────────────────────────────────────</text>
-<text x="907.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╮</text>
-<text x="1024.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">What is the</text>
-<text x="135.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="142.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   sample-1  </text>
-<text x="244.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">sample</text>
-<text x="298.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
-<text x="384.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Input</text>
-<text x="907.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="1024.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="18.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">It&#x27;s allowe</text>
-<text x="135.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="150.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">&gt; </text>
-<text x="166.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">custom-1  </text>
-<text x="244.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">custom</text>
-<text x="298.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">WA </text>
-<text x="384.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1000000000 1 1                                                </text>
-<text x="907.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="1024.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="18.0" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">the Square </text>
-<text x="135.0" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="142.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   custom-2  </text>
-<text x="244.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">custom</text>
-<text x="298.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
-<text x="384.6" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Expected</text>
-<text x="907.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="1024.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="18.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">flagstones.</text>
-<text x="135.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="384.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  1000000000000000000                                           </text>
-<text x="907.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="1024.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="18.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">of the</text>
-<text x="96.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> Squa</text>
-<text x="135.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="384.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Output</text>
-<text x="907.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="915.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">─── 2/3 AC WA ╯</text>
-<text x="18.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="135.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="384.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> │ </text>
-<text x="408.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  -1486618624                                                   </text>
-<text x="907.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="915.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">──────────────</text>
-<text x="1024.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╮</text>
-<text x="18.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">Input</text>
-<text x="135.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="907.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="642.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> as you move through the list.                   </text>
+<text x="1024.2" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="41.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">GENERAL</text>
+<text x="618.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Handle            s-m-s</text>
+<text x="236.4" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="649.8" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">applies immediately</text>
+<text x="1024.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Workspace         ~/verd</text>
+<text x="244.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="649.8" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">←/→ or space change · saved on change</text>
+<text x="1024.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Default language  </text>
+<text x="197.4" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">‹ </text>
+<text x="213.0" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">cpp</text>
+<text x="236.4" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ›</text>
+<text x="618.6" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="649.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">THEMES</text>
+<text x="1024.2" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="41.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">TESTING</text>
+<text x="618.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">terminal      </text>
+<text x="782.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">██</text>
+<text x="798.0" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">██</text>
+<text x="813.6" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">██</text>
+<text x="829.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" font-weight="700" xml:space="preserve">██</text>
+<text x="844.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">██</text>
+<text x="860.4" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">██</text>
+<text x="1024.2" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Autotest          </text>
+<text x="197.4" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">● on</text>
+<text x="618.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">catppuccin    </text>
+<text x="782.4" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#89b4fa" xml:space="preserve">██</text>
+<text x="798.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#cba6f7" xml:space="preserve">██</text>
+<text x="813.6" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a6e3a1" xml:space="preserve">██</text>
+<text x="829.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f38ba8" xml:space="preserve">██</text>
+<text x="844.8" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f9e2af" xml:space="preserve">██</text>
+<text x="860.4" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#6c7086" xml:space="preserve">██</text>
+<text x="1024.2" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Time multiplier   1</text>
+<text x="205.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">dracula       </text>
+<text x="782.4" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bd93f9" xml:space="preserve">██</text>
+<text x="798.0" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#ff79c6" xml:space="preserve">██</text>
+<text x="813.6" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#50fa7b" xml:space="preserve">██</text>
+<text x="829.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#ff5555" xml:space="preserve">██</text>
+<text x="844.8" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f1fa8c" xml:space="preserve">██</text>
+<text x="860.4" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#6272a4" xml:space="preserve">██</text>
+<text x="1024.2" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Float tolerance   1e-06</text>
+<text x="236.4" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">gruvbox       </text>
+<text x="782.4" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#83a598" xml:space="preserve">██</text>
+<text x="798.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#d3869b" xml:space="preserve">██</text>
+<text x="813.6" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#b8bb26" xml:space="preserve">██</text>
+<text x="829.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#fb4934" xml:space="preserve">██</text>
+<text x="844.8" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#fabd2f" xml:space="preserve">██</text>
+<text x="860.4" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#928374" xml:space="preserve">██</text>
 <text x="1024.2" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="135.0" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="907.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">nord          </text>
+<text x="782.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#88c0d0" xml:space="preserve">██</text>
+<text x="798.0" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#b48ead" xml:space="preserve">██</text>
+<text x="813.6" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a3be8c" xml:space="preserve">██</text>
+<text x="829.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bf616a" xml:space="preserve">██</text>
+<text x="844.8" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#ebcb8b" xml:space="preserve">██</text>
+<text x="860.4" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#616e88" xml:space="preserve">██</text>
 <text x="1024.2" y="346" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">The input c</text>
-<text x="135.0" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="907.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="41.4" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">EDITOR</text>
+<text x="618.6" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">one-dark      </text>
+<text x="782.4" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#61afef" xml:space="preserve">██</text>
+<text x="798.0" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c678dd" xml:space="preserve">██</text>
+<text x="813.6" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#98c379" xml:space="preserve">██</text>
+<text x="829.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e06c75" xml:space="preserve">██</text>
+<text x="844.8" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e5c07b" xml:space="preserve">██</text>
+<text x="860.4" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#5c6370" xml:space="preserve">██</text>
 <text x="1024.2" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="49.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">n</text>
-<text x="57.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">,  </text>
-<text x="80.4" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">m</text>
-<text x="88.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve"> and </text>
-<text x="127.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#a9b1d6" xml:space="preserve">a</text>
-<text x="135.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
-<text x="907.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="18.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Editor split      </text>
+<text x="197.4" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">‹ </text>
+<text x="213.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">auto</text>
+<text x="244.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ›</text>
+<text x="259.8" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="665.4" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">solarized     </text>
+<text x="782.4" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#268bd2" xml:space="preserve">██</text>
+<text x="798.0" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#6c71c4" xml:space="preserve">██</text>
+<text x="813.6" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#859900" xml:space="preserve">██</text>
+<text x="829.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#dc322f" xml:space="preserve">██</text>
+<text x="844.8" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#b58900" xml:space="preserve">██</text>
+<text x="860.4" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#586e75" xml:space="preserve">██</text>
 <text x="1024.2" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="18.0" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
-<text x="135.0" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╰──────────────────────────────────── a add  e edit  c copy  d delete  E in editor  t run  q close ╯</text>
+<text x="18.0" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Embedded share    0.4</text>
+<text x="220.8" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="649.8" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">▸ </text>
+<text x="665.4" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">tokyo-night   </text>
+<text x="782.4" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" xml:space="preserve">██</text>
+<text x="798.0" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" xml:space="preserve">██</text>
+<text x="813.6" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">██</text>
+<text x="829.2" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">██</text>
+<text x="844.8" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#e0af68" xml:space="preserve">██</text>
+<text x="860.4" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">██</text>
 <text x="1024.2" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Focus key         ctrl+\</text>
+<text x="244.2" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="418" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="436" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="436" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="436" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="436" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="454" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="41.4" y="454" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">SUBMIT</text>
+<text x="618.6" y="454" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="454" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="454" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="25.8" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    Submit mode       </text>
+<text x="197.4" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">‹ </text>
+<text x="213.0" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">browser</text>
+<text x="267.6" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ›</text>
+<text x="283.2" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve"> ↻</text>
+<text x="618.6" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="618.6" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">│</text>
+<text x="634.2" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="1024.2" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">│</text>
+<text x="18.0" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">╰────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="634.2" y="526" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">╰─────────────────────────────────────────────────╯</text>
+<rect x="18.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="25.8" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="49.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="57.0" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="88.2" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="103.8" y="549" width="23.4" height="18" fill="#1f2335"/>
+<rect x="127.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="135.0" y="549" width="46.8" height="18" fill="#1f2335"/>
+<rect x="181.8" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="197.4" y="549" width="39.0" height="18" fill="#1f2335"/>
+<rect x="236.4" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="244.2" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="275.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="291.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="298.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="306.6" y="549" width="124.8" height="18" fill="#1f2335"/>
+<rect x="431.4" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="447.0" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="454.8" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="462.6" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="493.8" y="549" width="15.6" height="18" fill="#1f2335"/>
+<rect x="509.4" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="517.2" y="549" width="7.8" height="18" fill="#1f2335"/>
+<rect x="525.0" y="549" width="31.2" height="18" fill="#1f2335"/>
+<rect x="556.2" y="549" width="475.8" height="18" fill="#1f2335"/>
+<text x="25.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">j/k</text>
+<text x="57.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">move</text>
+<text x="103.8" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">←/→</text>
+<text x="135.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">change</text>
+<text x="197.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">enter</text>
+<text x="244.2" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">edit</text>
+<text x="291.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">e</text>
+<text x="306.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">open config.toml</text>
+<text x="447.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">?</text>
+<text x="462.6" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">help</text>
+<text x="509.4" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#bb9af7" font-weight="700" xml:space="preserve">q</text>
+<text x="525.0" y="562" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">quit</text>
 </g>
 </svg>

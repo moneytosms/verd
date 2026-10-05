@@ -6,7 +6,7 @@ Press `?` on any screen to see its keys. Keys are the same everywhere the same a
 
 | Key | Action |
 | --- | --- |
-| `1`-`4`, `tab` | Switch tab: Problems, Contests, Stats, Picker |
+| `1`-`5`, `tab` | Switch tab: Problems, Contests, Stats, Picker, Settings |
 | `ctrl+r` | Refresh from the network |
 | `?` | Toggle help |
 | `q`, `ctrl+c` | Quit |
@@ -17,12 +17,16 @@ Press `?` on any screen to see its keys. Keys are the same everywhere the same a
 | --- | --- |
 | `j`/`k`, `pgup`/`pgdn` | Move |
 | `enter` | Open the Problem |
-| `f` | Filter, e.g. `800-1200 +dp -graphs unsolved` |
+| `f` | Filters modal: rating range, status, sort and a tag picker (`+` include, `−` exclude) |
+| `:` | Filter expression, e.g. `800-1200 +dp -graphs unsolved` |
+| `X` | Clear all filters |
 | `/` | Live fuzzy search: the list narrows and re-ranks as you type |
 
 Search: type letters in order (`wmln` finds Watermelon), several words must all match (`water 4a`), and `#dp` matches tags. `tab` inside the prompt cycles what is searched: all, name, tag, id. `enter` keeps the search, `esc` undoes it.
 
 Filter syntax: a rating range (`800-1200`, `800-`, `-1200`, or one value), `+tag` to include, `-tag` to exclude (prefix match, `_` for a space: `+two_pointers`), and `unsolved` (or `u`).
+
+The filter bar above the list shows what is active as chips; click it to open the filters. In the filters modal `tab` moves between fields, digits type a rating, `←`/`→` change status and sort, typing in the tag list searches it, `space` cycles a tag (include, exclude, off), `ctrl+u` resets and `esc` closes.
 
 ## Contests
 
@@ -40,6 +44,17 @@ Filter syntax: a rating range (`800-1200`, `800-`, `-1200`, or one value), `+tag
 | `n`/`N` | Select next / previous attempted Problem |
 | `enter` | Open it |
 | `p` | Problem Picker with the weak-topics preset |
+
+## Settings
+
+| Key | Action |
+| --- | --- |
+| `j`/`k` | Move |
+| `←`/`→`, `space` | Change an option or toggle (saved to `config.toml` at once) |
+| `enter` | Edit a text value; `enter` saves, `esc` cancels |
+| `e` | Open `config.toml` in your editor |
+
+Theme, background, default language and autotest apply immediately. Settings marked `↻` apply the next time verd starts. Comments in `config.toml` are kept.
 
 ## Picker
 
@@ -73,13 +88,18 @@ Filter syntax: a rating range (`800-1200`, `800-`, `-1200`, or one value), `+tag
 
 On a terminal at least 100 columns wide and 16 rows tall the Problem view is split: the statement on the left, and on the right the Problem's rating, limits and tags, every test with its Local Verdict, and the selected test's input, expected and actual output. Narrower terminals get a single column.
 
+## Mouse
+
+Click a tab pill to switch screens. Click a row to select it and the selected row again to open it. Click the filter bar to open the filters, a pane to focus it, a test to select it, a setting to select it and its value to change it. Click outside a modal to close it. The wheel scrolls whatever is under the pointer. While verd uses the mouse, hold `shift` to select text with your terminal.
+
 ## Modals
 
 Small things open in a modal over the screen you were on. `q` or `esc` closes a modal; `q` only quits verd when no modal is open.
 
 | Modal | Opened by | Keys |
 | --- | --- | --- |
-| Help | `?` | `?`, `q`, `esc` close |
+| Help | `?` | `←`/`→` page (this screen, everywhere, mouse, guide), `j`/`k` scroll, `q` closes |
+| Filters | `f` | see Problems |
 | Diff | `d` on a failing test, or a stress counterexample | `j`/`k` scroll, `w` saves a counterexample, `q` closes |
 | Submission | `s` | Live status and final Verdict; `q` closes, tracking continues |
 | Contest Problems | `enter` on a contest | `j`/`k` move, `enter` opens, `q` closes |

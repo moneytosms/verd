@@ -27,10 +27,10 @@
 ## See it
 
 <p align="center">
-  <img src="./assets/readme/screens.svg" width="100%" alt="Live fuzzy search on the Problems tab; the split Problem view with the statement on the left and tests with input, expected and output on the right; and the test manager modal.">
+  <img src="./assets/readme/screens.svg" width="100%" alt="The Problems list with filter chips and colored ratings and tags; the filter modal with a tag picker; the split Problem view with tests and the selected test input, expected and output; and the Settings tab with a theme gallery.">
 </p>
 
-These are real frames rendered by verd's own model (Tokyo Night theme), not mock-ups. The Problem view splits when the terminal is at least 100 columns wide; `tab` moves between its panes, and small things (help, diffs, the test manager, a Submission) open in modals you close with `q`.
+These are real frames rendered by verd's own model (Tokyo Night theme), not mock-ups. Eight themes ship (`terminal`, `tokyo-night`, `dracula`, `catppuccin`, `gruvbox`, `nord`, `one-dark`, `solarized`), switchable live in the Settings tab (`5`), which also edits `config.toml` for you. The mouse works: click tabs, rows, panes and settings, scroll with the wheel, click outside a modal to close it. The Problem view splits when the terminal is at least 100 columns wide; `tab` moves between its panes, and small things (help, diffs, the test manager, a Submission) open in modals you close with `q`.
 
 ## Install
 
@@ -51,7 +51,7 @@ verd                            # open the TUI
 verd --here                     # same, but keep Solutions in the current directory
 ```
 
-1. **Pick.** On the Problems tab press `enter` on a Problem, or press `4` for the Picker and `w` for your weak topics.
+1. **Pick.** On the Problems tab, `/` searches fuzzily and `f` filters by rating, status, sort and tags. `enter` opens a Problem; `4` is the Picker (`w` for your weak topics).
 2. **Edit.** Press `e`. Neovim opens beside verd on `~/verd/<contest>/<index>/main.cpp`, created from your Template.
 3. **Test.** Press `t` (or just save, `autotest` is on by default). Press `n`/`p` to select a test and `d` for a diff on a failing one.
 4. **Manage cases.** Press `a` to add a Custom Test in place, or `T` for the test manager: edit, copy (samples too), delete.

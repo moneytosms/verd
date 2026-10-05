@@ -12,7 +12,8 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `time_multiplier` | `1.0` | Scales every Problem's time limit for local runs. Use `2.0` on a slow machine. |
 | `float_eps` | `1e-6` | Absolute/relative tolerance for the `float` Comparison Mode. |
 | `autotest` | `true` | Run a Test Run whenever the active Solution is saved. |
-| `theme` | `"terminal"` | `terminal` (inherits your palette), `dracula`, or `tokyo-night`. |
+| `theme` | `"terminal"` | `terminal` (inherits your palette), `tokyo-night`, `dracula`, `catppuccin`, `gruvbox`, `nord`, `one-dark` or `solarized`. Change it live in the Settings tab. |
+| `background` | `"auto"` | `auto` detects the terminal, or force `dark` / `light`. |
 | `split` | `"auto"` | How Neovim opens: `auto`, `tmux`, `herdr`, `embedded`, `suspend`. See [Neovim](./neovim.md). |
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
 | `embed_focus_key` | `"ctrl+\\"` | Hands keyboard focus between verd and the embedded Neovim. |
