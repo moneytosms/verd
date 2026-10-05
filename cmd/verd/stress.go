@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -93,4 +94,17 @@ func printStress(out io.Writer, r stress.Result) error {
 		fmt.Fprintf(out, "%s at seed %d (iteration %d)\ninput:\n%s%s\n", r.Kind, r.Seed, r.Iterations, r.Input, r.Err)
 	}
 	return &exitError{1, ""}
+}
+
+// stressHelpers are where a Solution's gen and brute live and whether either is still missing.
+func stressHelpers(cfg config.Config, ref workspace.Ref) (gen, brute string, missing bool) {
+	l := cfg.Lang[ref.Lang]
+	dir := workspace.New(cfg.Workspace).Dir(ref.Contest, ref.Index)
+	gen, brute = filepath.Join(dir, "gen."+l.Ext), filepath.Join(dir, "brute."+l.Ext)
+	for _, p := range []string{gen, brute} {
+		if _, err := os.Stat(p); err != nil {
+			missing = true
+		}
+	}
+	return
 }

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="508" viewBox="0 0 1200 508" role="img" aria-labelledby="t d">
+<title id="t">verd screens</title>
+<desc id="d">Top: the Problems tab with solved and attempted marks, rating, solve count and tags. Bottom: the diff overlay showing a stress counterexample, expected output against actual output.</desc>
+<rect width="1200" height="508" rx="22" fill="#1a1b26"/>
+<g transform="translate(40 40)">
+<rect width="1120" height="220" rx="12" fill="#16161e" stroke="#292e42"/>
+<path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
+<circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Problems tab: filter, search, solved marks</text>
+<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
+<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
+<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tourist (3979)</text>
+<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">    ID       Name                                     Rating  Solved  Tags</text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">&gt;</text>
+<text x="25.8" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   1A       Theatre Square                             1000  301234  math</text>
+<text x="33.6" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">✓</text>
+<text x="41.4" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 4A       Watermelon                                  800  502111  brute force, math</text>
+<text x="33.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">✗</text>
+<text x="41.4" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1900B    Laura and Operations                       1000   41230  math</text>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">    1881D    Divisibility by 2^n                        1300   18900  greedy, math</text>
+<text x="33.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">✓</text>
+<text x="41.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1472C    Long Jumps                                 1100   77005  dp, graphs</text>
+</g>
+<g transform="translate(40 284)">
+<rect width="1120" height="184" rx="12" fill="#16161e" stroke="#292e42"/>
+<path d="M0 12a12 12 0 0 1 12-12h1096a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
+<circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
+<text x="560.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">Stress counterexample in the diff overlay</text>
+<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
+<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
+<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tourist (3979)</text>
+<text x="25.8" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Diff: stress seed 7  WA</text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> first mismatch at line 1 col 1: want &quot;1000000000000000000&quot; got &quot;-1486618624&quot;</text>
+<text x="25.8" y="130" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">expected                                      | actual</text>
+<text x="25.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">1000000000000000000                          </text>
+<text x="376.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> | </text>
+<text x="400.2" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">-1486618624                                  </text>
+</g>
+</svg>

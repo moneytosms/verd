@@ -281,9 +281,16 @@ func runTUI(path string) error {
 			if _, err := os.Stat(ref.Path); err != nil {
 				return nil, fmt.Errorf("no Solution yet (press e to create one)")
 			}
+			gen, brute, missing := stressHelpers(cfg, ref)
 			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0)
 			if err != nil {
 				return nil, err
+			}
+			if missing { // first time: open the fresh helpers so the user can fill them in
+				if cmd, err := ctrl.OpenPair(gen, brute); err != nil || cmd != nil {
+					return nil, fmt.Errorf("created %s and %s: fill them in, then press S again", gen, brute)
+				}
+				return nil, errors.New("created gen and brute: fill them in, then press S again")
 			}
 			return stress.Run(ctx, spec), nil
 		},

@@ -15,6 +15,7 @@ import (
 	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/tui"
+	"github.com/moneytosms/verd/internal/workspace"
 )
 
 func exitCode(err error) int {
@@ -185,5 +186,22 @@ func TestStressDelegatedMatchesHeadless(t *testing.T) {
 	}
 	if r := <-attached; r.Stress == nil {
 		t.Fatal("TUI should get the stress stream")
+	}
+}
+
+func TestStressHelpersMissingUntilBothExist(t *testing.T) {
+	cfg, path, _, _ := setup(t, "", "main.py", nil)
+	ref := workspace.Ref{Contest: 1, Index: "A", Lang: "python", Path: path}
+	gen, brute, missing := stressHelpers(cfg, ref)
+	if !missing || filepath.Base(gen) != "gen.py" || filepath.Base(brute) != "brute.py" {
+		t.Fatalf("%s %s %v", gen, brute, missing)
+	}
+	os.WriteFile(gen, nil, 0o644)
+	if _, _, missing := stressHelpers(cfg, ref); !missing {
+		t.Fatal("brute still missing")
+	}
+	os.WriteFile(brute, nil, 0o644)
+	if _, _, missing := stressHelpers(cfg, ref); missing {
+		t.Fatal("both exist")
 	}
 }

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="t d">
+<title id="t">verd: Codeforces in your terminal</title>
+<desc id="d">The verd terminal UI on a Problem: local tests all AC, then a stress run that found a counterexample at seed 7 and saved it as a Custom Test.</desc>
+<rect width="1200" height="500" rx="22" fill="#1a1b26"/>
+<path d="M0 22A22 22 0 0 1 22 0h1156a22 22 0 0 1 22 22v2H0z" fill="#7aa2f7" fill-opacity="0.9"/>
+<text x="64" y="104" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" letter-spacing="2.5" fill="#7aa2f7">CODEFORCES · IN YOUR TERMINAL</text>
+<text x="58" y="218" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="132" font-weight="800" letter-spacing="-4" fill="#c0caf5">verd</text>
+<rect x="352" y="132" width="20" height="96" rx="3" fill="#7aa2f7"/>
+<text x="64" y="272" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="27" fill="#c0caf5">Pick it. Read it. Code it in Neovim.</text>
+<text x="64" y="308" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="27" fill="#c0caf5">Test it. <tspan fill="#e0af68">Stress it.</tspan> Submit it.</text>
+<text x="64" y="352" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" fill="#565f89">Local Verdicts before the judge sees a byte.</text>
+<g transform="translate(64 392)"><rect width="40" height="28" rx="6" fill="#9ece6a" fill-opacity="0.14" stroke="#9ece6a" stroke-opacity="0.55"/><text x="20.0" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#9ece6a">AC</text></g>
+<g transform="translate(114 392)"><rect width="40" height="28" rx="6" fill="#f7768e" fill-opacity="0.14" stroke="#f7768e" stroke-opacity="0.55"/><text x="20.0" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#f7768e">WA</text></g>
+<g transform="translate(164 392)"><rect width="49" height="28" rx="6" fill="#e0af68" fill-opacity="0.14" stroke="#e0af68" stroke-opacity="0.55"/><text x="24.5" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#e0af68">TLE</text></g>
+<g transform="translate(223 392)"><rect width="40" height="28" rx="6" fill="#f7768e" fill-opacity="0.14" stroke="#f7768e" stroke-opacity="0.55"/><text x="20.0" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#f7768e">RE</text></g>
+<g transform="translate(273 392)"><rect width="49" height="28" rx="6" fill="#e0af68" fill-opacity="0.14" stroke="#e0af68" stroke-opacity="0.55"/><text x="24.5" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#e0af68">MLE</text></g>
+<g transform="translate(332 392)"><rect width="40" height="28" rx="6" fill="#f7768e" fill-opacity="0.14" stroke="#f7768e" stroke-opacity="0.55"/><text x="20.0" y="19" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="700" fill="#f7768e">CE</text></g>
+<text x="64" y="466" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#565f89">linux · macos · tmux · herdr · neovim · go</text>
+<g transform="translate(600 52)">
+<rect width="548" height="346" rx="12" fill="#16161e" stroke="#292e42"/>
+<path d="M0 12a12 12 0 0 1 12-12h524a12 12 0 0 1 12 12v22H0z" fill="#1f2335"/>
+<circle cx="22" cy="17" r="5" fill="#f7768e"/><circle cx="40" cy="17" r="5" fill="#e0af68"/><circle cx="58" cy="17" r="5" fill="#9ece6a"/>
+<text x="274.0" y="21" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#565f89">verd  ~/verd/1/A</text>
+<text x="25.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">[Problems]</text>
+<text x="103.8" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">  Contests  Stats  Picker   </text>
+<text x="322.2" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">tourist (3979)</text>
+<text x="18.0" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> 1A  Theatre Square</text>
+<text x="18.0" y="112" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve"> time 1 s   memory 256 MB</text>
+<text x="25.8" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Tests [cpp, tokens]  </text>
+<text x="189.6" y="148" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" font-weight="700" xml:space="preserve">AC </text>
+<text x="18.0" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   compile: ok (cached)</text>
+<text x="25.8" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">&gt; </text>
+<text x="41.4" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">sample-1   </text>
+<text x="127.2" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
+<text x="150.6" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      4 ms     3.1 MB</text>
+<text x="18.0" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   custom-1   </text>
+<text x="127.2" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
+<text x="150.6" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      5 ms     3.0 MB</text>
+<text x="18.0" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   custom-2   </text>
+<text x="127.2" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#9ece6a" xml:space="preserve">AC </text>
+<text x="150.6" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">      5 ms     3.2 MB</text>
+<text x="25.8" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">  3/3 AC  max 5 ms  max 3.2 MB   n/p select  d diff</text>
+<text x="25.8" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#7aa2f7" font-weight="700" xml:space="preserve">Stress [cpp, tokens]</text>
+<text x="25.8" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#f7768e" xml:space="preserve">  mismatch at seed 7</text>
+<text x="18.0" y="292" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#c0caf5" xml:space="preserve">   saved as custom-3</text>
+<text x="18.0" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#565f89" xml:space="preserve">esc back  e edit  s submit  a add test  l lang  t test  S stress …</text>
+</g>
+</svg>
