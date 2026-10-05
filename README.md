@@ -6,6 +6,7 @@
   <a href="https://github.com/moneytosms/verd/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/moneytosms/verd/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/go-1.27-7aa2f7?labelColor=1a1b26">
   <img alt="Platforms" src="https://img.shields.io/badge/linux%20%C2%B7%20macos-9ece6a?labelColor=1a1b26">
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-bb9af7?labelColor=1a1b26"></a>
 </p>
 
 **verd** is a terminal companion for [Codeforces](https://codeforces.com). Find a Problem, read the statement, write the Solution in Neovim, run it against Sample Tests and your own, hunt for counterexamples with a stress test, submit, and watch the Verdict arrive. One keyboard-driven TUI, no browser tab for the loop.
