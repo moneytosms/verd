@@ -89,11 +89,8 @@ func main() {
 	resp, page := do("GET", base+"/problemset/submit", "", nil)
 	fmt.Printf("GET /problemset/submit -> %d, %d bytes, content-type %q\n", resp.StatusCode, len(page), resp.Header.Get("content-type"))
 	switch {
-	case resp.StatusCode == 403 || cfPage.MatchString(page):
-		fmt.Println("OUTCOME: BLOCKED (403 or Cloudflare challenge/Turnstile on GET). Direct mode not viable with these cookies.")
-		if cfPage.MatchString(page) {
-			fmt.Println("  challenge markers found in body")
-		}
+	case resp.StatusCode == 403 || resp.StatusCode == 503:
+		fmt.Println("OUTCOME: BLOCKED (403/503 on GET). Direct mode not viable with these cookies.")
 		return
 	case resp.StatusCode != 200:
 		fmt.Printf("OUTCOME: UNEXPECTED GET status %d, Location %q\n", resp.StatusCode, resp.Header.Get("location"))
@@ -132,9 +129,16 @@ func main() {
 			csrf = val
 		}
 	}
+	if m := cfPage.FindString(page); m != "" {
+		fmt.Printf("note: body mentions %q (a challenge page has no form; a real page may embed Turnstile)\n", m)
+	}
 	fmt.Printf("hidden/input fields found: %s\n", fieldNames(form))
 	if csrf == "" {
-		fmt.Println("OUTCOME: NOT LOGGED IN or page layout changed (no csrf_token). Check the Cookie header.")
+		if cfPage.MatchString(page) {
+			fmt.Println("OUTCOME: BLOCKED (200 but Cloudflare challenge page, no form).")
+		} else {
+			fmt.Println("OUTCOME: NOT LOGGED IN or page layout changed (no csrf_token). Check the Cookie header.")
+		}
 		return
 	}
 	var typeID, typeName string
@@ -181,7 +185,7 @@ func main() {
 	loc := resp.Header.Get("location")
 	fmt.Printf("POST -> %d, Location %q, %d bytes\n", resp.StatusCode, loc, len(out))
 	switch {
-	case resp.StatusCode == 403 || cfPage.MatchString(out):
+	case resp.StatusCode == 403 || resp.StatusCode == 503:
 		fmt.Println("OUTCOME: BLOCKED on POST (403 or Cloudflare/Turnstile).")
 		return
 	case resp.StatusCode != 302 && resp.StatusCode != 303:

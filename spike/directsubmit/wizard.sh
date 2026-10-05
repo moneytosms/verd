@@ -190,7 +190,7 @@ OUT=out
 mkdir -p "$OUT"
 FIXTURE=../../internal/submit/testdata/submit-page.html
 
-TOTAL_STAGES=5
+TOTAL_STAGES=6
 
 banner "Issue #40 spike: direct submit against live Codeforces"
 
