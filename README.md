@@ -53,7 +53,7 @@ verd                            # open the TUI
 2. **Edit.** Press `e`. Neovim opens beside verd on `~/verd/<contest>/<index>/main.cpp`, created from your Template.
 3. **Test.** Press `t` (or just save, `autotest` is on by default). Press `n`/`p` to select a test and `d` for a diff on a failing one.
 4. **Add a case.** Press `a` to create the next `custom-N.in` / `.ans` pair.
-5. **Stress.** Press `S`. verd creates `gen.cpp` and `brute.cpp` if missing, runs until a counterexample, and `w` saves it.
+5. **Stress.** Press `S`. The first time, verd creates `gen.cpp` and `brute.cpp` and opens them; fill them in and press `S` again. It runs until it finds a counterexample, and `w` saves it as a Custom Test.
 6. **Submit.** Press `s`. The Solution is copied, the submit page opens, and the Verdict streams into the pane.
 
 Press `?` on any screen for its key list. Full reference: [docs/keys.md](./docs/keys.md).
