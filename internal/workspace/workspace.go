@@ -16,12 +16,15 @@ import (
 
 type Workspace struct{ Root string }
 
-// New expands a leading ~ in root.
+// New expands a leading ~ in root and makes a relative root absolute (so "." means the launch directory).
 func New(root string) Workspace {
 	if root == "~" || strings.HasPrefix(root, "~/") {
 		if home, err := os.UserHomeDir(); err == nil {
 			root = filepath.Join(home, strings.TrimPrefix(root, "~"))
 		}
+	}
+	if abs, err := filepath.Abs(root); err == nil {
+		root = abs
 	}
 	return Workspace{Root: root}
 }

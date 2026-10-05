@@ -58,6 +58,9 @@ func run(args []string, out io.Writer) error {
 		return nil
 	}
 	path := filepath.Join(config.Dir(), "config.toml")
+	if i := slices.Index(args, "--here"); i >= 0 { // keep Solutions in the current directory
+		args, hereWorkspace = slices.Delete(slices.Clone(args), i, i+1), true
+	}
 	if len(args) == 0 {
 		return runTUI(path)
 	}
@@ -76,7 +79,7 @@ func run(args []string, out io.Writer) error {
 		if len(args) != 2 {
 			return &exitError{2, "usage: verd test <file>"}
 		}
-		cfg, err := config.Load(path)
+		cfg, err := loadConfig(path)
 		if err != nil {
 			return err
 		}
@@ -102,7 +105,7 @@ func run(args []string, out io.Writer) error {
 		if len(args) != 2 {
 			return &exitError{2, "usage: verd submit <file>"}
 		}
-		cfg, err := config.Load(path)
+		cfg, err := loadConfig(path)
 		if err != nil {
 			return err
 		}
@@ -136,7 +139,7 @@ func run(args []string, out io.Writer) error {
 		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 1 {
 			return &exitError{2, "usage: verd stress [--iter N] [--time S] <file>"}
 		}
-		cfg, err := config.Load(path)
+		cfg, err := loadConfig(path)
 		if err != nil {
 			return err
 		}
@@ -162,7 +165,7 @@ func run(args []string, out io.Writer) error {
 	case "logout":
 		return logoutCmd(out, credStore())
 	case "config":
-		cfg, err := config.Load(path)
+		cfg, err := loadConfig(path)
 		if err != nil {
 			return err
 		}
@@ -176,8 +179,19 @@ func run(args []string, out io.Writer) error {
 	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
 }
 
-func runTUI(path string) error {
+// hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
+var hereWorkspace bool
+
+func loadConfig(path string) (config.Config, error) {
 	cfg, err := config.Load(path)
+	if hereWorkspace {
+		cfg.Workspace = "."
+	}
+	return cfg, err
+}
+
+func runTUI(path string) error {
+	cfg, err := loadConfig(path)
 	if err != nil {
 		return err
 	}

@@ -118,3 +118,10 @@ func TestSaveCustomWritesNextPair(t *testing.T) {
 		t.Fatalf("%+v %q", tests, b)
 	}
 }
+
+func TestNewMakesRelativeRootAbsolute(t *testing.T) {
+	wd, _ := os.Getwd()
+	if got := New(".").Root; got != wd {
+		t.Fatalf("%q want %q", got, wd)
+	}
+}
