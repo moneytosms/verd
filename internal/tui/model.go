@@ -18,6 +18,7 @@ import (
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
+	"github.com/moneytosms/verd/internal/stress"
 	"github.com/moneytosms/verd/internal/theme"
 )
 
@@ -43,6 +44,10 @@ type Deps struct {
 	EditorAlive func() bool
 	// Tests starts a Test Run of the Problem's Solution and streams its events.
 	Tests func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error)
+	// Stress starts a stress run of the Problem's Solution against its brute force.
+	Stress func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan stress.Event, error)
+	// SaveCounterexample stores a stress counterexample as the next Custom Test and returns its name.
+	SaveCounterexample func(p cf.Problem, input, want string) (string, error)
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
@@ -95,6 +100,8 @@ type Model struct {
 	pickNote    string
 	picked      *cf.Problem
 	pickMatches int
+	strs        *stressRun
+	stressID    int
 	stats       stats.Stats
 	statsScroll int
 	statsSel    int
@@ -296,6 +303,15 @@ func (m Model) Init() tea.Cmd {
 type ExternalRun struct {
 	Problem cf.Problem
 	Events  <-chan runner.Event
+	Stress  <-chan stress.Event // set instead of Events for a stress run
+}
+
+// attachExternal shows an external run in whichever panel it belongs to.
+func (m Model) attachExternal(r ExternalRun) (Model, tea.Cmd) {
+	if r.Stress != nil {
+		return m.attachStress(r.Stress)
+	}
+	return m.attachRun(r.Events)
 }
 
 type watchMsg struct {
@@ -396,7 +412,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.pending = &msg
 			return m, nil
 		}
-		return m.attachRun(msg.Events)
+		return m.attachExternal(msg)
+	case stressEventMsg:
+		return m.onStressEvent(msg)
 	case watchMsg:
 		if msg.closed || m.open == nil {
 			return m, nil
@@ -437,9 +455,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
 			m.body = strings.Split(msg.body, "\n")
 			if m.pending != nil {
-				ev := m.pending.Events
+				r := *m.pending
 				m.pending = nil
-				return m.attachRun(ev)
+				return m.attachExternal(r)
 			}
 		}
 	case tea.KeyPressMsg:
@@ -545,7 +563,7 @@ func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
 
 // closeProblem leaves the Problem view: stops its run and watcher.
 func (m Model) closeProblem() Model {
-	m = m.stopTests()
+	m = m.stopTests().stopStress()
 	if m.watchCancel != nil {
 		m.watchCancel()
 		m.watchCancel = nil
@@ -583,6 +601,12 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.stopTests(), tea.Quit
 		}
 		return m, nil
+	}
+	if m.strs != nil && m.strs.diff {
+		return m.updateStressOverlay(msg)
+	}
+	if nm, cmd, handled := m.updateStress(msg); handled {
+		return nm, cmd
 	}
 	if nm, cmd, handled := m.updateTests(msg); handled {
 		return nm, cmd
@@ -673,6 +697,7 @@ func (m Model) content() []string {
 		lines = append(lines, lim, "")
 		lines = append(lines, m.submissionLines()...)
 		lines = append(lines, m.testsPanel()...)
+		lines = append(lines, m.stressPanel()...)
 		lines = append(lines, "")
 		lines = append(lines, m.body...)
 		for i, s := range d.Samples {
@@ -838,7 +863,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	global := [][2]string{{"1-4 / tab", "switch tab"}, {"ctrl+r", "refresh from network"}, {"?", "toggle help"}, {"q", "quit"}}
 	switch {
 	case m.open != nil:
-		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
+		return "Problem", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"e", "edit Solution in Neovim"}, {"a", "add Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"S", "stress test (esc cancels, w saves counterexample)"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
@@ -868,8 +893,11 @@ func (m Model) viewHelp(b *strings.Builder) string {
 }
 
 func (m Model) viewProblem(b *strings.Builder) string {
-	if m.run != nil && m.run.diff {
-		return m.diffView(b)
+	if s := m.strs; s != nil && s.diff {
+		return m.diffView(b, s.counterexample(), &s.diffOff, &s.diffInit, s.saveHint())
+	}
+	if r := m.run; r != nil && r.diff {
+		return m.diffView(b, r.results[r.sel], &r.diffOff, &r.diffInit, "")
 	}
 	lines := m.content()
 	if m.loading {
@@ -882,7 +910,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  s submit  a add test  l lang  t test  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  s submit  a add test  l lang  t test  S stress  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func (m Model) viewList(b *strings.Builder) string {

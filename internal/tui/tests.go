@@ -223,9 +223,7 @@ func (m Model) verdictStyle(v string) string {
 }
 
 // diffView renders the side-by-side diff overlay for the selected test.
-func (m Model) diffView(b *strings.Builder) string {
-	r := m.run
-	res := r.results[r.sel]
+func (m Model) diffView(b *strings.Builder, res runner.Result, diffOff *int, diffInit *bool, extra string) string {
 	st := m.styles()
 	want, got := cleanLines(res.Expected), cleanLines(res.Output)
 	b.WriteString(" " + st.Accent.Render(fmt.Sprintf("Diff: %s  %s", res.Name, res.Verdict)) + "\n")
@@ -235,15 +233,14 @@ func (m Model) diffView(b *strings.Builder) string {
 	}
 	rows := max(3, m.height-8)
 	total := max(len(want), len(got))
-	if !r.diffInit { // start near the first mismatch
-		r.diffInit = true
+	if !*diffInit { // start near the first mismatch
+		*diffInit = true
+		*diffOff = 0
 		if res.Mismatch != nil {
-			r.diffOff = max(0, res.Mismatch.Line-1-rows/3)
-		} else {
-			r.diffOff = 0
+			*diffOff = max(0, res.Mismatch.Line-1-rows/3)
 		}
 	}
-	off := min(r.diffOff, max(0, total-rows))
+	off := min(*diffOff, max(0, total-rows))
 	w := max(10, (m.width-6)/2)
 	b.WriteString(" " + st.Dim.Render(fmt.Sprintf("%-*s | %s", w, "expected", "actual")) + "\n")
 	end := min(total, off+rows)
@@ -256,7 +253,7 @@ func (m Model) diffView(b *strings.Builder) string {
 		b.WriteString(fmt.Sprintf(" %s | %s\n", l, a))
 	}
 	hint := fmt.Sprintf("showing %d/%d lines from line %d", end-off, total, min(off+1, total))
-	return hint + "  j/k scroll  esc close"
+	return hint + extra + "  j/k scroll  esc close"
 }
 
 // cell returns line i of ls, padded or clipped to w columns.

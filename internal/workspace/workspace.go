@@ -167,3 +167,18 @@ func (w Workspace) NextCustom(contest int, index string) (n int, in, ans string,
 	}
 	return n, in, ans, nil
 }
+
+// SaveCustom writes input and answer as the next Custom Test and returns its name.
+func (w Workspace) SaveCustom(contest int, index, input, ans string) (string, error) {
+	n, in, out, err := w.NextCustom(contest, index)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(in, []byte(input), 0o644); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(out, []byte(ans), 0o644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("custom-%d", n), nil
+}

@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/tui"
 )
 
 func exitCode(err error) int {
@@ -148,5 +150,40 @@ func TestStressCmd(t *testing.T) {
 	out.Reset()
 	if err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 20, 20*time.Second); err != nil || !strings.Contains(out.String(), "no counterexample in 20") {
 		t.Fatalf("%v\n%s", err, out.String())
+	}
+}
+
+func TestStressDelegatedMatchesHeadless(t *testing.T) {
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 missing")
+	}
+	d := &scrape.Detail{TimeLimitMS: 2000, MemoryLimitMB: 256}
+	cfg, path, cache, detail := setup(t, "print(int(input())*2)\n", "main.py", d)
+	dir := filepath.Dir(path)
+	os.WriteFile(filepath.Join(dir, "gen.py"), []byte("import sys\nprint(int(sys.argv[1]))\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "brute.py"), []byte("n=int(input())\nprint(n*2 if n!=5 else 0)\n"), 0o644)
+
+	var headless bytes.Buffer
+	hErr := stressCmd(context.Background(), &headless, cfg, cache, detail, nil, path, 20, 20*time.Second)
+
+	sock := shortSock(t)
+	srv, err := ipc.Listen(sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	attached := make(chan tui.ExternalRun, 1)
+	go srv.Serve(stressHandler(cfg, cache, detail, nil, func(r tui.ExternalRun) { attached <- r }))
+
+	var delegated bytes.Buffer
+	handled, dErr := delegateStress(context.Background(), &delegated, sock, path, 20, 20*time.Second)
+	if !handled || exitCode(hErr) != 1 || exitCode(dErr) != 1 {
+		t.Fatalf("handled=%v headless=%v delegated=%v", handled, hErr, dErr)
+	}
+	if !strings.Contains(headless.String(), "MISMATCH at seed 5") || headless.String() != delegated.String() {
+		t.Fatalf("headless:\n%s\ndelegated:\n%s", headless.String(), delegated.String())
+	}
+	if r := <-attached; r.Stress == nil {
+		t.Fatal("TUI should get the stress stream")
 	}
 }

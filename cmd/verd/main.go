@@ -26,6 +26,7 @@ import (
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
+	"github.com/moneytosms/verd/internal/stress"
 	"github.com/moneytosms/verd/internal/tui"
 	"github.com/moneytosms/verd/internal/watch"
 	"github.com/moneytosms/verd/internal/workspace"
@@ -151,7 +152,11 @@ func run(args []string, out io.Writer) error {
 		mode := func(contest int, index string) string { st, _ := s.ProblemState(contest, index); return st.Mode }
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()
-		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, time.Duration(*secs)*time.Second)
+		limit := time.Duration(*secs) * time.Second
+		if handled, err := delegateStress(ctx, out, socketPath(), fs.Arg(0), *iter, limit); handled {
+			return err
+		}
+		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, limit)
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -264,6 +269,23 @@ func runTUI(path string) error {
 			}
 			return runner.Run(ctx, spec), nil
 		},
+		Stress: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan stress.Event, error) {
+			ref, err := solutionRef(cfg, p, o.Lang)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := os.Stat(ref.Path); err != nil {
+				return nil, fmt.Errorf("no Solution yet (press e to create one)")
+			}
+			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0)
+			if err != nil {
+				return nil, err
+			}
+			return stress.Run(ctx, spec), nil
+		},
+		SaveCounterexample: func(p cf.Problem, input, want string) (string, error) {
+			return workspace.New(cfg.Workspace).SaveCustom(p.ContestID, p.Index, input, want)
+		},
 		// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
 		Refresh: []func() (tui.Data, error){
 			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
@@ -282,6 +304,7 @@ func runTUI(path string) error {
 	go srv.Serve(dispatch(map[string]ipc.Handler{
 		"test":   testHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
 		"submit": submitHandler(sub, func(r tui.ExternalSubmit) { prog.Send(r) }),
+		"stress": stressHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
 	}))
 	_, err = prog.Run()
 	return err

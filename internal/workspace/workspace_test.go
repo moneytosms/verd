@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,5 +101,20 @@ func TestNextCustomSkipsExisting(t *testing.T) {
 	}
 	if strings.Join(names, ",") != "sample-1,custom-1,custom-8" {
 		t.Fatalf("custom tests must run with samples: %v", names)
+	}
+}
+
+func TestSaveCustomWritesNextPair(t *testing.T) {
+	w := New(t.TempDir())
+	for want := 1; want <= 2; want++ {
+		name, err := w.SaveCustom(1, "A", "3\n", "6\n")
+		if err != nil || name != fmt.Sprintf("custom-%d", want) {
+			t.Fatalf("%q %v", name, err)
+		}
+	}
+	tests, _ := w.Tests(1, "A")
+	b, _ := os.ReadFile(tests[1].Ans)
+	if len(tests) != 2 || string(b) != "6\n" {
+		t.Fatalf("%+v %q", tests, b)
 	}
 }

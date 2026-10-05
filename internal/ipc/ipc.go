@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/stress"
 )
 
 // ErrRunning is returned by Listen when another verd already owns the socket.
@@ -25,11 +26,13 @@ var ErrRunning = errors.New("verd is already running")
 const maxPath = 100
 
 type Request struct {
-	Cmd  string `json:"cmd"` // "test" | "submit"
+	Cmd  string `json:"cmd"` // "test" | "submit" | "stress"
 	File string `json:"file"`
+	Iter int    `json:"iter,omitempty"` // stress: max iterations
+	Secs int    `json:"secs,omitempty"` // stress: time limit in seconds
 }
 
-// Message is one streamed event. Kind: header | compile | test | done | submit | error.
+// Message is one streamed event. Kind: header | compile | test | done | submit | stress | error.
 // A submit message carries a status line in Text; Final marks the last one.
 type Message struct {
 	Kind        string         `json:"kind"`
@@ -39,7 +42,8 @@ type Message struct {
 	Err         string         `json:"err,omitempty"` // compiler output on failure
 	Result      *runner.Result `json:"result,omitempty"`
 	Verdict     string         `json:"verdict,omitempty"`
-	Final       bool           `json:"final,omitempty"` // submit: the Verdict is decided
+	Final       bool           `json:"final,omitempty"` // submit, stress: the last message
+	Stress      *stress.Result `json:"stress,omitempty"`
 }
 
 // FromEvent converts a runner event to its wire form.
@@ -178,7 +182,7 @@ func Call(ctx context.Context, path string, req Request, onMsg func(Message)) (d
 			return true, nil // server closed the stream
 		}
 		onMsg(m)
-		if m.Kind == "done" || m.Kind == "error" || (m.Kind == "submit" && m.Final) {
+		if m.Kind == "done" || m.Kind == "error" || ((m.Kind == "submit" || m.Kind == "stress") && m.Final) {
 			return true, nil
 		}
 	}

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/stress"
 	"github.com/moneytosms/verd/internal/submit"
 	"github.com/moneytosms/verd/internal/tui"
 )
@@ -156,4 +158,62 @@ func delegateSubmit(ctx context.Context, out io.Writer, sock, file string) (hand
 		return true, &exitError{2, "tracking ended without a Verdict"}
 	}
 	return true, &exitError{1, ""}
+}
+
+// stressHandler serves `stress` requests: it runs the loop, shows progress in the TUI pane and
+// sends the client only the final Result.
+func stressHandler(cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, attach func(tui.ExternalRun)) ipc.Handler {
+	return func(ctx context.Context, req ipc.Request, emit func(ipc.Message)) error {
+		ref, spec, err := prepareStress(ctx, cfg, cacheDir, detail, savedMode, req.File, req.Iter, time.Duration(req.Secs)*time.Second)
+		if err != nil {
+			return err
+		}
+		shown := make(chan stress.Event, 64)
+		attach(tui.ExternalRun{Problem: cf.Problem{ContestID: ref.Contest, Index: ref.Index}, Stress: shown})
+		defer close(shown)
+		for e := range stress.Run(ctx, spec) {
+			if e.Done {
+				emit(ipc.Message{Kind: "stress", Final: true, Stress: &e.Result})
+				select {
+				case shown <- e:
+				case <-time.After(2 * time.Second):
+				}
+				continue
+			}
+			select {
+			case shown <- e:
+			default: // the pane is only a view
+			}
+		}
+		return nil
+	}
+}
+
+// delegateStress runs `verd stress` through a running TUI. handled=false: nobody listening.
+func delegateStress(ctx context.Context, out io.Writer, sock, file string, iter int, limit time.Duration) (handled bool, err error) {
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return true, err
+	}
+	var srvErr string
+	var res *stress.Result
+	dialed, err := ipc.Call(ctx, sock, ipc.Request{Cmd: "stress", File: abs, Iter: iter, Secs: int(limit.Seconds())}, func(m ipc.Message) {
+		switch m.Kind {
+		case "error":
+			srvErr = m.Text
+		case "stress":
+			res = m.Stress
+		}
+	})
+	switch {
+	case !dialed:
+		return false, nil
+	case err != nil:
+		return true, err
+	case srvErr != "":
+		return true, &exitError{2, srvErr}
+	case res == nil:
+		return true, &exitError{2, "stress ended without a result"}
+	}
+	return true, printStress(out, *res)
 }
