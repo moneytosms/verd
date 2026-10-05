@@ -183,3 +183,54 @@ func TestDelegatedSubmitMatchesAndAttaches(t *testing.T) {
 		t.Fatalf("unknown cmd on this server: %v", err)
 	}
 }
+
+func TestSubmitDirectModeSkipsBrowserAndTracks(t *testing.T) {
+	var calls []ran
+	s := testSubmitter(t, fakeCF(t, "OK"), &calls)
+	s.cfg.SubmitMode = "direct"
+	var got struct {
+		contest, compiler int
+		index, src        string
+	}
+	s.direct = func(_ context.Context, contest int, index string, compiler int, src []byte) error {
+		got.contest, got.index, got.compiler, got.src = contest, index, compiler, string(src)
+		return nil
+	}
+	st, err := s.begin(context.Background(), cf.Problem{ContestID: 1900, Index: "A"}, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.contest != 1900 || got.index != "A" || got.compiler != 89 || got.src != "int main(){}\n" {
+		t.Fatalf("direct args: %+v", got)
+	}
+	if len(calls) != 0 || strings.Join(st.Notes, "|") != "submitted directly" {
+		t.Fatalf("no clipboard/browser expected: calls=%+v notes=%v", calls, st.Notes)
+	}
+	var out bytes.Buffer
+	if err := printSubmit(&out, st); err != nil || !strings.Contains(out.String(), "Accepted") {
+		t.Fatalf("verdict must still be tracked: %v\n%s", err, out.String())
+	}
+}
+
+func TestSubmitDirectFailureFallsBackToBrowser(t *testing.T) {
+	var calls []ran
+	s := testSubmitter(t, fakeCF(t, "OK"), &calls)
+	s.cfg.SubmitMode = "direct"
+	s.direct = func(context.Context, int, string, int, []byte) error { return fmt.Errorf("blocked by Cloudflare") }
+	st, err := s.begin(context.Background(), cf.Problem{ContestID: 1900, Index: "A"}, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || !strings.Contains(strings.Join(st.Notes, "|"), "direct submit failed, using the browser: blocked by Cloudflare") {
+		t.Fatalf("fallback expected: calls=%+v notes=%v", calls, st.Notes)
+	}
+}
+
+func TestSubmitBrowserModeNeverCallsDirect(t *testing.T) {
+	var calls []ran
+	s := testSubmitter(t, fakeCF(t, "OK"), &calls)
+	s.direct = func(context.Context, int, string, int, []byte) error { t.Fatal("direct must not run"); return nil }
+	if _, err := s.begin(context.Background(), cf.Problem{ContestID: 1900, Index: "A"}, "cpp"); err != nil {
+		t.Fatal(err)
+	}
+}

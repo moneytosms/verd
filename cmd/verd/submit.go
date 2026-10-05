@@ -9,11 +9,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/creds"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/submit"
 	"github.com/moneytosms/verd/internal/workspace"
@@ -28,11 +30,30 @@ type submitter struct {
 	run      func(argv []string, stdin []byte) error // copy tool / opener
 	interval time.Duration
 	timeout  time.Duration
+	// direct posts the Solution with the saved session; any error means "use the browser instead".
+	direct func(ctx context.Context, contest int, index string, compilerID int, src []byte) error
+}
+
+func credStore() creds.Store {
+	return creds.Store{File: filepath.Join(config.Dir(), "credentials.json")}
+}
+
+// directSubmit is the real direct path: saved session over a Chrome TLS client.
+func directSubmit(ctx context.Context, contest int, index string, compilerID int, src []byte) error {
+	c, err := credStore().Load()
+	if err != nil {
+		return err
+	}
+	doer, err := submit.NewChromeDoer()
+	if err != nil {
+		return err
+	}
+	return submit.Direct{Doer: doer, Cookie: c.Cookie, UserAgent: c.UserAgent}.Submit(ctx, contest, index, compilerID, src)
 }
 
 func newSubmitter(cfg config.Config, client *cf.Client, s *store.Store) *submitter {
 	return &submitter{
-		cfg: cfg, client: client, store: s,
+		cfg: cfg, client: client, store: s, direct: directSubmit,
 		env: submit.Env{GOOS: runtime.GOOS, Getenv: os.Getenv, LookPath: exec.LookPath},
 		run: func(argv []string, stdin []byte) error {
 			cmd := exec.Command(argv[0], argv[1:]...)
@@ -77,6 +98,18 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		return nil, err
 	}
 	st := &Started{Problem: p, Text: string(src)}
+	sent := false
+	if s.cfg.SubmitMode == "direct" {
+		if err := s.direct(ctx, p.ContestID, p.Index, s.cfg.Lang[lang].CFCompilerID, src); err != nil {
+			st.Notes = append(st.Notes, "direct submit failed, using the browser: "+err.Error())
+		} else {
+			sent = true
+			st.Notes = append(st.Notes, "submitted directly")
+		}
+	}
+	if sent {
+		return s.track(ctx, st, tr, base), nil
+	}
 	if clip := s.env.ClipboardCommand(); clip != nil {
 		if err := s.run(clip, src); err != nil {
 			st.Notes = append(st.Notes, "clipboard tool failed: "+err.Error())
@@ -91,7 +124,12 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		st.Notes = append(st.Notes, "no browser opener found")
 	}
 	st.Notes = append(st.Notes, "paste and submit at "+url)
+	return s.track(ctx, st, tr, base), nil
+}
 
+// track follows the new Submission, upserting each update into the store.
+func (s *submitter) track(ctx context.Context, st *Started, tr submit.Tracker, base int64) *Started {
+	p := st.Problem
 	raw := tr.Track(ctx, p.ContestID, p.Index, base)
 	out := make(chan submit.Update, 4)
 	go func() {
@@ -108,7 +146,7 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		}
 	}()
 	st.Updates = out
-	return st, nil
+	return st
 }
 
 // osc52 is the clipboard escape sequence; it works over tmux/ssh where terminals allow it.

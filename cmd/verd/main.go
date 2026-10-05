@@ -157,6 +157,10 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, limit)
+	case "login":
+		return loginCmd(out, os.Stdin, credStore())
+	case "logout":
+		return logoutCmd(out, credStore())
 	case "config":
 		cfg, err := config.Load(path)
 		if err != nil {
@@ -169,7 +173,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>, stress <file>)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
 }
 
 func runTUI(path string) error {

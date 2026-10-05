@@ -87,3 +87,18 @@ func TestLangMergeInheritsDefaults(t *testing.T) {
 		t.Fatalf("defaults and new langs: %+v", c.Lang)
 	}
 }
+
+func TestSubmitModeDefaultAndValidation(t *testing.T) {
+	if Default().SubmitMode != "browser" {
+		t.Fatal("browser must be the default")
+	}
+	p := filepath.Join(t.TempDir(), "c.toml")
+	os.WriteFile(p, []byte(`submit_mode = "direct"`), 0o644)
+	if c, err := Load(p); err != nil || c.SubmitMode != "direct" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	os.WriteFile(p, []byte(`submit_mode = "magic"`), 0o644)
+	if _, err := Load(p); err == nil {
+		t.Fatal("unknown submit_mode must error")
+	}
+}

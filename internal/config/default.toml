@@ -34,6 +34,13 @@
 # Toggles keyboard focus between verd and the embedded Neovim.
 # embed_focus_key = "ctrl+\\"
 
+# How `s` / `verd submit` sends a Solution: browser | direct
+# browser copies the Solution, opens the submit page and tracks the Verdict (default, safe).
+# direct posts it from verd using the browser session saved by `verd login`. EXPERIMENTAL:
+# it replays your Codeforces cookies, which Codeforces may treat as automation (account risk),
+# and it falls back to browser on any failure.
+# submit_mode = "browser"
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]
