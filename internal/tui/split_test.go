@@ -155,3 +155,68 @@ func TestSplitViewHasNoTabs(t *testing.T) {
 		t.Fatal("tabs break column alignment")
 	}
 }
+
+func TestFilterModalRatingStatusTagsAndSort(t *testing.T) {
+	ps := []cf.Problem{
+		{ContestID: 3, Index: "A", Name: "Alpha", Rating: 800, Tags: []string{"dp"}},
+		{ContestID: 2, Index: "B", Name: "Beta", Rating: 1500, Tags: []string{"dp", "math"}},
+		{ContestID: 1, Index: "C", Name: "Gamma", Rating: 1000, Tags: []string{"math"}},
+	}
+	m := New(ps, "", Deps{})
+	m, _ = send(m, "f")
+	if m.fm == nil {
+		t.Fatal("f opens the filter modal")
+	}
+	// rating min: type 9 0 0 -> 900
+	for _, k := range []string{"9", "0", "0"} {
+		m, _ = send(m, k)
+	}
+	if m.filter.MinRating != 900 || len(m.visible) != 2 {
+		t.Fatalf("min rating: %d %v", m.filter.MinRating, m.visible)
+	}
+	// tags: tab x4 to the tag list, type "math", space includes it
+	for range 4 {
+		m, _ = send(m, "tab")
+	}
+	for _, k := range []string{"m", "a", "t", "h"} {
+		m, _ = send(m, k)
+	}
+	m, _ = send(m, " ")
+	if len(m.filter.Include) != 1 || m.filter.Include[0] != "math" || len(m.visible) != 2 {
+		t.Fatalf("tag include: %+v %v", m.filter.Include, m.visible)
+	}
+	m, _ = send(m, " ") // include -> exclude
+	if len(m.filter.Exclude) != 1 || len(m.visible) != 0 {
+		t.Fatalf("tag exclude: %+v %v", m.filter.Exclude, m.visible)
+	}
+	if !strings.Contains(plain(m), "Filters") {
+		t.Fatal("modal should be drawn")
+	}
+	m, _ = send(m, "esc")
+	if m.fm != nil || !strings.Contains(plain(m), "rating ≥ 900") || !strings.Contains(plain(m), "math") {
+		t.Fatalf("chips should show the active filters:\n%s", plain(m))
+	}
+	m, _ = send(m, "X")
+	if len(m.visible) != 3 || m.filter.Active() {
+		t.Fatal("X clears every filter")
+	}
+}
+
+func TestSortOrdersTheList(t *testing.T) {
+	ps := []cf.Problem{
+		{ContestID: 3, Index: "A", Name: "Alpha", Rating: 1500},
+		{ContestID: 2, Index: "B", Name: "Beta", Rating: 800},
+		{ContestID: 1, Index: "C", Name: "Gamma"},
+	}
+	m := New(ps, "", Deps{})
+	m.sortBy = "rating"
+	m = m.refilter()
+	if m.visible[0].Name != "Beta" || m.visible[2].Name != "Gamma" {
+		t.Fatalf("easiest first, unrated last: %v", m.visible)
+	}
+	m.sortBy = "-rating"
+	m = m.refilter()
+	if m.visible[0].Name != "Alpha" || m.visible[2].Name != "Gamma" {
+		t.Fatalf("hardest first, unrated last: %v", m.visible)
+	}
+}

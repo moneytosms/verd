@@ -13,6 +13,8 @@ func (m Model) modalBox() []string {
 	switch {
 	case m.tm != nil:
 		return m.tmBox()
+	case m.fm != nil:
+		return m.filterBox()
 	case m.help:
 		return m.helpBox()
 	case m.tab == 1 && m.contestOpen != nil && m.open == nil:

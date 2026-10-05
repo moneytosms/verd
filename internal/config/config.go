@@ -20,6 +20,7 @@ type Config struct {
 	FloatEps       float64 `toml:"float_eps"`
 	Autotest       bool    `toml:"autotest"`
 	Theme          string  `toml:"theme"`
+	Background     string  `toml:"background"`
 	Split          string  `toml:"split"`
 	EmbedRatio     float64 `toml:"embed_ratio"`
 	EmbedFocusKey  string  `toml:"embed_focus_key"`
@@ -63,7 +64,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -110,6 +111,9 @@ func Load(path string) (Config, error) {
 	}
 	if err := toml.Unmarshal(b, &c); err != nil {
 		return c, err
+	}
+	if c.Background != "auto" && c.Background != "dark" && c.Background != "light" {
+		return c, fmt.Errorf("background %q: want auto, dark or light", c.Background)
 	}
 	if c.SubmitMode != "browser" && c.SubmitMode != "direct" {
 		return c, fmt.Errorf("submit_mode %q: want browser or direct", c.SubmitMode)

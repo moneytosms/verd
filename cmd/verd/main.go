@@ -308,6 +308,23 @@ func runTUI(path string) error {
 			}
 			return stress.Run(ctx, spec), nil
 		},
+		Settings: map[string]string{
+			"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
+			"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
+			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
+			"split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
+			"submit_mode": cfg.SubmitMode,
+		},
+		SaveSetting: func(key, value string) error { return config.Set(path, key, value) },
+		EditConfig: func() (*exec.Cmd, error) {
+			if _, err := os.Stat(path); err != nil {
+				if err := config.Init(path, false); err != nil {
+					return nil, err
+				}
+			}
+			return ctrl.Open(path, 0)
+		},
+		LangSummary: langSummary(cfg),
 		Customs: func(p cf.Problem) ([]tui.Case, error) {
 			cs, err := workspace.New(cfg.Workspace).Customs(p.ContestID, p.Index)
 			out := make([]tui.Case, len(cs))
@@ -332,7 +349,7 @@ func runTUI(path string) error {
 		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
-	prog = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithData(data))
+	prog = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithBackground(cfg.Background).WithData(data))
 	detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
 		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
 	}
@@ -397,4 +414,15 @@ func openURL(url string) error {
 		return exec.Command("open", url).Start()
 	}
 	return exec.Command("xdg-open", url).Start()
+}
+
+// langSummary describes each configured language for the Settings tab.
+func langSummary(cfg config.Config) []string {
+	keys := langKeys(cfg)
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		l := cfg.Lang[k]
+		out = append(out, fmt.Sprintf("%s  .%s  cf id %d", k, l.Ext, l.CFCompilerID))
+	}
+	return out
 }

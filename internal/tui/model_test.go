@@ -156,10 +156,10 @@ func TestFilterSearchAndMarks(t *testing.T) {
 		t.Fatalf("marks/count wrong:\n%s", out)
 	}
 	// filter: +dp unsolved  -> only 2B
-	m, _ = send(m, "f")
+	m, _ = send(m, ":")
 	m = typeText(m, "+dp unsolved")
 	m, _ = send(m, "enter")
-	if len(m.visible) != 1 || m.visible[0].Index != "B" || !strings.Contains(plain(m), "1/3 problems") {
+	if len(m.visible) != 1 || m.visible[0].Index != "B" || !strings.Contains(plain(m), "1 of 3 problems") {
 		t.Fatalf("filter: %+v\n%s", m.visible, plain(m))
 	}
 	// search combines with the filter
@@ -174,7 +174,7 @@ func TestFilterSearchAndMarks(t *testing.T) {
 	nm, _ := m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	m = nm.(Model)
 	m, _ = send(m, "enter")
-	m, _ = send(m, "f")
+	m, _ = send(m, ":")
 	nm, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	m = typeText(nm.(Model), "wat")
 	m, _ = send(m, "enter")
@@ -248,7 +248,7 @@ func TestBackgroundRefreshDoesNotBlockInput(t *testing.T) {
 	cached := []cf.Problem{{ContestID: 1, Index: "A", Name: "Cached1"}, {ContestID: 2, Index: "A", Name: "Cached2"}}
 	m := New(cached, "", deps)
 	cmd := m.Init() // must return immediately; the blocking work lives in the batched cmds
-	if cmd == nil || !strings.Contains(plain(m), "[syncing...]") || !strings.Contains(plain(m), "Cached1") {
+	if cmd == nil || !strings.Contains(plain(m), "● syncing...") || !strings.Contains(plain(m), "Cached1") {
 		t.Fatal("should render cache and show syncing before refresh completes")
 	}
 	batch := cmd().(tea.BatchMsg)
@@ -287,11 +287,11 @@ func TestOfflineBadgeAndMessages(t *testing.T) {
 	nm, _ := m.Update(refreshedMsg{Data{Problems: cached, SyncedAt: now.Add(-3 * time.Hour)}, fmt.Errorf("sync: %w", cf.ErrNetwork), 0})
 	m = nm.(Model)
 	out := plain(m)
-	if !strings.Contains(out, "Cached1") || !strings.Contains(out, "[offline, synced 3h ago]") {
+	if !strings.Contains(out, "Cached1") || !strings.Contains(out, "● offline, synced 3h ago") {
 		t.Fatalf("offline render:\n%s", out)
 	}
 	nm, _ = m.Update(refreshedMsg{Data{Problems: cached}, fmt.Errorf("sync: %w", cf.ErrNetwork), 0})
-	if !strings.Contains(plain(nm.(Model)), "[offline, never synced]") {
+	if !strings.Contains(plain(nm.(Model)), "● offline, never synced") {
 		t.Fatal("never-synced badge missing")
 	}
 	// uncached statement while offline
@@ -383,7 +383,7 @@ func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
 
 func TestStatusLineAndTheme(t *testing.T) {
 	m := New(nil, "", Deps{}).WithData(Data{Handle: "tourist", Rating: 3800})
-	if out := plain(m); !strings.Contains(out, "tourist (3800)") {
+	if out := plain(m); !strings.Contains(out, "tourist 3800") {
 		t.Fatalf("status line missing handle/rating:\n%s", out)
 	}
 	if out := plain(New(nil, "", Deps{}).WithData(Data{Handle: "newbie"})); !strings.Contains(out, "newbie") || strings.Contains(out, "(0)") {
@@ -595,7 +595,7 @@ func TestSplitPaneEditorPolling(t *testing.T) {
 	}
 	m, _ := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
 	m, cmd := send(m, "e")
-	if cmd == nil || !m.editorOpen || !strings.Contains(plain(m), "[editor open]") {
+	if cmd == nil || !m.editorOpen || !strings.Contains(plain(m), "● editor open") {
 		t.Fatal("pane editor should start polling and show a badge")
 	}
 	// e again: focuses the existing pane (Edit is called) but must not start a second ticker
@@ -611,7 +611,7 @@ func TestSplitPaneEditorPolling(t *testing.T) {
 	alive = false
 	nm, cmd = m.Update(editorTickMsg{})
 	m = nm.(Model)
-	if cmd != nil || m.editorOpen || strings.Contains(plain(m), "[editor open]") {
+	if cmd != nil || m.editorOpen || strings.Contains(plain(m), "● editor open") {
 		t.Fatal("closed pane must stop polling and clear the badge")
 	}
 }

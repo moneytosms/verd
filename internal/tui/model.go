@@ -23,7 +23,7 @@ import (
 	"github.com/moneytosms/verd/internal/theme"
 )
 
-var tabs = []string{"Problems", "Contests", "Stats", "Picker"}
+var tabs = []string{"Problems", "Contests", "Stats", "Picker", "Settings"}
 
 // Deps are the side effects the model needs; nil funcs are no-ops.
 type Deps struct {
@@ -55,6 +55,12 @@ type Deps struct {
 	SaveCase func(p cf.Problem, name, input, want string) (string, error)
 	// DeleteCase removes a Custom Test.
 	DeleteCase func(p cf.Problem, name string) error
+	// Settings are the current config values by key; SaveSetting persists one change (and validates it).
+	Settings    map[string]string
+	SaveSetting func(key, value string) error
+	// EditConfig opens config.toml in the editor; LangSummary describes each configured language.
+	EditConfig  func() (*exec.Cmd, error)
+	LangSummary []string
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
@@ -161,6 +167,13 @@ type Model struct {
 	detScroll   int
 	bodyW       int // width the statement was rendered at
 	tm          *testMgr
+	fm          *filterMgr
+	sortBy      string // "", "rating", "-rating", "solved", "id"
+	cfgVals     map[string]string // current config values shown in Settings
+	setSel      int
+	setEdit     *settingEdit
+	setNote     string
+	bgMode      string // background setting: auto, dark or light
 	subModal    bool // the Submission modal is open
 	detail      *scrape.Detail
 	body        []string // rendered statement lines
@@ -170,7 +183,11 @@ type Model struct {
 }
 
 func New(ps []cf.Problem, note string, deps Deps) Model {
-	return Model{Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0, dark: true, theme: mustTheme("terminal")}
+	vals := map[string]string{}
+	for k, v := range deps.Settings {
+		vals[k] = v
+	}
+	return Model{cfgVals: vals, Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0, dark: true, theme: mustTheme("terminal")}
 }
 
 func mustTheme(name string) theme.Theme { t, _ := theme.Get(name); return t }
@@ -181,6 +198,15 @@ func (m Model) WithTheme(name string) Model {
 	m.theme = t
 	if !ok {
 		m.Notice = fmt.Sprintf("unknown theme %q (have: %s)", clean(name), strings.Join(theme.Names(), ", "))
+	}
+	return m
+}
+
+// WithBackground applies the background setting: auto keeps detection, dark and light force it.
+func (m Model) WithBackground(mode string) Model {
+	m.bgMode = mode
+	if mode == "dark" || mode == "light" {
+		m.dark = mode == "dark"
 	}
 	return m
 }
@@ -231,7 +257,30 @@ func (m Model) refilter() Model {
 			}
 		}
 	}
-	if m.filter.Search != "" { // best match first; stable keeps the list order among equals
+	switch m.sortBy {
+	case "rating", "-rating":
+		sort.SliceStable(m.visible, func(i, j int) bool {
+			a, b := m.visible[i].Rating, m.visible[j].Rating
+			if a == 0 || b == 0 { // unrated last either way
+				return b == 0 && a != 0
+			}
+			if m.sortBy == "rating" {
+				return a < b
+			}
+			return a > b
+		})
+	case "solved":
+		sort.SliceStable(m.visible, func(i, j int) bool { return m.visible[i].SolvedCount > m.visible[j].SolvedCount })
+	case "id":
+		sort.SliceStable(m.visible, func(i, j int) bool {
+			a, b := m.visible[i], m.visible[j]
+			if a.ContestID != b.ContestID {
+				return a.ContestID < b.ContestID
+			}
+			return a.Index < b.Index
+		})
+	}
+	if m.filter.Search != "" && m.sortBy == "" { // best match first; stable keeps the list order among equals
 		sort.SliceStable(m.visible, func(i, j int) bool {
 			a, b := m.visible[i], m.visible[j]
 			return scores[fmt.Sprintf("%d%s", a.ContestID, a.Index)] > scores[fmt.Sprintf("%d%s", b.ContestID, b.Index)]
@@ -295,7 +344,7 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.inputErr = err.Error()
 				return m, nil
 			}
-			f.Search = m.filter.Search
+			f.Search, f.SearchMode, f.Status = m.filter.Search, m.filter.SearchMode, m.filter.Status
 			m.filter, m.filterExpr = f, m.input.text
 		}
 		m.input, m.inputErr = nil, ""
@@ -450,7 +499,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.resizeEmbed()
 	case tea.BackgroundColorMsg:
-		m.dark = msg.IsDark()
+		if m.bgMode == "" || m.bgMode == "auto" {
+			m.dark = msg.IsDark()
+		}
 	case refreshedMsg:
 		m = m.WithData(msg.data)
 		m.offline = errors.Is(msg.err, cf.ErrNetwork)
@@ -550,6 +601,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.tm != nil {
 			return m.updateTM(msg)
 		}
+		if m.fm != nil {
+			return m.updateFilters(msg)
+		}
 		if m.subModal {
 			switch msg.String() {
 			case "q", "esc", "enter":
@@ -589,7 +643,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.syncing = true
 			return m, m.refresh(0)
-		case "1", "2", "3", "4":
+		case "1", "2", "3", "4", "5":
 			m.tab = int(k[0] - '1')
 			return m.onTab(), nil
 		case "tab":
@@ -605,6 +659,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateStats(msg)
 		case 3:
 			return m.updatePicker(msg)
+		case 4:
+			return m.updateSettings(msg)
 		}
 		if k := msg.String(); k == "q" || k == "ctrl+c" {
 			return m, tea.Quit
@@ -631,7 +687,12 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.cursor = min(len(m.visible)-1, m.cursor+m.page())
 	case "f":
-		m.input, m.inputErr = &input{kind: 'f', text: m.filterExpr}, ""
+		m = m.openFilters()
+	case ":":
+		m.input, m.inputErr = &input{kind: 'f', text: m.filter.Expr()}, ""
+	case "X":
+		m.filter, m.filterExpr, m.cursor = Filter{}, "", 0
+		return m.refilter(), nil
 	case "/":
 		m.input, m.inputErr = &input{kind: '/', text: m.filter.Search, prev: m.filter.Search}, ""
 	case "enter":
@@ -915,22 +976,7 @@ func (m Model) page() int { return max(1, m.height-4) }
 func (m Model) screen() string {
 	st := m.styles()
 	var b strings.Builder
-	names := make([]string, len(tabs))
-	for i, t := range tabs {
-		names[i] = t
-		if i == m.tab {
-			names[i] = st.Accent.Render("[" + t + "]")
-		}
-	}
-	b.WriteString(" " + strings.Join(names, "  "))
-	if m.handle != "" {
-		who := clean(m.handle)
-		if m.rating > 0 {
-			who += fmt.Sprintf(" (%d)", m.rating)
-		}
-		b.WriteString("   " + st.Dim.Render(who))
-	}
-	b.WriteString("\n\n")
+	b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
 	footer := ""
 	switch {
 	case m.open != nil:
@@ -941,31 +987,33 @@ func (m Model) screen() string {
 		footer = m.viewContests(&b)
 	case m.tab == 2:
 		footer = m.viewStats(&b)
-	default:
+	case m.tab == 3:
 		footer = m.viewPicker(&b)
+	default:
+		footer = m.viewSettings(&b)
 	}
 	if m.confirm {
-		footer = st.Warn.Render(m.confirmText())
+		footer = paintRow(" "+st.Warn.Render(m.confirmText()), m.width, st.Bar)
 	} else {
-		footer = st.Dim.Render(footer)
+		footer = m.hintBar(footer, m.width)
 	}
 	// Status badges get their own line so the key hints can never push them off the pane.
 	var badges []string
 	if m.Notice != "" {
-		badges = append(badges, st.Warn.Render("["+clean(m.Notice)+"]"))
+		badges = append(badges, badge(st.Warn, clean(m.Notice)))
 	}
 	if b := m.embedBadge(); b != "" {
-		badges = append(badges, st.Dim.Render(b))
+		badges = append(badges, badge(st.Accent2, strings.Trim(b, "[]")))
 	} else if m.editorOpen {
-		badges = append(badges, st.Dim.Render("[editor open]"))
+		badges = append(badges, badge(st.Accent2, "editor open"))
 	}
 	switch {
 	case m.syncing:
-		badges = append(badges, st.Warn.Render("[syncing...]"))
+		badges = append(badges, badge(st.Warn, "syncing..."))
 	case m.offline && m.syncedAt.IsZero():
-		badges = append(badges, st.Warn.Render("[offline, never synced]"))
+		badges = append(badges, badge(st.Bad, "offline, never synced"))
 	case m.offline:
-		badges = append(badges, st.Warn.Render(fmt.Sprintf("[offline, synced %s ago]", ago(m.clock().Sub(m.syncedAt)))))
+		badges = append(badges, badge(st.Bad, fmt.Sprintf("offline, synced %s ago", ago(m.clock().Sub(m.syncedAt)))))
 	}
 	if len(badges) > 0 {
 		footer += "\n" + strings.Join(badges, " ")
@@ -997,7 +1045,7 @@ func (m Model) keys() (screen string, keys [][2]string) {
 	case m.input != nil:
 		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
 	case m.tab == 0:
-		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filter: 800-1200 +dp -graphs unsolved"}, {"/", "live fuzzy search (tab: all/name/tag/id; #dp matches tags)"}}, global...)
+		return "Problems", append([][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filters: rating, status, sort, tags (modal)"}, {":", "filter expression: 800-1200 +dp -graphs unsolved"}, {"X", "clear all filters"}, {"/", "live fuzzy search (tab: all/name/tag/id; #dp matches tags)"}}, global...)
 	case m.tab == 1 && m.contestOpen != nil:
 		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"esc", "back to contests"}, {"?", "toggle help"}, {"q", "quit"}}
 	case m.tab == 1:
@@ -1028,46 +1076,6 @@ func (m Model) viewProblem(b *strings.Builder) string {
 		b.WriteString(" " + l + "\n")
 	}
 	return "esc back  e edit  s submit  a add test  l lang  t test  S stress  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
-}
-
-func (m Model) viewList(b *strings.Builder) string {
-	st := m.styles()
-	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-8s %s %6s %7s  %s", "ID", fit("Name", max(20, min(46, (m.contentWidth()-34)/2))), "Rating", "Solved", "Tags")) + "\n")
-	rows := m.page() - 1
-	start := max(0, min(m.cursor-rows/2, len(m.visible)-rows))
-	for i := start; i < min(start+rows, len(m.visible)); i++ {
-		p := m.visible[i]
-		cur := " "
-		if i == m.cursor {
-			cur = st.Accent.Render(">")
-		}
-		mark := m.markOf(m.statusOf(p))
-		nameW := max(20, min(46, (m.contentWidth()-34)/2))
-		b.WriteString(fmt.Sprintf("%s %s %-8s %s %s %7d  %s\n", cur, mark, fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)), fit(clean(p.Name), nameW), m.ratingText(p), p.SolvedCount, st.Dim.Render(clean(strings.Join(p.Tags, ", ")))))
-	}
-	if m.input != nil {
-		if m.input.kind == '/' {
-			b.WriteString(fmt.Sprintf("\n/ %s_   %s", m.input.text, st.Accent.Render("["+m.searchMode()+"]")))
-			return fmt.Sprintf("%d matches  type to search (fuzzy, #tag)  tab mode: all/name/tag/id  enter keep  esc undo", len(m.visible))
-		}
-		b.WriteString(fmt.Sprintf("\n%c %s_", m.input.kind, m.input.text))
-		if m.inputErr != "" {
-			b.WriteString("   " + st.Bad.Render(m.inputErr))
-		}
-		return "enter apply  esc cancel"
-	}
-	count := fmt.Sprintf("%d problems", len(m.visible))
-	if len(m.visible) != len(m.Problems) {
-		count = fmt.Sprintf("%d/%d problems", len(m.visible), len(m.Problems))
-	}
-	var active []string
-	if m.filterExpr != "" {
-		active = append(active, "filter: "+clean(m.filterExpr))
-	}
-	if m.filter.Search != "" {
-		active = append(active, fmt.Sprintf("search[%s]: %s", m.searchMode(), clean(m.filter.Search)))
-	}
-	return count + "  " + strings.Join(active, "  ") + "  f filter  / search  enter open  ? help  q quit"
 }
 
 func ago(d time.Duration) string {

@@ -60,7 +60,7 @@ func TestEmbeddedLayoutIsTwoColumns(t *testing.T) {
 	if !strings.Contains(lines[0], "Problems") || !strings.Contains(lines[0], "┃") || !strings.Contains(lines[0], "EDITOR-HERE") {
 		t.Fatalf("verd on the left, divider, editor on the right:\n%s", plain(m))
 	}
-	if !strings.Contains(plain(m), "[editor focused, ctrl+\\ returns here]") {
+	if !strings.Contains(plain(m), "● editor focused, ctrl+\\ returns here") {
 		t.Fatalf("focus badge missing:\n%s", plain(m))
 	}
 	// the cursor is placed inside the pane while it has focus
@@ -88,7 +88,7 @@ func TestEmbeddedFocusRoutesKeys(t *testing.T) {
 
 	// ctrl+\ hands the keyboard back to verd: now q quits
 	m, _ = press(m, tea.KeyPressMsg{Code: '\\', Mod: tea.ModCtrl})
-	if m.embed.focus || !strings.Contains(plain(m), "[ctrl+\\ focuses the editor]") {
+	if m.embed.focus || !strings.Contains(plain(m), "● ctrl+\\ focuses the editor") {
 		t.Fatal("focus key should return to verd")
 	}
 	if v := m.View(); v.Cursor != nil {

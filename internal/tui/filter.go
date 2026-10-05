@@ -15,6 +15,7 @@ type Filter struct {
 	Include, Exclude     []string
 	AnyOf                []string // presets: at least one of these tags (prefix match)
 	Unsolved             bool
+	Status               string // "", "unsolved", "solved" or "attempted"
 	Search               string
 	SearchMode           string // "all" (default), "name", "tag" or "id"
 }
@@ -103,6 +104,20 @@ func (f Filter) Match(p cf.Problem, st store.Status) bool {
 	if f.Unsolved && st == store.StatusSolved {
 		return false
 	}
+	switch f.Status {
+	case "unsolved":
+		if st == store.StatusSolved {
+			return false
+		}
+	case "solved":
+		if st != store.StatusSolved {
+			return false
+		}
+	case "attempted":
+		if st != store.StatusAttempted {
+			return false
+		}
+	}
 	_, ok := f.Score(p)
 	return ok
 }
@@ -118,3 +133,29 @@ func (f Filter) Score(p cf.Problem) (int, bool) {
 	}
 	return searchScore(f.Search, mode, p)
 }
+
+// Expr renders the criteria back into ParseFilter syntax.
+func (f Filter) Expr() string {
+	var parts []string
+	switch {
+	case f.MinRating > 0 && f.MaxRating > 0:
+		parts = append(parts, fmt.Sprintf("%d-%d", f.MinRating, f.MaxRating))
+	case f.MinRating > 0:
+		parts = append(parts, fmt.Sprintf("%d-", f.MinRating))
+	case f.MaxRating > 0:
+		parts = append(parts, fmt.Sprintf("-%d", f.MaxRating))
+	}
+	for _, t := range f.Include {
+		parts = append(parts, "+"+strings.ReplaceAll(t, " ", "_"))
+	}
+	for _, t := range f.Exclude {
+		parts = append(parts, "-"+strings.ReplaceAll(t, " ", "_"))
+	}
+	if f.Unsolved || f.Status == "unsolved" {
+		parts = append(parts, "unsolved")
+	}
+	return strings.Join(parts, " ")
+}
+
+// Active reports whether any criterion besides the search is set.
+func (f Filter) Active() bool { return f.Expr() != "" || f.Status != "" }

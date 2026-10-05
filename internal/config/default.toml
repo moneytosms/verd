@@ -19,8 +19,12 @@
 # Run tests automatically whenever you save the Solution.
 # autotest = true
 
-# Color theme: terminal (inherits your terminal palette) | dracula | tokyo-night
+# Color theme: terminal (inherits your terminal palette) | tokyo-night | dracula | catppuccin |
+# gruvbox | nord | one-dark | solarized. Change it live in the Settings tab (5).
 # theme = "terminal"
+
+# Light or dark palette: auto (detect the terminal background) | dark | light
+# background = "auto"
 
 # How Neovim opens: auto | tmux | herdr | embedded | suspend
 # split = "auto"
