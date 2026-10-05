@@ -326,16 +326,7 @@ func (m Model) filterBox() []string {
 	}
 	body = append(body, tagHead+"   "+st.Accent2.Render(q))
 	shown := f.shownTags()
-	room := max(3, h-2-len(body)-1)
-	cols := 3
-	cw := (w - 6) / cols
-	perCol := room
-	total := perCol * cols
-	start := 0
-	if f.tsel >= total {
-		start = (f.tsel / perCol) * perCol / 1
-		start = max(0, f.tsel-total+1)
-	}
+	cols, cw, perCol, start := m.fmGrid()
 	for r := 0; r < perCol; r++ {
 		var line string
 		for c := 0; c < cols; c++ {
@@ -365,3 +356,15 @@ func (m Model) filterBox() []string {
 	return box("Filters", body, note, w, min(h, len(body)+2), true, st)
 }
 
+
+// fmGrid is the tag grid's geometry: columns, cell width, rows per column and the first tag shown.
+func (m Model) fmGrid() (cols, cw, perCol, start int) {
+	w, h := m.modalSize(96, 30)
+	cols = 3
+	cw = (w - 6) / cols
+	perCol = max(3, h-2-5-1) // five lines above the grid: rating, status, sort, blank, tags header
+	if total := perCol * cols; m.fm.tsel >= total {
+		start = max(0, m.fm.tsel-total+1)
+	}
+	return
+}

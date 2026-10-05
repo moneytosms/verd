@@ -150,6 +150,7 @@ func (m Model) View() tea.View {
 	if m.embed.term == nil || right == 0 {
 		v := tea.NewView(m.screen())
 		v.AltScreen = true
+		v.MouseMode = tea.MouseModeCellMotion
 		return v
 	}
 	lm := m

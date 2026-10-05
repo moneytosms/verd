@@ -588,6 +588,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.attachExternal(r)
 			}
 		}
+	case tea.MouseClickMsg:
+		if msg.Button == tea.MouseLeft {
+			return m.onClick(msg.X, msg.Y)
+		}
+	case tea.MouseWheelMsg:
+		return m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
 	case tea.PasteMsg:
 		if m.tm != nil && m.tm.ed != nil {
 			m.tm.ed.insert(clean(msg.Content))
@@ -1028,6 +1034,9 @@ func (m Model) screen() string {
 		lines[i] = xansi.Truncate(l, m.width, "…")
 	}
 	if bx := m.modalBox(); bx != nil {
+		for i, l := range lines { // scrim: mute what is behind the modal so it stands out
+			lines[i] = st.Dim.Render(xansi.Strip(l))
+		}
 		lines = overlay(lines, bx, m.width, m.height-3) // keep the footer and toast visible
 		for i, l := range lines {
 			lines[i] = xansi.Truncate(l, m.width, "")

@@ -122,10 +122,30 @@ func stripHeadingMarks(l string) string {
 	return l[:i] + l[i+4:]
 }
 
+// splitGeom is the sizes of the split view's boxes (right column: info, tests, detail).
+type splitGeom struct{ lw, rw, h, infoH, testsH, detH int }
+
+func (m Model) splitGeom() (splitGeom, bool) {
+	lw, rw, ok := m.split()
+	if !ok {
+		return splitGeom{}, false
+	}
+	h := m.paneHeight()
+	info := m.infoLines(rw - 4)
+	infoH := min(len(info)+2, max(5, h/3))
+	testsH := min(max(len(m.rows())+3+m.compileLines(), 5), max(5, (h-infoH)/2))
+	detH := h - infoH - testsH
+	if detH < 4 { // very short terminal: drop the detail pane
+		detH, testsH = 0, h-infoH
+	}
+	return splitGeom{lw, rw, h, infoH, testsH, detH}, true
+}
+
 // viewSplit draws the two-column Problem view and returns the footer hints.
 func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	st := m.styles()
-	h := m.paneHeight()
+	g, _ := m.splitGeom()
+	h := g.h
 	p := *m.open
 
 	// left: the statement
@@ -146,31 +166,22 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	title := fmt.Sprintf("%d%s  %s", p.ContestID, clean(p.Index), clean(p.Name))
 	left := box(title, body[off:end], note, lw, h, m.pane == paneStatement, st)
 
-	// right: info, tests, detail
-	info := m.infoLines(rw - 4)
-	infoH := min(len(info)+2, max(5, h/3))
-	rows := m.rows()
-	testsH := min(max(len(rows)+3+m.compileLines(), 5), max(5, (h-infoH)/2))
-	detH := h - infoH - testsH
-	if detH < 4 { // very short terminal: drop the detail pane
-		detH, testsH = 0, h-infoH
-	}
 	var right []string
-	right = append(right, box("Problem", info, "", rw, infoH, false, st)...)
-	tl, tnote := m.testsLines(rw-4, testsH-2)
-	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, testsH, m.pane == paneTests, st)...)
-	if detH > 0 {
+	right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st)...)
+	tl, tnote, _ := m.testsLines(rw-4, g.testsH-2)
+	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, g.testsH, m.pane == paneTests, st)...)
+	if g.detH > 0 {
 		dl, dtitle := m.detailLines(rw - 4)
 		if m.strs != nil {
 			dl, dtitle = m.stressPanel(), "Stress"
 		}
-		off := min(m.detScroll, max(0, len(dl)-(detH-2)))
+		off := min(m.detScroll, max(0, len(dl)-(g.detH-2)))
 		dnote := ""
-		if len(dl) > detH-2 {
+		if len(dl) > g.detH-2 {
 			dnote = fmt.Sprintf("%d/%d", off+1, len(dl))
 		}
-		end := min(len(dl), off+detH-2)
-		right = append(right, box(dtitle, dl[off:end], dnote, rw, detH, m.pane == paneDetail, st)...)
+		end := min(len(dl), off+g.detH-2)
+		right = append(right, box(dtitle, dl[off:end], dnote, rw, g.detH, m.pane == paneDetail, st)...)
 	}
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
@@ -236,7 +247,7 @@ func (m Model) compileLines() int {
 }
 
 // testsLines lists every test with its verdict, scrolled to keep the selection visible.
-func (m Model) testsLines(w, h int) ([]string, string) {
+func (m Model) testsLines(w, h int) ([]string, string, []int) {
 	st := m.styles()
 	r := m.run
 	var lines []string
@@ -300,7 +311,14 @@ func (m Model) testsLines(w, h int) ([]string, string) {
 			note += " " + strings.TrimSpace(r.overall)
 		}
 	}
-	return lines, note
+	rowAt := make([]int, len(lines))
+	for i := range rowAt {
+		rowAt[i] = -1
+	}
+	for i := start; i < end; i++ {
+		rowAt[len(lines)-(end-start)+(i-start)] = i
+	}
+	return lines, note, rowAt
 }
 
 // detailLines shows the selected test: input, expected, actual output and any mismatch.
