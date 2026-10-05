@@ -504,10 +504,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, editorTick()
 		}
 		m.editorOpen = false // the pane closed
+		m = m.loadCases()    // the user may have added or edited tests there
 	case editorDoneMsg:
 		if msg.err != nil {
 			m.errMsg = "editor: " + msg.err.Error()
 		}
+		m = m.loadCases()
 	case detailMsg:
 		if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
 			break // user already left or switched Problems

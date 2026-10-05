@@ -161,6 +161,9 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, testsH, m.pane == paneTests, st)...)
 	if detH > 0 {
 		dl, dtitle := m.detailLines(rw - 4)
+		if m.strs != nil {
+			dl, dtitle = m.stressPanel(), "Stress"
+		}
 		off := min(m.detScroll, max(0, len(dl)-(detH-2)))
 		dnote := ""
 		if len(dl) > detH-2 {
