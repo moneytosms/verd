@@ -39,6 +39,10 @@ var (
 	optionRe = regexp.MustCompile(`(?is)<option\b[^>]*value=["'](\d+)["'][^>]*>\s*([^<]*?)\s*</option>`)
 	scrubRe  = regexp.MustCompile(`(?is)(name=["'](?:csrf_token|ftaa|bfaa|_tta)["'][^>]*value=["'])[^"']*`)
 	scrubRe2 = regexp.MustCompile(`(?is)(value=["'])[^"']*(["'][^>]*name=["'](?:csrf_token|ftaa|bfaa|_tta)["'])`)
+	urlCSRF  = regexp.MustCompile(`csrf_token=[0-9a-f]+`)
+	jsAA     = regexp.MustCompile(`(window\._(?:ftaa|bfaa) = ")[^"]*`)
+	dataCSRF = regexp.MustCompile(`data-csrf='[0-9a-f]+'`)
+	metaUC   = regexp.MustCompile(`(<meta name="(?:uc|usmc|gc)" content=")[0-9a-f]+`)
 	metaCSRF = regexp.MustCompile(`(?is)(<meta\s+name=["']X-Csrf-Token["']\s+content=["'])[^"']*`)
 	cfPage   = regexp.MustCompile(`(?i)just a moment|cf-chl|challenges\.cloudflare\.com|turnstile`)
 )
@@ -97,6 +101,8 @@ func main() {
 		return
 	}
 	if *fixture != "" {
+		page := metaUC.ReplaceAllString(dataCSRF.ReplaceAllString(page, "data-csrf='REDACTED'"), "${1}REDACTED")
+		page = urlCSRF.ReplaceAllString(jsAA.ReplaceAllString(page, "${1}REDACTED"), "csrf_token=REDACTED")
 		scrubbed := metaCSRF.ReplaceAllString(scrubRe2.ReplaceAllString(scrubRe.ReplaceAllString(page, "${1}REDACTED"), "${1}REDACTED${2}"), "${1}REDACTED")
 		if err := os.WriteFile(*fixture, []byte(scrubbed), 0o644); err != nil {
 			die("fixture: %v", err)
