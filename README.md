@@ -125,3 +125,7 @@ go vet ./... && go test ./...
 ```
 
 CI runs both on Linux and macOS. Releases are built by GoReleaser when a `v*.*.*` tag is pushed. Issues and specs live in [GitHub Issues](https://github.com/moneytosms/verd/issues).
+
+## License
+
+[MIT](./LICENSE)
