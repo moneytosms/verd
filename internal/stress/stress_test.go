@@ -42,7 +42,7 @@ func final(ch <-chan Event) (Result, int) {
 const good = "print(int(input())*2)\n"
 
 func TestBuggySolutionGivesReproducibleSeed(t *testing.T) {
-	s := setup(t, "n=int(input())\nprint(n*2 if n!=77 else 0)\n", good)
+	s := setup(t, "n=int(input())\nprint(n*2 if n<=50 else 0)\n", good)
 	s.MaxIter = 1000
 	r, _ := final(Run(context.Background(), s))
 	if r.Kind != Mismatch || r.Input == "" || r.Want == r.Got {
