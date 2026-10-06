@@ -79,15 +79,15 @@ func (m Model) chipsBar() string {
 func (m Model) viewList(b *strings.Builder) string {
 	st := m.styles()
 	w := m.contentWidth()
-	nameW := max(20, min(46, (w-34)/2))
+	nameW := max(20, min(46, (w-43)/2))
 	b.WriteString(m.chipsBar() + "\n")
-	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-8s %s %6s %7s  %s", "ID", fit("Name", nameW), "Rating", "Solved", "Tags")) + "\n")
+	b.WriteString(st.Dim.Render(fmt.Sprintf("    %-5s %-10s %s %6s %7s  %s", "#", "Source", fit("Name", nameW), "Rating", "Solved", "Tags")) + "\n")
 	rows := m.listRows()
 	start := m.listStart()
 	for i := start; i < min(start+rows, len(m.visible)); i++ {
 		p := m.visible[i]
-		id := fmt.Sprintf("%-8s", p.Code())
-		tagW := max(10, w-nameW-34)
+		id := fmt.Sprintf("%-5d %-10s", i+1, cf.SourceName(p.Source()))
+		tagW := max(10, w-nameW-43)
 		if i == m.cursor {
 			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + fmt.Sprintf(" %7d  ", p.SolvedCount) + m.tagChips(p, tagW)
 			b.WriteString(paintRow(line, w, st.Selected) + "\n")

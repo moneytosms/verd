@@ -25,7 +25,7 @@ import (
 func TestViewAndQuit(t *testing.T) {
 	m := New([]cf.Problem{{ContestID: 1900, Index: "A", Name: "Cut the Triangle", Rating: 800, Tags: []string{"math"}, SolvedCount: 9}}, "", Deps{})
 	out := plain(m)
-	for _, want := range []string{"Problems", "Contests", "1900A", "Cut the Triangle", "800", "math"} {
+	for _, want := range []string{"Problems", "Contests", "Source", "Codeforces", "Cut the Triangle", "800", "math"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("view missing %q:\n%s", want, out)
 		}
@@ -152,7 +152,7 @@ func TestFilterSearchAndMarks(t *testing.T) {
 	}
 	m := New(ps, "", Deps{}).WithStatuses(map[string]store.Status{"3A": store.StatusSolved, "2B": store.StatusAttempted})
 	out := plain(m)
-	if !strings.Contains(out, "✓ 3A") || !strings.Contains(out, "✗ 2B") || !strings.Contains(out, "3 problems") {
+	if !strings.Contains(out, "✓ 1") || !strings.Contains(out, "✗ 2") || !strings.Contains(out, "3 problems") {
 		t.Fatalf("marks/count wrong:\n%s", out)
 	}
 	// filter: +dp unsolved  -> only 2B
@@ -1053,7 +1053,7 @@ func TestSubmissionFinalReloadsMarks(t *testing.T) {
 	nm, _ = m.Update(m.reload()())
 	m, _ = send(nm.(Model), "q") // close the Submission modal
 	m, _ = send(m, "esc")
-	if !strings.Contains(plain(m), "✓ 1A") {
+	if !strings.Contains(plain(m), "✓ 1") {
 		t.Fatalf("solved mark should appear after the Submission lands:\n%s", plain(m))
 	}
 }
