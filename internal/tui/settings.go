@@ -29,7 +29,7 @@ var settingDefs = []settingDef{
 	{"Testing", "float_eps", "Float tolerance", "Absolute and relative tolerance for the float Comparison Mode.", "text", false},
 	{"Sources", "source_cf", "Codeforces", "Show Codeforces Problems in the list, the picker and search.", "bool", true},
 	{"Sources", "source_cses", "CSES", "Show the CSES Problem Set (400 tasks, grouped by topic). Press ctrl+r to load it after turning it on. Mark tasks solved with m, or pull your solved list in with Y (after verd sync cses once).", "bool", true},
-	{"Editor", "editor", "Editor", "Your editor command: nvim (default), vim, hx, nano, micro, emacs, code and so on. Any command works from config.toml. Only Neovim reuses its pane on the next e.", "enum", true},
+	{"Editor", "editor", "Editor", "Your editor command: nvim (default), vim, hx, nano, micro, emacs, code and so on. Any command works from config.toml. Neovim reuses its pane; VS Code and Zed reuse the active window.", "enum", true},
 	{"Editor", "split", "Editor split", "How the editor opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},

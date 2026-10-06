@@ -4,6 +4,7 @@ package editor
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,8 +64,10 @@ func (c *Controller) profile() profile {
 	case "hx", "helix":
 		return profile{line: func(p string, n int) []string { return []string{fmt.Sprintf("%s:%d", p, n)} }, pair: two}
 	case "code", "codium", "cursor":
-		return profile{gui: true, line: func(p string, n int) []string { return []string{"-g", fmt.Sprintf("%s:%d", p, n)} }, pair: two}
-	case "subl", "zed":
+		return profile{gui: true, line: func(p string, n int) []string { return []string{"--reuse-window", "-g", fmt.Sprintf("%s:%d", p, n)} }, pair: func(l, r string) []string { return []string{"--reuse-window", l, r} }}
+	case "zed":
+		return profile{gui: true, line: func(p string, n int) []string { return []string{"--existing", fmt.Sprintf("%s:%d", p, n)} }, pair: func(l, r string) []string { return []string{"--existing", l, r} }}
+	case "subl":
 		return profile{gui: true, line: func(p string, n int) []string { return []string{fmt.Sprintf("%s:%d", p, n)} }, pair: two}
 	}
 	return profile{line: vi, pair: two} // nano, micro, emacs, kak and most others take +N file
@@ -89,7 +92,10 @@ func (c *Controller) Open(path string, line int) (*exec.Cmd, error) {
 	defer c.mu.Unlock()
 	pr := c.profile()
 	args := pr.line(path, line)
-	if c.Mux == nil || pr.gui {
+	if pr.gui {
+		return nil, c.launchGUI(filepath.Dir(path), args)
+	}
+	if c.Mux == nil {
 		return c.foreground(filepath.Dir(path), args), nil
 	}
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
@@ -139,7 +145,10 @@ func (c *Controller) OpenPair(left, right string) (*exec.Cmd, error) {
 	defer c.mu.Unlock()
 	pr := c.profile()
 	args := pr.pair(left, right)
-	if c.Mux == nil || pr.gui {
+	if pr.gui {
+		return nil, c.launchGUI(filepath.Dir(left), args)
+	}
+	if c.Mux == nil {
 		return c.foreground(filepath.Dir(left), args), nil
 	}
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
@@ -174,5 +183,16 @@ func (c *Controller) remote(expr string) error {
 	if err != nil {
 		return fmt.Errorf("nvim --remote-expr: %w: %s", err, strings.TrimSpace(string(out)))
 	}
+	return nil
+}
+
+// GUI launchers return quickly; keep their output and lifecycle outside the terminal UI.
+func (c *Controller) launchGUI(dir string, args []string) error {
+	cmd := c.foreground(dir, args)
+	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cmd.Wait()
 	return nil
 }
