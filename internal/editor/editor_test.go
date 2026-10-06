@@ -169,7 +169,7 @@ func TestNonNvimEditorsInAMux(t *testing.T) {
 	}
 	c.SetEditor(filepath.Join(t.TempDir(), "code"))
 	os.WriteFile(c.Bin, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if cmd, err := c.Open("/w/c.cpp", 2); cmd != nil || err != nil || len(f.opened) != 2 {
+	if cmd, err := c.Open(filepath.Join(t.TempDir(), "c.cpp"), 2); cmd != nil || err != nil || len(f.opened) != 2 {
 		t.Fatalf("a GUI editor never uses a split: %v %v", cmd, err)
 	}
 }
