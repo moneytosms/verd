@@ -167,7 +167,10 @@ type Model struct {
 	tsel        int    // selected row of the Tests pane
 	pane        int    // focused pane of the split Problem view
 	detScroll   int
-	bodyW       int // width the statement was rendered at
+	wAdj, hAdj  int  // user resize of the split view: right column width, Tests pane height
+	dragging    bool // dragging the column divider
+	showTags    bool // tags revealed in the Problem pane
+	bodyW       int  // width the statement was rendered at
 	tm          *testMgr
 	fm          *filterMgr
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
@@ -594,6 +597,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Button == tea.MouseLeft {
 			return m.onClick(msg.X, msg.Y)
 		}
+	case tea.MouseMotionMsg:
+		if m.dragging && msg.Button == tea.MouseLeft {
+			if g, ok := m.splitGeom(); ok {
+				m.wAdj += g.lw - msg.X // divider follows the pointer
+			}
+		}
+	case tea.MouseReleaseMsg:
+		m.dragging = false
 	case tea.MouseWheelMsg:
 		return m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
 	case tea.PasteMsg:
@@ -777,6 +788,22 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "esc":
 		m = m.closeProblem()
+	case "1", "2", "3", "4", "5":
+		m = m.closeProblem()
+		m.tab = int(msg.String()[0] - '1')
+		return m.onTab(), nil
+	case "v":
+		m.showTags = !m.showTags
+	case "y":
+		return m.copyPane()
+	case ">", ".":
+		m.wAdj += 4
+	case "<", ",":
+		m.wAdj -= 4
+	case "+", "=":
+		m.hAdj++
+	case "-":
+		m.hAdj--
 	case "r":
 		if m.offline {
 			m.errMsg = "offline: refetch needs network (ctrl+r on a list retries the connection)"

@@ -26,12 +26,36 @@ func splitModel(t *testing.T, deps Deps) Model {
 	return m
 }
 
+func TestSplitTagsHiddenUntilToggled(t *testing.T) {
+	m := splitModel(t, Deps{})
+	if strings.Contains(plain(m), "brute force") {
+		t.Fatal("tags shown by default")
+	}
+	m, _ = send(m, "v")
+	if !strings.Contains(plain(m), "brute force") {
+		t.Fatal("v did not reveal tags")
+	}
+}
+
+func TestSplitDigitLeavesProblemAndResizes(t *testing.T) {
+	m := splitModel(t, Deps{})
+	_, rw0, _ := m.split()
+	m, _ = send(m, ">")
+	if _, rw, _ := m.split(); rw != rw0+4 {
+		t.Fatalf("right width %d, want %d", rw, rw0+4)
+	}
+	m, _ = send(m, "3")
+	if m.open != nil || m.tab != 2 {
+		t.Fatalf("digit 3: open=%v tab=%d", m.open, m.tab)
+	}
+}
+
 func TestSplitViewShowsStatementTagsAndEveryTest(t *testing.T) {
 	m := splitModel(t, Deps{Customs: func(cf.Problem) ([]Case, error) {
 		return []Case{{Name: "custom-1", Input: "6\n", Want: "YES\n"}}, nil
 	}})
 	out := plain(m)
-	for _, want := range []string{"4A  Watermelon", "Divide the watermelon", "rating 800", "brute force", "math", "limits 1 s", "sample-1", "custom-1", "Input", "Expected", "8"} {
+	for _, want := range []string{"4A  Watermelon", "Divide the watermelon", "rating 800", "tags   click or v to show", "limits 1 s", "sample-1", "custom-1", "Input", "Expected", "8"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("split view missing %q:\n%s", want, out)
 		}
@@ -246,5 +270,26 @@ func TestHelpPagesAndSettingsKeys(t *testing.T) {
 	m, _ = send(m, "q")
 	if m.help {
 		t.Fatal("q closes help")
+	}
+}
+
+func TestSplitYCopiesFocusedPane(t *testing.T) {
+	m := splitModel(t, Deps{})
+	what, text := m.copyText()
+	for _, want := range []string{"4A  Watermelon", "Difficulty: 800", "Tags: brute force, math", "Divide the watermelon", "sample-1", "Input:", "Expected:"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("question copy missing %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "\x1b") || what != "question" {
+		t.Errorf("what=%q, ansi leaked", what)
+	}
+	m, cmd := send(m, "y")
+	if cmd == nil || !strings.Contains(m.Notice, "copied question") {
+		t.Fatalf("y: cmd=%v notice=%q", cmd, m.Notice)
+	}
+	m.pane = paneDetail
+	if what, text = m.copyText(); what != "sample-1" || strings.Contains(text, "Divide the watermelon") {
+		t.Errorf("detail copy: %q\n%s", what, text)
 	}
 }

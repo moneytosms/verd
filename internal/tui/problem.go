@@ -90,6 +90,7 @@ func (m Model) split() (left, right int, ok bool) {
 		return 0, 0, false
 	}
 	right = min(58, max(42, w*2/5))
+	right = max(30, min(right+m.wAdj, w-40)) // user resize, kept in bounds
 	return w - right - 1, right, true
 }
 
@@ -134,6 +135,7 @@ func (m Model) splitGeom() (splitGeom, bool) {
 	info := m.infoLines(rw - 4)
 	infoH := min(len(info)+2, max(5, h/3))
 	testsH := min(max(len(m.rows())+3+m.compileLines(), 5), max(5, (h-infoH)/2))
+	testsH = max(5, min(testsH+m.hAdj, h-infoH-4)) // user resize
 	detH := h - infoH - testsH
 	if detH < 4 { // very short terminal: drop the detail pane
 		detH, testsH = 0, h-infoH
@@ -212,7 +214,9 @@ func (m Model) infoLines(w int) []string {
 		}
 		lines = append(lines, st.Dim.Render("limits ")+lim)
 	}
-	if len(p.Tags) > 0 {
+	if len(p.Tags) > 0 && !m.showTags {
+		lines = append(lines, st.Dim.Render("tags   click or v to show"))
+	} else if len(p.Tags) > 0 {
 		cur := st.Dim.Render("tags   ")
 		first := true
 		for _, t := range p.Tags {

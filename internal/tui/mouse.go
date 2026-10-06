@@ -47,6 +47,7 @@ func (m Model) onClick(x, y int) (tea.Model, tea.Cmd) {
 	if y == 0 {
 		for i, r := range tabRanges() {
 			if x >= r[0] && x < r[1] {
+				m = m.closeProblem()
 				m.tab = i
 				return m.onTab(), nil
 			}
@@ -156,12 +157,18 @@ func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
+	if x == g.lw-1 || x == g.lw { // the gap before the right column: drag to resize
+		m.dragging = true
+		return m, nil
+	}
 	if x < g.lw {
 		m.pane = paneStatement
 		return m, nil
 	}
 	ty := contentTop + g.infoH
 	switch {
+	case y < ty:
+		m.showTags = !m.showTags
 	case y >= ty && y < ty+g.testsH:
 		m.pane = paneTests
 		_, _, rowAt := m.testsLines(g.rw-4, g.testsH-2)

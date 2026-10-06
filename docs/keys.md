@@ -70,8 +70,13 @@ Theme, background, default language and autotest apply immediately. Settings mar
 | Key | Action |
 | --- | --- |
 | `tab`, `shift+tab` | Move focus between the statement, the test list and the test detail |
+| `1`-`5` | Leave the Problem and switch tab |
+| `v` | Show or hide the tags (hidden by default; clicking the info box does the same) |
+| `<` / `>` | Narrow or widen the right column (drag the gap between the columns with the mouse) |
+| `-` / `+` | Shrink or grow the test list |
 | `j`/`k`, `pgup`/`pgdn`, `g`/`G` | Scroll the focused pane; in the test list, move the selection |
 | `e` | Edit the Solution in Neovim |
+| `y` | Copy the focused pane: question with difficulty, tags and tests; all tests; or the selected test |
 | `T` | Test manager: browse, add, edit, copy and delete tests |
 | `a` | Add a Custom Test (opens the in-place editor) |
 | `l` | Switch language for this Problem |
