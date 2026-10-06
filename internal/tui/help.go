@@ -48,7 +48,8 @@ var mouseHelp = [][2]string{
 	{"click a setting", "select it; click its value to change it"},
 	{"click outside a modal", "close it"},
 	{"wheel", "scroll the list, pane or modal under the pointer"},
-	{"shift + drag", "select text (your terminal handles it while verd uses the mouse)"},
+	{"drag in a pane", "select whole lines of the statement or test detail and copy them (Problem view)"},
+	{"shift + drag", "select any text with your terminal instead (verd keeps the mouse otherwise)"},
 }
 
 var guide = []string{

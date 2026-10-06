@@ -111,8 +111,12 @@ func TestHerdrCommands(t *testing.T) {
 	if g := strings.Join(calls[1].args, " "); g != "pane run w1:p4 exec 'nvim' '/w/main.py'" {
 		t.Fatalf("must exec so the pane closes with the editor: %s", g)
 	}
-	if err := h.Focus(p); !errors.Is(err, ErrFocusUnsupported) {
-		t.Fatal("herdr focus is unsupported by CLI")
+	calls = nil
+	if err := h.Focus(p); err != nil {
+		t.Fatal(err)
+	}
+	if g := strings.Join(calls[0].args, " "); g != "pane focus --direction right --current" {
+		t.Fatal(g)
 	}
 	// run failure closes the half-made pane
 	calls = nil

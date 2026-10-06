@@ -153,6 +153,7 @@ func (m Model) settingsStart(lines []settingLine, inner int) int {
 }
 
 func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
+	m = m.startSelect(x, y)
 	g, ok := m.splitGeom()
 	if !ok {
 		return m, nil

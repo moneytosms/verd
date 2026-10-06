@@ -19,7 +19,7 @@ type Mux interface {
 	OpenEditor(cwd string, argv []string) (Pane, error)
 	// Alive is false once the pane's process exited or the pane is gone.
 	Alive(p Pane) bool
-	// Focus moves keyboard focus to the pane. Not every multiplexer can (see herdr).
+	// Focus moves keyboard focus to the pane.
 	Focus(p Pane) error
 	Close(p Pane) error
 }
@@ -167,7 +167,17 @@ func (h *Herdr) OpenEditor(cwd string, argv []string) (Pane, error) {
 
 func (h *Herdr) Alive(p Pane) bool { _, err := h.cmd("pane", "get", p.ID); return err == nil }
 
-// Focus: the herdr CLI can only focus by direction, never by pane id.
-func (h *Herdr) Focus(Pane) error { return ErrFocusUnsupported }
+// Focus: the herdr CLI focuses by direction only, never by pane id. The editor split opens to the
+// right of verd's pane, so focus right from there.
+func (h *Herdr) Focus(Pane) error {
+	args := []string{"pane", "focus", "--direction", "right"}
+	if h.target != "" {
+		args = append(args, "--pane", h.target)
+	} else {
+		args = append(args, "--current")
+	}
+	_, err := h.cmd(args...)
+	return err
+}
 
 func (h *Herdr) Close(p Pane) error { _, err := h.cmd("pane", "close", p.ID); return err }

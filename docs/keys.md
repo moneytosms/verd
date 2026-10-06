@@ -95,7 +95,7 @@ On a terminal at least 100 columns wide and 16 rows tall the Problem view is spl
 
 ## Mouse
 
-Click a tab pill to switch screens. Click a row to select it and the selected row again to open it. Click the filter bar to open the filters, a pane to focus it, a test to select it, a setting to select it and its value to change it. Click outside a modal to close it. The wheel scrolls whatever is under the pointer. While verd uses the mouse, hold `shift` to select text with your terminal.
+Click a tab pill to switch screens. Click a row to select it and the selected row again to open it. Click the filter bar to open the filters, a pane to focus it, a test to select it, a setting to select it and its value to change it. Click outside a modal to close it. The wheel scrolls whatever is under the pointer. In the Problem view, drag over the statement or the test detail to select whole lines; they are copied on release (OSC 52, so it works over ssh and tmux if your terminal allows it). Anywhere else, hold `shift` while dragging to select with your terminal.
 
 ## Modals
 

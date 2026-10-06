@@ -293,3 +293,25 @@ func TestSplitYCopiesFocusedPane(t *testing.T) {
 		t.Errorf("detail copy: %q\n%s", what, text)
 	}
 }
+
+func TestSplitMouseDragCopiesLines(t *testing.T) {
+	m := splitModel(t, Deps{})
+	m, _ = click(m, 5, contentTop+1)
+	if m.sel.moved {
+		t.Fatal("a click alone is not a selection")
+	}
+	nm, _ := m.Update(tea.MouseMotionMsg{X: 5, Y: contentTop + 2, Button: tea.MouseLeft})
+	m = nm.(Model)
+	if !m.sel.moved || !strings.Contains(m.View().Content, "\x1b[7m") {
+		t.Fatalf("drag highlights lines: %+v", m.sel)
+	}
+	nm, cmd := m.Update(tea.MouseReleaseMsg{X: 5, Y: contentTop + 2, Button: tea.MouseLeft})
+	m = nm.(Model)
+	if cmd == nil || m.Notice != "copied selection" {
+		t.Fatalf("release copies: cmd=%v notice=%q", cmd, m.Notice)
+	}
+	m, _ = send(m, "j")
+	if m.sel.on {
+		t.Fatal("a key clears the selection")
+	}
+}

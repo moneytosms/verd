@@ -169,6 +169,7 @@ type Model struct {
 	detScroll   int
 	wAdj, hAdj  int  // user resize of the split view: right column width, Tests pane height
 	dragging    bool // dragging the column divider
+	sel         selection
 	showTags    bool // tags revealed in the Problem pane
 	bodyW       int  // width the statement was rendered at
 	tm          *testMgr
@@ -598,6 +599,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.onClick(msg.X, msg.Y)
 		}
 	case tea.MouseMotionMsg:
+		if msg.Button == tea.MouseLeft {
+			m = m.dragSelect(msg.X, msg.Y)
+		}
 		if m.dragging && msg.Button == tea.MouseLeft {
 			if g, ok := m.splitGeom(); ok {
 				m.wAdj += g.lw - msg.X // divider follows the pointer
@@ -605,6 +609,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.MouseReleaseMsg:
 		m.dragging = false
+		nm, cmd := m.endSelect()
+		return nm, cmd
 	case tea.MouseWheelMsg:
 		return m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
 	case tea.PasteMsg:
@@ -746,6 +752,7 @@ func (m Model) closeProblem() Model {
 }
 
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	m.sel = selection{}
 	if m.confirm {
 		switch msg.String() {
 		case "y", "enter":

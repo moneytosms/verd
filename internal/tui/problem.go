@@ -151,13 +151,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	p := *m.open
 
 	// left: the statement
-	body := m.stmtLines()
-	if m.loading {
-		body = append(body, "", "loading...")
-	}
-	if m.errMsg != "" {
-		body = append(body, "", st.Bad.Render(clean(m.errMsg)))
-	}
+	body := m.stmtBody()
 	inner := h - 2
 	off := min(m.scroll, max(0, len(body)-inner))
 	end := min(len(body), off+inner)
@@ -166,7 +160,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 		note = fmt.Sprintf("%d%%", 100*end/len(body))
 	}
 	title := fmt.Sprintf("%d%s  %s", p.ContestID, clean(p.Index), clean(p.Name))
-	left := box(title, body[off:end], note, lw, h, m.pane == paneStatement, st)
+	left := box(title, m.highlight(paneStatement, off, body[off:end]), note, lw, h, m.pane == paneStatement, st)
 
 	var right []string
 	right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st)...)
@@ -183,7 +177,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 			dnote = fmt.Sprintf("%d/%d", off+1, len(dl))
 		}
 		end := min(len(dl), off+g.detH-2)
-		right = append(right, box(dtitle, dl[off:end], dnote, rw, g.detH, m.pane == paneDetail, st)...)
+		right = append(right, box(dtitle, m.highlight(paneDetail, off, dl[off:end]), dnote, rw, g.detH, m.pane == paneDetail, st)...)
 	}
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
