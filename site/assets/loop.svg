@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="230" viewBox="0 0 1200 230" role="img" aria-labelledby="t d">
+<title id="t">The verd loop</title>
+<desc id="d">Six steps: pick a Problem, read it, edit the Solution in Neovim, test locally, stress test against a brute force, submit and watch the Verdict.</desc>
+<rect width="1200" height="230" rx="22" fill="#1a1b26"/>
+<line x1="140.0" y1="78" x2="1060.0" y2="78" stroke="#292e42" stroke-width="2"/>
+<circle cx="140.0" cy="78" r="26" fill="#16161e" stroke="#7aa2f7" stroke-width="2"/>
+<text x="140.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#7aa2f7">1</text>
+<text x="140.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Picker</text>
+<text x="140.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#7aa2f7">tab 4 · w</text>
+<text x="140.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">a random unsolved</text>
+<text x="140.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">Problem, weak topics</text>
+<circle cx="324.0" cy="78" r="26" fill="#16161e" stroke="#7aa2f7" stroke-width="2"/>
+<text x="324.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#7aa2f7">2</text>
+<text x="324.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Read</text>
+<text x="324.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#7aa2f7">enter</text>
+<text x="324.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">statement and samples,</text>
+<text x="324.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">rendered in the pane</text>
+<circle cx="508.0" cy="78" r="26" fill="#16161e" stroke="#7aa2f7" stroke-width="2"/>
+<text x="508.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#7aa2f7">3</text>
+<text x="508.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Edit</text>
+<text x="508.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#7aa2f7">e</text>
+<text x="508.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">Neovim opens beside verd</text>
+<text x="508.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">with your Template</text>
+<circle cx="692.0" cy="78" r="26" fill="#16161e" stroke="#9ece6a" stroke-width="2"/>
+<text x="692.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#9ece6a">4</text>
+<text x="692.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Test</text>
+<text x="692.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#9ece6a">t · on save</text>
+<text x="692.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">samples and Custom</text>
+<text x="692.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">Tests, Local Verdicts</text>
+<circle cx="876.0" cy="78" r="26" fill="#16161e" stroke="#e0af68" stroke-width="2"/>
+<text x="876.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#e0af68">5</text>
+<text x="876.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Stress</text>
+<text x="876.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#e0af68">S</text>
+<text x="876.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">gen vs brute until a</text>
+<text x="876.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">counterexample appears</text>
+<circle cx="1060.0" cy="78" r="26" fill="#16161e" stroke="#9ece6a" stroke-width="2"/>
+<text x="1060.0" y="85" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="20" font-weight="700" fill="#9ece6a">6</text>
+<text x="1060.0" y="140" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#c0caf5">Submit</text>
+<text x="1060.0" y="166" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#9ece6a">s</text>
+<text x="1060.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">send it, then watch</text>
+<text x="1060.0" y="210" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#565f89">the Verdict live</text>
+</svg>
