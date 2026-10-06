@@ -218,11 +218,15 @@ func runTUI(path string) error {
 		return err
 	}
 	var prog *tea.Program
-	ctrl := &editor.Controller{Mux: mux.Detect(cfg.Split, os.Getenv), Bin: "nvim", SockDir: config.RuntimeDir()}
-	if cfg.Split == "embedded" {
-		// Controller calls Open from the update loop, so messages must not block on prog.Send.
-		ctrl.Mux = &embed.Adapter{Send: func(m any) { go prog.Send(m) }}
+	ctrl := &editor.Controller{Bin: "nvim", SockDir: config.RuntimeDir()}
+	pickMux := func(mode string) mux.Mux {
+		if mode == "embedded" {
+			// Controller calls Open from the update loop, so messages must not block on prog.Send.
+			return &embed.Adapter{Send: func(m any) { go prog.Send(m) }}
+		}
+		return mux.Detect(mode, os.Getenv)
 	}
+	ctrl.Mux = pickMux(cfg.Split)
 	if bin, err := exec.LookPath("nvim"); err == nil {
 		ctrl.Bin = bin
 	}
@@ -315,7 +319,15 @@ func runTUI(path string) error {
 			"split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
 			"submit_mode": cfg.SubmitMode,
 		},
-		SaveSetting: func(key, value string) error { return config.Set(path, key, value) },
+		SaveSetting: func(key, value string) error {
+			if err := config.Set(path, key, value); err != nil {
+				return err
+			}
+			if key == "split" {
+				ctrl.SetMux(pickMux(value))
+			}
+			return nil
+		},
 		EditConfig: func() (*exec.Cmd, error) {
 			if _, err := os.Stat(path); err != nil {
 				if err := config.Init(path, false); err != nil {

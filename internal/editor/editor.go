@@ -24,17 +24,24 @@ type Controller struct {
 	sock string
 }
 
+// SetMux switches the multiplexer (a changed `split` setting); a pane of the old one is forgotten.
+func (c *Controller) SetMux(m mux.Mux) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Mux, c.pane = m, nil
+}
+
 // Open opens path at line. With a multiplexer it returns (nil, nil): the editor lives in a split
 // pane. A second Open reuses a live pane (`:edit +N`, then focus). Without one it returns the
 // command to run in the foreground (tea.ExecProcess).
 func (c *Controller) Open(path string, line int) (*exec.Cmd, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.Mux == nil {
 		cmd := exec.Command(c.Bin, fmt.Sprintf("+%d", line), path)
 		cmd.Dir = filepath.Dir(path)
 		return cmd, nil
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
 		if err := c.remoteEdit(path, line); err == nil {
 			c.Mux.Focus(*c.pane) // best effort: herdr cannot focus by id
@@ -64,13 +71,13 @@ func (c *Controller) openPane(cwd string, args ...string) error {
 // OpenPair opens two files side by side (a Custom Test's .in and .ans), with the same
 // pane / suspend behavior as Open.
 func (c *Controller) OpenPair(left, right string) (*exec.Cmd, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.Mux == nil {
 		cmd := exec.Command(c.Bin, "-O", left, right)
 		cmd.Dir = filepath.Dir(left)
 		return cmd, nil
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
 		if err := c.remote(fmt.Sprintf("execute('edit ' . fnameescape('%s') . ' | vsplit ' . fnameescape('%s'))", vimQuote(left), vimQuote(right))); err == nil {
 			c.Mux.Focus(*c.pane)

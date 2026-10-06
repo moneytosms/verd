@@ -29,13 +29,17 @@ var ErrFocusUnsupported = errors.New("focusing a pane by id is not supported")
 
 // Detect picks the multiplexer verd runs inside. mode is the `split` config value:
 // "auto" detects (tmux before herdr, since herdr strips TMUX from its panes but tmux inherits
-// HERDR_*); "tmux"/"herdr" force that adapter; anything else (suspend, embedded) returns nil.
+// HERDR_*); "tmux"/"herdr" force that adapter, or nil (suspend) when verd is not running inside it; anything else (suspend, embedded) returns nil.
 func Detect(mode string, env func(string) string) Mux {
 	switch mode {
-	case "tmux":
-		return NewTmux([]string{"tmux"}, env("TMUX_PANE"))
+	case "tmux": // forced, but only usable from inside tmux: elsewhere there is no server to split
+		if env("TMUX") != "" && env("TMUX_PANE") != "" {
+			return NewTmux([]string{"tmux"}, env("TMUX_PANE"))
+		}
 	case "herdr":
-		return NewHerdr([]string{"herdr"}, env("HERDR_PANE_ID"))
+		if env("HERDR_PANE_ID") != "" {
+			return NewHerdr([]string{"herdr"}, env("HERDR_PANE_ID"))
+		}
 	case "auto", "":
 		if env("TMUX") != "" && env("TMUX_PANE") != "" {
 			return NewTmux([]string{"tmux"}, env("TMUX_PANE"))

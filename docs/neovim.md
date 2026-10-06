@@ -7,7 +7,7 @@ verd edits Solutions in Neovim (`nvim` must be on your `PATH`). How the editor a
 | `split` | Behavior |
 | --- | --- |
 | `auto` (default) | tmux if you are in tmux, else herdr if you are in herdr, else suspend. |
-| `tmux` / `herdr` | Force that multiplexer. Neovim opens in a split pane next to verd. |
+| `tmux` / `herdr` | Force that multiplexer. Neovim opens in a split pane next to verd. verd must be running inside it; otherwise it falls back to `suspend`. Changing `split` in Settings applies at once. |
 | `suspend` | verd hands the terminal to Neovim and resumes when you quit. |
 | `embedded` | Neovim is drawn inside verd's own window. Opt-in. See [Embedded pane](./embedded-pane.md). |
 

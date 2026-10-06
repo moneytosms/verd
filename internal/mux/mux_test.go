@@ -29,7 +29,9 @@ func TestDetect(t *testing.T) {
 		{"herdr needs ENV=1", "auto", map[string]string{"HERDR_PANE_ID": "w1:p1"}, ""},
 		{"empty mode is auto", "", tmuxEnv, "tmux"},
 		{"force herdr over tmux", "herdr", both, "herdr"},
-		{"force tmux", "tmux", herdrEnv, "tmux"},
+		{"force tmux", "tmux", tmuxEnv, "tmux"},
+		{"force tmux outside tmux falls back", "tmux", herdrEnv, ""},
+		{"force herdr outside herdr falls back", "herdr", tmuxEnv, ""},
 		{"suspend disables", "suspend", tmuxEnv, ""},
 		{"embedded disables", "embedded", tmuxEnv, ""},
 	} {

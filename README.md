@@ -35,10 +35,10 @@ These are real frames rendered by verd's own model (Tokyo Night theme), not mock
 ## Install
 
 ```sh
-go install github.com/moneytosms/verd/cmd/verd@latest
+curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh
 ```
 
-Or download a Linux/macOS binary (amd64, arm64) from the [Releases](https://github.com/moneytosms/verd/releases) page once a tag is published. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
+This installs the latest release to `~/.local/bin` after checking its checksum (`VERD_VERSION=v0.1.0` pins a version, `VERD_INSTALL_DIR` changes the target). Or `go install github.com/moneytosms/verd/cmd/verd@latest`, or download a Linux/macOS binary (amd64, arm64) from the [Releases](https://github.com/moneytosms/verd/releases) page. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
 
 You also need: `nvim` for editing, a compiler or interpreter for your languages (`g++`, `gcc`, `python3` by default), and optionally `tmux` or `herdr` for the editor split.
 
