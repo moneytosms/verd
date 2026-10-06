@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>verd: Codeforces in your terminal</title>
-<meta name="description" content="verd is a keyboard-driven TUI for Codeforces: browse problems, edit in Neovim, test locally, stress test, submit and watch the verdict.">
+<title>verd: competitive programming in your terminal</title>
+<meta name="description" content="verd is a keyboard-driven TUI for competitive programming, with Codeforces and CSES today and more providers planned: browse problems, edit in Neovim, test locally, stress test, submit and watch the verdict.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2316161e%27/%3E%3Ctext x=%274%27 y=%2723%27 font-family=%27monospace%27 font-size=%2720%27 font-weight=%27700%27 fill=%27%239ece6a%27%3Ev_%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#16161e;--panel:#1a1b26;--line:#2a2e42;--fg:#c0caf5;--dim:#7982a9;--blue:#7aa2f7;--green:#9ece6a;--purple:#bb9af7;--amber:#e0af68;--red:#f7768e;--mono:ui-monospace,"JetBrains Mono","Fira Code",SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -71,9 +71,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
 </div></nav>
 
 <header class="hero" id="top"><div class="wrap">
-  <span class="pill">v0.1.0 · Linux &amp; macOS</span>
-  <h1>Codeforces, <em>without leaving the terminal</em></h1>
-  <p class="lead">Find a problem, read it, write the solution in Neovim, test it locally, hunt counterexamples, submit, and watch the verdict arrive. One keyboard-driven TUI. No browser tab for the loop.</p>
+  <span class="pill">v0.1.2 · Linux &amp; macOS</span>
+  <h1>Codeforces, CSES and more, <em>without leaving the terminal</em></h1>
+  <p class="lead">Pick a problem from Codeforces or CSES, read it, write the solution in Neovim, test it locally, hunt counterexamples, submit, and watch the verdict arrive. One keyboard-driven TUI. No browser tab for the loop.</p>
   <div class="install">
     <code id="cmd"><b>$</b> curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh</code>
     <button id="copy" type="button">Copy</button>
@@ -92,7 +92,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
     <div class="card c3"><span class="ic">stress</span><h3>Stress testing built in</h3><p>Per-language <code>gen</code> and <code>brute</code> templates. <kbd>S</kbd> finds a counterexample and shows the diff; <kbd>w</kbd> saves it as your next custom test.</p></div>
     <div class="card c4"><span class="ic">stats</span><h3>Your history, used</h3><p>Solved marks, per-topic stats, a rating chart, and a problem picker with a weak-topics preset.</p></div>
     <div class="card c5"><span class="ic">cache</span><h3>Offline tolerant</h3><p>Everything renders from a local SQLite cache. The network refreshes it in the background and respects rate limits.</p></div>
-    <div class="card c1"><span class="ic">CSES</span><h3>More than Codeforces</h3><p>Turn on the CSES Problem Set in Settings and browse it in the same list. Filter by source, mark tasks solved by hand. More sources are designed for.</p></div>
+    <div class="card c1"><span class="ic">CSES</span><h3>More than one provider</h3><p>Codeforces plus the CSES Problem Set in one list. Switch providers on in Settings, filter by source, mark tasks solved by hand. USACO is next; adding a provider is one fetcher.</p></div>
     <div class="card c2"><span class="ic">$EDITOR</span><h3>Your editor</h3><p>Neovim by default. Switch to vim, helix, nano, micro, emacs or VS Code in Settings, live.</p></div>
     <div class="card c6"><span class="ic">safe</span><h3>Safe submit by default</h3><p>Browser handoff copies the solution, opens the submit page and tracks the verdict. Direct submit is opt-in and experimental.</p></div>
   </div>
@@ -175,7 +175,7 @@ curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | s
 <span class="c"># set your handle, then go</span>
 verd init
 verd</pre>
-  <p class="sub" style="margin-top:22px">Pin a version with <code>VERD_VERSION=v0.1.0</code>. Not affiliated with Codeforces.</p>
+  <p class="sub" style="margin-top:22px">Pin a version with <code>VERD_VERSION=v0.1.2</code>. Not affiliated with Codeforces or CSES.</p>
 </div></div></section>
 
 <footer><div class="wrap">

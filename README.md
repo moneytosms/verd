@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="verd: Codeforces in your terminal. The TUI shows a Problem with local tests all AC, then a stress run that found a counterexample at seed 7.">
+  <img src="./assets/readme/hero.svg" width="100%" alt="verd: Codeforces and more, in your terminal. The TUI shows a Problem with local tests all AC, then a stress run that found a counterexample at seed 7.">
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-bb9af7?labelColor=1a1b26"></a>
 </p>
 
-**verd** is a terminal companion for [Codeforces](https://codeforces.com). Find a Problem, read the statement, write the Solution in Neovim, run it against Sample Tests and your own, hunt for counterexamples with a stress test, submit, and watch the Verdict arrive. One keyboard-driven TUI, no browser tab for the loop.
+**verd** is a terminal companion for competitive programming: [Codeforces](https://codeforces.com) and the [CSES Problem Set](https://cses.fi/problemset/) today, more providers (USACO is next) planned. Find a Problem, read the statement, write the Solution in Neovim, run it against Sample Tests and your own, hunt for counterexamples with a stress test, submit, and watch the Verdict arrive. One keyboard-driven TUI, no browser tab for the loop.
 
 <p align="center">
   <img src="./assets/readme/loop.svg" width="100%" alt="The verd loop: pick, read, edit, test, stress, submit.">
@@ -20,11 +20,11 @@
 
 ## Why
 
-- **Local Verdicts first.** AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a Codeforces submission.
+- **Local Verdicts first.** AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a real submission.
 - **Neovim stays Neovim.** It opens in a tmux or herdr split next to verd (or embedded in the pane, opt-in). `verd test`, `verd submit` and `verd stress` run from inside Neovim and report in verd's pane.
 - **Stress testing built in.** `gen` and `brute` Templates per language; `S` finds a counterexample, shows the diff, and `w` saves it as the next Custom Test.
 - **Your history, used.** Solved marks, per-topic stats, rating chart, and a Problem Picker with a weak-topics preset.
-- **More than Codeforces.** Turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse it in the same list, with a Source filter and solved marks you set by hand. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
+- **More than one provider.** Codeforces is on by default; turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse both in one list, with a Source filter and solved marks you set by hand for providers that have no feed to read. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
 - **Offline-tolerant.** Everything renders from a local cache; the network refreshes it in the background.
 - **Safe submit by default.** Browser handoff copies the Solution, opens the submit page and tracks the Verdict. Direct submit is opt-in and [experimental](./docs/submit.md#direct-mode).
 
@@ -138,7 +138,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 - CSES has no API verd can use without a login: no verdict tracking, so solved marks are manual.
 - Interactive Problems cannot be run locally; verd tells you so and you can still submit.
 - Direct submit is experimental and carries account risk. Read [the risks](./docs/submit.md#direct-mode) before turning it on.
-- verd is not affiliated with Codeforces. It reads the public API and statement pages, and respects rate limits.
+- verd is not affiliated with Codeforces or CSES. It reads the public API and statement pages, and respects rate limits.
 
 ## Development
 

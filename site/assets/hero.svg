@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="t d">
-<title id="t">verd: Codeforces in your terminal</title>
+<title id="t">verd: Codeforces and more, in your terminal</title>
 <desc id="d">The verd terminal UI on a Problem: header with tabs, local tests with Local Verdicts, and the statement below.</desc>
 <rect width="1200" height="500" rx="22" fill="#1a1b26"/>
 <path d="M0 22A22 22 0 0 1 22 0h1156a22 22 0 0 1 22 22v2H0z" fill="#7aa2f7" fill-opacity="0.9"/>
