@@ -184,7 +184,24 @@ func run(args []string, out io.Writer) error {
 	case "login":
 		return loginCmd(out, os.Stdin, credStore())
 	case "logout":
+		if len(args) == 2 { // verd logout cses: forget a provider's session
+			for _, p := range providers() {
+				if strings.EqualFold(args[1], p.source) {
+					return logoutCmd(out, p.creds)
+				}
+			}
+			return &exitError{2, "unknown provider " + args[1]}
+		}
 		return logoutCmd(out, credStore())
+	case "sync":
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		return syncCmd(ctx, out, os.Stdin, args[1:], s)
 	case "config":
 		cfg, err := loadConfig(path)
 		if err != nil {
@@ -197,7 +214,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, update [--check], config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, update [--check], config, test <file>, submit <file>, stress <file>, login, logout [cses], sync [cses])", args[0])
 }
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
@@ -337,6 +354,18 @@ func runTUI(path string) error {
 			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
 			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
 			"submit_mode": cfg.SubmitMode,
+		},
+		Sync: func(source string) (string, error) {
+			for _, p := range providers() {
+				if p.source == source {
+					solved, added, err := syncProvider(context.Background(), p, s, nil)
+					if errors.Is(err, errNeedLogin) {
+						return "", fmt.Errorf("run `verd sync %s` once to sign in", p.source)
+					}
+					return fmt.Sprintf("%s: %d solved, %d new marks", p.name, solved, added), err
+				}
+			}
+			return "", fmt.Errorf("no sync for %s", source)
 		},
 		SetMark: func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) },
 		SaveCreds: func(cookie, ua string) (string, error) {

@@ -170,6 +170,25 @@ func (s *Store) SetMark(contest int, idx string, on bool) error {
 	return err
 }
 
+// MarkSolved marks tasks of a non-Codeforces source solved (from a provider sync) and returns how
+// many were not marked before. It never clears a mark.
+func (s *Store) MarkSolved(source string, ids []int) (added int, err error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	for _, id := range ids {
+		res, err := tx.Exec("INSERT OR IGNORE INTO marks(contest_id, idx) VALUES(?,?)", id, source)
+		if err != nil {
+			return 0, err
+		}
+		n, _ := res.RowsAffected()
+		added += int(n)
+	}
+	return added, tx.Commit()
+}
+
 // ProblemsetSyncedAt returns the last problemset sync time; zero if never.
 func (s *Store) ProblemsetSyncedAt() (time.Time, error) { return s.syncedAt(keyProblemsetSync) }
 

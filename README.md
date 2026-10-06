@@ -24,7 +24,7 @@
 - **Neovim stays Neovim.** It opens in a tmux or herdr split next to verd (or embedded in the pane, opt-in). `verd test`, `verd submit` and `verd stress` run from inside Neovim and report in verd's pane.
 - **Stress testing built in.** `gen` and `brute` Templates per language; `S` finds a counterexample, shows the diff, and `w` saves it as the next Custom Test.
 - **Your history, used.** Solved marks, per-topic stats, rating chart, and a Problem Picker with a weak-topics preset.
-- **More than one provider.** Codeforces is on by default; turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse both in one list, with a Source filter and solved marks you set by hand for providers that have no feed to read. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
+- **More than one provider.** Codeforces is on by default; turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse both in one list, with a Source filter and solved marks you set by hand or pull in with `verd sync cses`. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
 - **Offline-tolerant.** Everything renders from a local cache; the network refreshes it in the background.
 - **Safe submit by default.** Browser handoff copies the Solution, opens the submit page and tracks the Verdict. Direct submit is opt-in and [experimental](./docs/submit.md#direct-mode).
 
@@ -112,7 +112,8 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd stress [--iter N] [--time S] <file>` | Search for a counterexample. Exit `0` only if none was found. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
 | `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |
-| `verd login` / `verd logout` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |
+| `verd sync [cses]` | Pull your solved CSES tasks into verd as marks. Asks for your CSES login the first time; the password is never stored. |
+| `verd login` / `verd logout [cses]` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |
 | `verd --version` | Print the version. |
 
 Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexample, rejected), `2` verd could not do it (bad input, build error, offline).
@@ -135,7 +136,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 ## Limits
 
 - Linux and macOS only. Windows is not supported.
-- CSES has no API verd can use without a login: no verdict tracking, so solved marks are manual.
+- CSES has no API: no verdict tracking, so solved marks come from `m` or `verd sync cses`.
 - Interactive Problems cannot be run locally; verd tells you so and you can still submit.
 - Direct submit is experimental and carries account risk. Read [the risks](./docs/submit.md#direct-mode) before turning it on.
 - verd is not affiliated with Codeforces or CSES. It reads the public API and statement pages, and respects rate limits.

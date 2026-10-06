@@ -25,13 +25,21 @@ type Creds struct {
 // ErrNone means nobody is logged in.
 var ErrNone = errors.New("not logged in: run `verd login`")
 
-// Store keeps Creds in the keyring, falling back to File.
-type Store struct{ File string }
+// Store keeps Creds in the keyring, falling back to File. Account names the keyring entry
+// ("codeforces" when empty), so each provider's session is stored separately.
+type Store struct{ File, Account string }
+
+func (s Store) account() string {
+	if s.Account == "" {
+		return user
+	}
+	return s.Account
+}
 
 // Save returns where the credentials went; warn is set when the file fallback was used.
 func (s Store) Save(c Creds) (where, warn string, err error) {
 	b, _ := json.Marshal(c)
-	kerr := keyring.Set(service, user, string(b))
+	kerr := keyring.Set(service, s.account(), string(b))
 	if kerr == nil {
 		os.Remove(s.File) // never leave a stale copy behind
 		return "OS keyring", "", nil
@@ -48,7 +56,7 @@ func (s Store) Save(c Creds) (where, warn string, err error) {
 
 func (s Store) Load() (Creds, error) {
 	var c Creds
-	raw, err := keyring.Get(service, user)
+	raw, err := keyring.Get(service, s.account())
 	if err != nil {
 		b, ferr := os.ReadFile(s.File)
 		if errors.Is(ferr, fs.ErrNotExist) {
@@ -67,7 +75,7 @@ func (s Store) Load() (Creds, error) {
 
 // Delete removes the credentials from both places.
 func (s Store) Delete() error {
-	kerr, ferr := keyring.Delete(service, user), os.Remove(s.File)
+	kerr, ferr := keyring.Delete(service, s.account()), os.Remove(s.File)
 	if errors.Is(kerr, keyring.ErrNotFound) {
 		kerr = nil
 	}

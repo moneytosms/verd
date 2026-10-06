@@ -19,6 +19,7 @@ Press `?` on any screen to see its keys. Keys are the same everywhere the same a
 | `enter` | Open the Problem |
 | `m` | Mark the selected task solved or not (CSES; Codeforces marks come from your Submissions) |
 | `f` | Filters modal: rating range, status, sort, source and a tag picker (`+` include, `−` exclude) |
+| `Y` | Sync solved marks from CSES with the saved session (sign in once with `verd sync cses`) |
 | `m` | Mark the selected CSES task solved or not (Codeforces marks come from your Submissions). Also works in the Problem view |
 | `:` | Filter expression, e.g. `800-1200 +dp -graphs unsolved` |
 | `X` | Clear all filters |

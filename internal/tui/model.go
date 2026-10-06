@@ -59,6 +59,8 @@ type Deps struct {
 	Settings    map[string]string
 	SaveSetting func(key, value string) error
 	// SaveCreds stores the browser session direct submit uses and says where it went; HasCreds reports whether one is saved.
+	// Sync pulls a provider's solved tasks into the marks using its saved session (no prompts).
+	Sync func(source string) (string, error)
 	// SetMark records a hand-made solved mark for a Problem of a source with no Submission feed.
 	SetMark   func(p cf.Problem, on bool) error
 	SaveCreds func(cookie, ua string) (string, error)
@@ -231,6 +233,11 @@ func (m Model) WithData(d Data) Model {
 	m.statsSel = min(m.statsSel, max(0, len(d.Stats.Unsolved)-1))
 	m = m.WithContests(d.Contests)
 	return m.refilter()
+}
+
+type syncDoneMsg struct {
+	text string
+	err  error
 }
 
 type refreshedMsg struct {
@@ -655,6 +662,13 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.attachExternal(r)
 			}
 		}
+	case syncDoneMsg:
+		m.Notice = msg.text
+		if msg.err != nil {
+			m.Notice = clean(msg.err.Error())
+			return m, nil
+		}
+		return m, m.reload()
 	case tea.MouseClickMsg:
 		if msg.Button == tea.MouseLeft {
 			return m.onClick(msg.X, msg.Y)
@@ -773,6 +787,17 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "m":
 		if len(m.visible) > 0 {
 			m = m.toggleMark(m.visible[m.cursor])
+		}
+	case "Y": // sync solved marks from the providers that support it
+		if m.deps.Sync == nil || !m.sourceOn(cf.SourceCSES) {
+			m.Notice = "turn CSES on in Settings to sync it"
+			break
+		}
+		sync := m.deps.Sync
+		m.Notice = "syncing CSES..."
+		return m, func() tea.Msg {
+			text, err := sync(cf.SourceCSES)
+			return syncDoneMsg{text, err}
 		}
 	case ":":
 		m.input, m.inputErr = &input{kind: 'f', text: m.filter.Expr()}, ""

@@ -5,7 +5,7 @@ verd shows Problems from more than one problem set in one list. Turn each on or 
 | Source | What you get | Submitting | Solved marks |
 | --- | --- | --- | --- |
 | Codeforces | Ratings, tags, statements, Verdict tracking, stats | Browser handoff, or [direct](./submit.md#direct-mode) | From your Submissions |
-| [CSES](https://cses.fi/problemset/) | 400 tasks. The topic section (for example "Dynamic Programming") is the tag; the solver count is the popularity. Limits, statement and the example from the task page | Browser handoff to `cses.fi/problemset/submit/<id>/` (CSES needs a login and has no API) | By hand: `m` |
+| [CSES](https://cses.fi/problemset/) | 400 tasks. The topic section (for example "Dynamic Programming") is the tag; the solver count is the popularity. Limits, statement and the example from the task page | Browser handoff to `cses.fi/problemset/submit/<id>/` (CSES needs a login and has no API) | By hand with `m`, or pulled in with `verd sync cses` |
 
 ## Using CSES
 
@@ -17,6 +17,20 @@ verd shows Problems from more than one problem set in one list. Turn each on or 
 CSES shows a single example per task, so local runs cover that plus the tests you add. Marks live only in verd's own database. Codeforces stats do not include CSES.
 
 Statements are fetched once and cached. verd waits a second between requests to cses.fi and identifies itself in the User-Agent.
+
+## Sync solved tasks
+
+```sh
+verd sync cses     # or just `verd sync` for every provider
+```
+
+The first run asks for your CSES username and password (the password is typed hidden and never stored). verd signs in the way the website does, keeps only the session cookie (OS keyring, or a 0600 file next to `credentials.json`), and reads the task list's solved icons. Every solved task becomes a mark. After that `verd sync cses` and `Y` on the Problems list reuse the session without asking; when it expires you are asked again. `verd logout cses` forgets the session.
+
+Sync only adds marks: it never clears one you set with `m`. Tasks you merely tried are not marked. CSES has no API, so this reads the same HTML you see in a browser; if CSES changes it, `verd sync` says what it could not find.
+
+### Adding a provider
+
+A provider is a `provider` value in `cmd/verd/sync.go`: a login (username and password to session cookie) and a function listing the solved ids. The marks, the keyring storage, the `verd sync` command and the `Y` key come with it. LeetCode would fit the same shape (its solved list needs a session cookie too), but it would also need its own source for the problems themselves, so it is not planned yet.
 
 ## USACO
 

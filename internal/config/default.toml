@@ -27,7 +27,7 @@
 # background = "auto"
 
 # Which problem sources the list, search and picker show. CSES (cses.fi) is off by default;
-# load it with ctrl+r after turning it on. Mark CSES tasks solved with m.
+# load it with ctrl+r after turning it on. Mark CSES tasks solved with m, or `verd sync cses`.
 # source_cf = true
 # source_cses = false
 
