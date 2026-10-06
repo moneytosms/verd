@@ -126,7 +126,6 @@ func TestEditorCommandLines(t *testing.T) {
 		{"vim", "vim +7 /w/main.cpp"},
 		{"hx", "hx /w/main.cpp:7"},
 		{"nano", "nano +7 /w/main.cpp"},
-		{"code -w", "code -w -g /w/main.cpp:7"},
 		{"nvim", "nvim +7 /w/main.cpp"},
 	} {
 		c := &Controller{}
@@ -168,8 +167,23 @@ func TestNonNvimEditorsInAMux(t *testing.T) {
 	if _, err := c.Open("/w/b.cpp", 1); err != nil || f.closed != 1 || len(f.opened) != 2 {
 		t.Fatalf("a second open replaces the pane: closed=%d opened=%d", f.closed, len(f.opened))
 	}
-	c.SetEditor("code")
-	if cmd, err := c.Open("/w/c.cpp", 2); cmd == nil || err != nil || len(f.opened) != 2 {
+	c.SetEditor(filepath.Join(t.TempDir(), "code"))
+	os.WriteFile(c.Bin, []byte("#!/bin/sh\nexit 0\n"), 0o755)
+	if cmd, err := c.Open(filepath.Join(t.TempDir(), "c.cpp"), 2); cmd != nil || err != nil || len(f.opened) != 2 {
 		t.Fatalf("a GUI editor never uses a split: %v %v", cmd, err)
+	}
+}
+
+func TestGUIProfilesReuseWindow(t *testing.T) {
+	for _, tc := range []struct{ bin, flag string }{{"code", "--reuse-window"}, {"zed", "--existing"}} {
+		c := &Controller{Bin: tc.bin}
+		p := c.profile()
+		if !p.gui || p.line("/w/a.cpp", 7)[0] != tc.flag || p.pair("/w/a", "/w/b")[0] != tc.flag {
+			t.Fatalf("%s does not reuse window", tc.bin)
+		}
+	}
+	c := &Controller{Bin: filepath.Join(t.TempDir(), "zed")}
+	if cmd, err := c.Open("/w/a", 1); cmd != nil || err == nil {
+		t.Fatal("missing GUI launcher should report an error")
 	}
 }
