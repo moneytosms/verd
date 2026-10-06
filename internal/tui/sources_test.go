@@ -24,7 +24,7 @@ func mixedModel(settings map[string]string, marks *[]string) Model {
 func TestMixedListSourcesFilterAndMarks(t *testing.T) {
 	var marks []string
 	m := mixedModel(map[string]string{"source_cses": "true"}, &marks)
-	if len(m.visible) != 2 || !strings.Contains(plain(m), "CSES1068") || !strings.Contains(plain(m), "4A") {
+	if len(m.visible) != 2 || !strings.Contains(plain(m), "CSES") || !strings.Contains(plain(m), "Codeforces") || strings.Contains(plain(m), "CSES1068") {
 		t.Fatalf("one mixed list:\n%s", plain(m))
 	}
 	f, err := ParseFilter("src:cses")
