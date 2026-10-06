@@ -198,8 +198,8 @@ func TestFilterModalRatingStatusTagsAndSort(t *testing.T) {
 	if m.filter.MinRating != 900 || len(m.visible) != 2 {
 		t.Fatalf("min rating: %d %v", m.filter.MinRating, m.visible)
 	}
-	// tags: tab x4 to the tag list, type "math", space includes it
-	for range 4 {
+	// tags: tab x5 to the tag list, type "math", space includes it
+	for range 5 {
 		m, _ = send(m, "tab")
 	}
 	for _, k := range []string{"m", "a", "t", "h"} {

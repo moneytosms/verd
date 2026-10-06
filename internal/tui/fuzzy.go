@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 
@@ -45,7 +44,7 @@ var searchModes = []string{"all", "name", "tag", "id"}
 
 // searchScore matches every space-separated word of query (AND) against the fields selected by mode.
 func searchScore(query, mode string, p cf.Problem) (int, bool) {
-	id := fmt.Sprintf("%d%s", p.ContestID, p.Index)
+	id := p.Code()
 	total := 0
 	for _, w := range strings.Fields(query) {
 		field := w

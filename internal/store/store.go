@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
@@ -112,7 +113,7 @@ func (s *Store) SaveProblemset(ps []cf.Problem, at time.Time) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec("DELETE FROM problems"); err != nil {
+	if _, err := tx.Exec("DELETE FROM problems WHERE idx NOT IN ('" + strings.Join(cf.Sources[1:], "','") + "')"); err != nil { // other sources sync separately
 		return err
 	}
 	st, err := tx.Prepare("INSERT INTO problems(contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?)")
@@ -130,6 +131,43 @@ func (s *Store) SaveProblemset(ps []cf.Problem, at time.Time) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// SaveSource replaces one non-Codeforces source's problems and stamps its sync time, atomically.
+func (s *Store) SaveSource(source string, ps []cf.Problem, at time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("DELETE FROM problems WHERE idx = ?", source); err != nil {
+		return err
+	}
+	for _, p := range ps {
+		tags, _ := json.Marshal(p.Tags)
+		if _, err := tx.Exec("INSERT INTO problems(contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?)", p.ContestID, source, p.Name, p.Rating, string(tags), p.SolvedCount); err != nil {
+			return err
+		}
+	}
+	if err := s.setMeta(tx, source+"_synced_at", strconv.FormatInt(at.Unix(), 10)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// SourceSyncedAt returns when a non-Codeforces source was last synced; zero if never.
+func (s *Store) SourceSyncedAt(source string) (time.Time, error) {
+	return s.syncedAt(source + "_synced_at")
+}
+
+// SetMark marks a Problem solved by hand (sources without a Submission feed); on=false clears it.
+func (s *Store) SetMark(contest int, idx string, on bool) error {
+	if !on {
+		_, err := s.db.Exec("DELETE FROM marks WHERE contest_id = ? AND idx = ?", contest, idx)
+		return err
+	}
+	_, err := s.db.Exec("INSERT OR IGNORE INTO marks(contest_id, idx) VALUES(?,?)", contest, idx)
+	return err
 }
 
 // ProblemsetSyncedAt returns the last problemset sync time; zero if never.
@@ -188,7 +226,7 @@ func (s *Store) Contests() ([]cf.Contest, error) {
 
 // Problems returns the cached problemset, newest contest first.
 func (s *Store) Problems() ([]cf.Problem, error) {
-	rows, err := s.db.Query("SELECT contest_id, idx, name, rating, tags, solved_count FROM problems ORDER BY contest_id DESC, idx")
+	rows, err := s.db.Query("SELECT contest_id, idx, name, rating, tags, solved_count FROM problems ORDER BY idx IN ('" + strings.Join(cf.Sources[1:], "','") + "'), CASE WHEN idx IN ('" + strings.Join(cf.Sources[1:], "','") + "') THEN contest_id ELSE -contest_id END, idx")
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +348,23 @@ func (s *Store) Statuses() (map[string]Status, error) {
 		}
 		out[fmt.Sprintf("%d%s", c, i)] = map[bool]Status{true: StatusSolved, false: StatusAttempted}[ok]
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	marks, err := s.db.Query("SELECT contest_id, idx FROM marks")
+	if err != nil {
+		return nil, err
+	}
+	defer marks.Close()
+	for marks.Next() {
+		var c int
+		var i string
+		if err := marks.Scan(&c, &i); err != nil {
+			return nil, err
+		}
+		out[fmt.Sprintf("%d%s", c, i)] = StatusSolved
+	}
+	return out, marks.Err()
 }
 
 // RatingSyncedAt returns the last rating history sync time; zero if never.

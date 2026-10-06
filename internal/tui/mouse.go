@@ -234,11 +234,17 @@ func (m Model) clickInModal(rx, ry int) (tea.Model, tea.Cmd) {
 				return m.applyFilter(), nil
 			}
 			f.field = ffSort
-		case ry >= 6:
+		case ry == 4:
+			if f.field == ffSource {
+				m.filter.Source = statusChoice(nextOf(m.sourceOpts(), orAny(m.filter.Source)))
+				return m.applyFilter(), nil
+			}
+			f.field = ffSource
+		case ry >= 7:
 			f.field = ffTags
 			cols, cw, perCol, start := m.fmGrid()
 			col := (rx - 3) / cw
-			i := start + col*perCol + (ry - 6)
+			i := start + col*perCol + (ry - 7)
 			if shown := f.shownTags(); col >= 0 && col < cols && i >= 0 && i < len(shown) {
 				f.tsel = i
 				return m.cycleTag(shown[i].name).applyFilter(), nil

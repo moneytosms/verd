@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet " type="text/css" href="/cses.css?1" id="styles">
+  <link rel="stylesheet alternate" type="text/css" href="/cses-dark.css?1" id="styles-dark">
+  <meta name="theme-color" content="white" id="theme-color">
+  <script type="application/json" id="darkmode-enabled">false</script>
+  <script src="/ui.js"></script>
+  <link rel="stylesheet" type="text/css" href="/lib/fontawesome/css/all.min.css">
+  <title>CSES - Permutations</title></head>
+<body class="with-sidebar norm-width">
+  <div class="header">
+    <div>
+      <a href="/" class="logo"><img src="/logo.png?1" alt="CSES"></a>
+      <a class="menu-toggle" onclick="document.body.classList.toggle('menu-open');">
+        <i class="fas fa-bars"></i>
+      </a>
+      <div class="controls">
+                <a class="account" href="/login">Login</a>
+        <span>&mdash;</span>
+                        <a href="/darkmode" title="Toggle dark mode" onclick="return toggle_theme()"><i aria-label="Dark mode" class="fas fa-adjust"></i><span>Dark mode</span></a>
+              </div>
+    </div>
+  </div>
+  <div class="skeleton">
+  <div class="navigation">
+    <div class="title-block">
+                <h3><a href="/problemset/list/">CSES Problem Set</a></h3>
+                <h1>Permutations</h1>
+        <ul class="nav">
+<li><a href="/problemset/task/1070/" class="current">Task</a></li>
+<li><a href="/problemset/stats/1070/">Statistics</a></li>
+</ul>
+    </div>
+    </div>
+
+<div class="content-wrapper">
+<div class="content">
+
+<link rel="stylesheet" href="/lib/katex/katex.min.css">
+<script defer src="/lib/katex/katex.min.js"></script>
+<script defer src="/lib/katex/contrib/copy-tex.min.js"></script>
+<script defer src="/lib/google-code-prettify/run_prettify.js"></script>
+<script>
+addEventListener("DOMContentLoaded", function (e) {
+    const mathElements = document.getElementsByClassName("math");
+    const macros = {};
+    for (let element of mathElements) {
+        katex.render(element.textContent, element, {
+            displayMode: element.classList.contains("math-display"),
+            throwOnError: false,
+            globalGroup: true,
+            macros,
+        });
+    }
+});
+</script>
+<style>
+.katex .base:last-child {
+    display: inline;
+}
+</style>
+<ul class="task-constraints">
+<li><b>Time limit:</b> 1.00 s</li>
+<li><b>Memory limit:</b> 512 MB</li>
+</ul>
+<div class="md"><p>A permutation of integers <span class="math math-inline">1,2,\ldots,n</span> is called <em>beautiful</em> if there are no adjacent elements whose difference is <span class="math math-inline">1</span>.</p>
+<p>Given <span class="math math-inline">n</span>, construct a beautiful permutation if such a permutation exists.</p>
+<h1 id="input">Input</h1>
+<p>The only input line contains an integer <span class="math math-inline">n</span>.</p>
+<h1 id="output">Output</h1>
+<p>Print a beautiful permutation of integers <span class="math math-inline">1,2,\ldots,n</span>. If there are several solutions, you may print any of them. If there are no solutions, print "NO SOLUTION".</p>
+<h1 id="constraints">Constraints</h1>
+<ul>
+<li><span class="math math-inline">1 \le n \le 10^6</span></li>
+</ul>
+<h1 id="example1">Example 1</h1>
+<p>Input:</p>
+<pre>5
+</pre>
+<p>Output:</p>
+<pre>4 2 5 3 1
+</pre><h1 id="example2">Example 2</h1>
+<p>Input:</p>
+<pre>3
+</pre>
+<p>Output:</p>
+<pre>NO SOLUTION
+</pre></div>
+</div>
+
+<div class="nav sidebar">
+<h4>Introductory Problems</h4>...
+<a  href="/problemset/task/1083">Missing Number<span class="task-score icon "></span></a><a  href="/problemset/task/1069">Repetitions<span class="task-score icon "></span></a><a  href="/problemset/task/1094">Increasing Array<span class="task-score icon "></span></a><a class="current" href="/problemset/task/1070">Permutations<span class="task-score icon "></span></a><a  href="/problemset/task/1071">Number Spiral<span class="task-score icon "></span></a><a  href="/problemset/task/1072">Two Knights<span class="task-score icon "></span></a><a  href="/problemset/task/1092">Two Sets<span class="task-score icon "></span></a><a  href="/problemset/task/1617">Bit Strings<span class="task-score icon "></span></a>...
+<hr />    <h4>Your submissions</h4>
+
+    </div>
+
+
+</div>
+
+  </div>
+</body>
+</html>

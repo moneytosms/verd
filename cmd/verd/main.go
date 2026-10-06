@@ -248,9 +248,7 @@ func runTUI(path string) error {
 		return mux.Detect(mode, os.Getenv)
 	}
 	ctrl.Mux = pickMux(cfg.Split)
-	if bin, err := exec.LookPath("nvim"); err == nil {
-		ctrl.Bin = bin
-	}
+	ctrl.SetEditor(cfg.Editor)
 	sub := newSubmitter(cfg, client, s)
 	deps := tui.Deps{
 		Submit: func(ctx context.Context, p cf.Problem, lang string) (tui.SubmitStart, error) {
@@ -337,9 +335,10 @@ func runTUI(path string) error {
 			"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
 			"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
 			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
-			"split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
+			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
 			"submit_mode": cfg.SubmitMode,
 		},
+		SetMark: func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) },
 		SaveCreds: func(cookie, ua string) (string, error) {
 			where, _, err := credStore().Save(creds.Creds{Cookie: cookie, UserAgent: ua})
 			return where, err
@@ -349,8 +348,11 @@ func runTUI(path string) error {
 			if err := config.Set(path, key, value); err != nil {
 				return err
 			}
-			if key == "split" {
+			switch key {
+			case "split":
 				ctrl.SetMux(pickMux(value))
+			case "editor":
+				ctrl.SetEditor(value)
 			}
 			return nil
 		},
@@ -384,6 +386,14 @@ func runTUI(path string) error {
 		Refresh: []func() (tui.Data, error){
 			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
 			stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
+			stage(s, cfg.Handle, func() error {
+				// read live: Settings can switch CSES on while verd runs
+				if c, err := config.Load(path); err == nil && c.SourceCSES {
+					_, err := refresh.Source(ctx, s, cf.SourceCSES, time.Now())
+					return err
+				}
+				return nil
+			}),
 		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
@@ -440,7 +450,13 @@ func loadData(s *store.Store, handle string) (tui.Data, error) {
 	if err != nil {
 		return d, err
 	}
-	d.Stats = stats.Compute(stats.Input{Problems: d.Problems, Submissions: subs, Rating: rs, Now: time.Now()})
+	var cfOnly []cf.Problem // stats are about Codeforces: other sources have no ratings or Submissions
+	for _, p := range d.Problems {
+		if p.Source() == cf.SourceCF {
+			cfOnly = append(cfOnly, p)
+		}
+	}
+	d.Stats = stats.Compute(stats.Input{Problems: cfOnly, Submissions: subs, Rating: rs, Now: time.Now()})
 	return d, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/scrape"
 )
@@ -30,7 +31,12 @@ func New(root string) Workspace {
 	return Workspace{Root: root}
 }
 
+// Dir is a Problem's directory: <root>/<contest>/<index> for Codeforces, <root>/<source>/<id> for
+// every other source (whose Index is its source tag).
 func (w Workspace) Dir(contest int, index string) string {
+	if cf.IndexSource(index) != cf.SourceCF {
+		return filepath.Join(w.Root, index, strconv.Itoa(contest))
+	}
 	return filepath.Join(w.Root, strconv.Itoa(contest), index)
 }
 
@@ -41,6 +47,9 @@ type Ref struct {
 	Lang    string // key into config Lang
 	Path    string // absolute
 }
+
+// Code is the Problem's short id, as cf.Problem.Code.
+func (r Ref) Code() string { return cf.Problem{ContestID: r.Contest, Index: r.Index}.Code() }
 
 // Resolve maps a path inside the Workspace back to its Problem and language (by extension).
 func (w Workspace) Resolve(path string, langs map[string]config.Lang) (Ref, error) {
@@ -60,8 +69,14 @@ func (w Workspace) Resolve(path string, langs map[string]config.Lang) (Ref, erro
 	if len(parts) < 3 {
 		return Ref{}, fmt.Errorf("%s: expected <contest>/<index>/<file> under the workspace", path)
 	}
-	contest, err := strconv.Atoi(parts[0])
-	if err != nil {
+	contest, index := 0, parts[1]
+	if cf.IndexSource(parts[0]) != cf.SourceCF { // <source>/<id>/<file>
+		contest, err = strconv.Atoi(parts[1])
+		index = parts[0]
+		if err != nil {
+			return Ref{}, fmt.Errorf("%s: %q is not a task id", path, parts[1])
+		}
+	} else if contest, err = strconv.Atoi(parts[0]); err != nil {
 		return Ref{}, fmt.Errorf("%s: %q is not a contest id", path, parts[0])
 	}
 	ext := strings.TrimPrefix(filepath.Ext(abs), ".")
@@ -75,7 +90,7 @@ func (w Workspace) Resolve(path string, langs map[string]config.Lang) (Ref, erro
 		return Ref{}, fmt.Errorf("%s: no configured language uses extension .%s", path, ext)
 	}
 	sort.Strings(keys) // deterministic if several languages share an extension
-	return Ref{Contest: contest, Index: parts[1], Lang: keys[0], Path: abs}, nil
+	return Ref{Contest: contest, Index: index, Lang: keys[0], Path: abs}, nil
 }
 
 // Test is one input/expected-output pair on disk.

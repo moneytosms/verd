@@ -26,7 +26,7 @@ func (m Model) copyText() (what, text string) {
 	default:
 		what = "question"
 		p := *m.open
-		fmt.Fprintf(&b, "%d%s  %s\n", p.ContestID, p.Index, p.Name)
+		fmt.Fprintf(&b, "%s  %s\n", p.Code(), p.Name)
 		rating := "unrated"
 		if p.Rating > 0 {
 			rating = fmt.Sprint(p.Rating)
@@ -38,7 +38,7 @@ func (m Model) copyText() (what, text string) {
 		if d := m.detail; d != nil {
 			fmt.Fprintf(&b, "Limits: %.4g s, %d MB\n", float64(d.TimeLimitMS)/1000, d.MemoryLimitMB)
 		}
-		fmt.Fprintf(&b, "https://codeforces.com/problemset/problem/%d/%s\n\n", p.ContestID, p.Index)
+		fmt.Fprintf(&b, "%s\n\n", p.URL())
 		for _, l := range m.stmtLines() {
 			b.WriteString(strings.TrimRight(xansiStrip(l), " ") + "\n")
 		}

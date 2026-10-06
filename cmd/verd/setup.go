@@ -80,7 +80,9 @@ func setupCmd(out io.Writer, in *os.File, path string, store creds.Store) error 
 		{"workspace", "Workspace (where Solutions live)", cfg.Workspace, nil},
 		{"default_lang", "Default language", cfg.DefaultLang, langs},
 		{"theme", "Theme", cfg.Theme, theme.Names()},
-		{"split", "Neovim split", cfg.Split, config.Options("split")},
+		{"editor", "Editor command (nvim, vim, hx, nano, code...)", cfg.Editor, nil},
+		{"source_cses", "Also show CSES problems", fmt.Sprint(cfg.SourceCSES), []string{"true", "false"}},
+		{"split", "Editor split", cfg.Split, config.Options("split")},
 		{"submit_mode", "Submit mode (direct is experimental)", cfg.SubmitMode, config.Options("submit_mode")},
 	} {
 		if err := ask(q.key, q.label, q.def, q.opts); err != nil {

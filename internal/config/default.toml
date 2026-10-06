@@ -26,7 +26,16 @@
 # Light or dark palette: auto (detect the terminal background) | dark | light
 # background = "auto"
 
-# How Neovim opens: auto | tmux | herdr | embedded | suspend
+# Which problem sources the list, search and picker show. CSES (cses.fi) is off by default;
+# load it with ctrl+r after turning it on. Mark CSES tasks solved with m.
+# source_cf = true
+# source_cses = false
+
+# The editor command: nvim (default), vim, hx, nano, micro, emacs, kak, code, subl, zed, or any
+# other; extra arguments are allowed ("code -w"). Neovim also reuses its pane on the next `e`.
+# editor = "nvim"
+
+# How the editor opens: auto | tmux | herdr | embedded | suspend
 # split = "auto"
 #   embedded draws Neovim inside verd (opt-in, works outside tmux/herdr). Keys go to Neovim
 #   while it has focus; embed_focus_key hands them back to verd. Kitty-keyboard-only chords

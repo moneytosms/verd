@@ -13,6 +13,9 @@ import (
 
 // URL is the Problem's submit page.
 func URL(contest int, index string) string {
+	if cf.IndexSource(index) == cf.SourceCSES {
+		return fmt.Sprintf("https://cses.fi/problemset/submit/%d/", contest)
+	}
 	return fmt.Sprintf("%s/contest/%d/submit/%s", cf.BaseURL, contest, index)
 }
 

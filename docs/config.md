@@ -14,7 +14,10 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `autotest` | `true` | Run a Test Run whenever the active Solution is saved. |
 | `theme` | `"terminal"` | `terminal` (inherits your palette), `tokyo-night`, `dracula`, `catppuccin`, `gruvbox`, `nord`, `one-dark` or `solarized`. Change it live in the Settings tab. |
 | `background` | `"auto"` | `auto` detects the terminal, or force `dark` / `light`. |
-| `split` | `"auto"` | How Neovim opens: `auto`, `tmux`, `herdr`, `embedded`, `suspend`. See [Neovim](./neovim.md). |
+| `editor` | `"nvim"` | The editor command: `nvim`, `vim`, `hx`, `nano`, `micro`, `emacs`, `kak`, `code`, `subl`, `zed` or any other, with optional arguments (`"code -w"`). verd knows how each takes a line number. Only Neovim reuses its pane on the next `e`; GUI editors open their own window instead of a split. Change it live in Settings. |
+| `source_cf` | `true` | Show Codeforces Problems. See [Sources](./sources.md). |
+| `source_cses` | `false` | Show the CSES Problem Set next to them. See [Sources](./sources.md). |
+| `split` | `"auto"` | How the editor opens: `auto`, `tmux`, `herdr`, `embedded`, `suspend`. See [Neovim](./neovim.md). |
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
 | `embed_focus_key` | `"ctrl+\\"` | Hands keyboard focus between verd and the embedded Neovim. |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |

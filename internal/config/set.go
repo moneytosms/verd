@@ -30,6 +30,7 @@ var settable = map[string]struct {
 	"default_lang":    {kString, nil},
 	"theme":           {kString, nil},
 	"background":      {kString, []string{"auto", "dark", "light"}},
+	"editor":          {kString, nil},
 	"split":           {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
 	"embed_focus_key": {kString, nil},
 	"submit_mode":     {kString, []string{"browser", "direct"}},
@@ -37,6 +38,8 @@ var settable = map[string]struct {
 	"float_eps":       {kFloat, nil},
 	"embed_ratio":     {kFloat, nil},
 	"autotest":        {kBool, nil},
+	"source_cf":       {kBool, nil},
+	"source_cses":     {kBool, nil},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.

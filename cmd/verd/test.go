@@ -45,10 +45,10 @@ func prepareTest(ctx context.Context, cfg config.Config, cacheDir string, detail
 	}
 	d, err := detail(ctx, ref.Contest, ref.Index)
 	if err != nil {
-		return nil, &exitError{2, fmt.Sprintf("loading %d%s: %v", ref.Contest, ref.Index, err)}
+		return nil, &exitError{2, fmt.Sprintf("loading %s: %v", ref.Code(), err)}
 	}
 	if d.Interactive {
-		return nil, &exitError{2, fmt.Sprintf("%d%s is interactive: local run unsupported", ref.Contest, ref.Index)}
+		return nil, &exitError{2, fmt.Sprintf("%s is interactive: local run unsupported", ref.Code())}
 	}
 	mode := ""
 	if savedMode != nil {
@@ -61,7 +61,7 @@ func prepareTest(ctx context.Context, cfg config.Config, cacheDir string, detail
 	if len(spec.Tests) == 0 {
 		return nil, &exitError{2, "no tests found"}
 	}
-	header := fmt.Sprintf("%d%s  %s  TL %d ms x%g  ML %d MB  %s", ref.Contest, ref.Index, ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, spec.Mode)
+	header := fmt.Sprintf("%s  %s  TL %d ms x%g  ML %d MB  %s", ref.Code(), ref.Lang, d.TimeLimitMS, cfg.TimeMultiplier, d.MemoryLimitMB, spec.Mode)
 	return &testPrep{ref, spec, header}, nil
 }
 

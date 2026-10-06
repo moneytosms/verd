@@ -159,7 +159,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	if len(body) > inner {
 		note = fmt.Sprintf("%d%%", 100*end/len(body))
 	}
-	title := fmt.Sprintf("%d%s  %s", p.ContestID, clean(p.Index), clean(p.Name))
+	title := fmt.Sprintf("%s  %s", p.Code(), clean(p.Name))
 	left := box(title, m.highlight(paneStatement, off, body[off:end]), note, lw, h, m.pane == paneStatement, st)
 
 	var right []string

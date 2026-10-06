@@ -120,3 +120,56 @@ func TestSecondOpenReusesPaneTmux(t *testing.T) {
 		t.Fatalf("want 2 windows with .ans focused after vsplit, got %q", got)
 	}
 }
+
+func TestEditorCommandLines(t *testing.T) {
+	for _, tc := range []struct{ editor, want string }{
+		{"vim", "vim +7 /w/main.cpp"},
+		{"hx", "hx /w/main.cpp:7"},
+		{"nano", "nano +7 /w/main.cpp"},
+		{"code -w", "code -w -g /w/main.cpp:7"},
+		{"nvim", "nvim +7 /w/main.cpp"},
+	} {
+		c := &Controller{}
+		c.SetEditor(tc.editor)
+		cmd, err := c.Open("/w/main.cpp", 7)
+		got := ""
+		if cmd != nil {
+			got = strings.Join(append([]string{filepath.Base(cmd.Args[0])}, cmd.Args[1:]...), " ")
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("%s: got %q (%v) want %q", tc.editor, got, err, tc.want)
+		}
+	}
+}
+
+// fakeMux records splits so a GUI or non-nvim editor can be checked without tmux.
+type fakeMux struct {
+	opened [][]string
+	closed int
+	alive  bool
+}
+
+func (f *fakeMux) Name() string { return "fake" }
+func (f *fakeMux) OpenEditor(_ string, argv []string) (mux.Pane, error) {
+	f.opened, f.alive = append(f.opened, argv), true
+	return mux.Pane{ID: "p"}, nil
+}
+func (f *fakeMux) Alive(mux.Pane) bool  { return f.alive }
+func (f *fakeMux) Focus(mux.Pane) error { return nil }
+func (f *fakeMux) Close(mux.Pane) error { f.closed++; f.alive = false; return nil }
+
+func TestNonNvimEditorsInAMux(t *testing.T) {
+	f := &fakeMux{}
+	c := &Controller{Mux: f, SockDir: t.TempDir()}
+	c.SetEditor("vim")
+	if cmd, err := c.Open("/w/a.cpp", 3); cmd != nil || err != nil || strings.Join(f.opened[0], " ") != strings.Join([]string{c.Bin, "+3", "/w/a.cpp"}, " ") {
+		t.Fatalf("vim opens in a split with no --listen: %v %v %v", cmd, err, f.opened)
+	}
+	if _, err := c.Open("/w/b.cpp", 1); err != nil || f.closed != 1 || len(f.opened) != 2 {
+		t.Fatalf("a second open replaces the pane: closed=%d opened=%d", f.closed, len(f.opened))
+	}
+	c.SetEditor("code")
+	if cmd, err := c.Open("/w/c.cpp", 2); cmd == nil || err != nil || len(f.opened) != 2 {
+		t.Fatalf("a GUI editor never uses a split: %v %v", cmd, err)
+	}
+}

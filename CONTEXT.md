@@ -8,6 +8,10 @@ A terminal companion for Codeforces: find a problem, write a solution in Neovim,
 A single Codeforces task, identified by contest id and index (e.g. 1900A).
 _Avoid_: Question, task, qn
 
+**Source**:
+Where a Problem comes from: Codeforces or CSES. A non-Codeforces Problem keeps its own id in `ContestID` and the source tag (`cses`) in `Index`, so (ContestID, Index) is unique across Sources.
+_Avoid_: Platform, site, judge
+
 **Sample Test**:
 An input/expected-output pair published in a Problem's statement.
 _Avoid_: Example, sample case

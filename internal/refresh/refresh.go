@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/cses"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 )
@@ -34,6 +35,32 @@ func Problemset(ctx context.Context, s *store.Store, c *cf.Client, now time.Time
 	return true, s.SaveProblemset(ps, now)
 }
 
+// CSES is the client for the CSES source; tests point it at a local server.
+var CSES = cses.New()
+
+// Source fetches and stores a non-Codeforces source's problem list when its cache is older than
+// ProblemsetTTL. It reports whether a fetch happened; a failed fetch leaves the cache intact.
+func Source(ctx context.Context, s *store.Store, source string, now time.Time) (bool, error) {
+	at, err := s.SourceSyncedAt(source)
+	if err != nil {
+		return false, err
+	}
+	if !at.IsZero() && now.Sub(at) < ProblemsetTTL {
+		return false, nil
+	}
+	var ps []cf.Problem
+	switch source {
+	case cf.SourceCSES:
+		ps, err = CSES.Problems(ctx)
+	default:
+		return false, errors.New("unknown source " + source)
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, s.SaveSource(source, ps, now)
+}
+
 // Detail returns a Problem's scraped detail, cache-first. Statements never expire;
 // force (the `r` key) re-fetches. Errors from a failed fetch leave the cache intact.
 func Detail(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, force bool, now time.Time) (*scrape.Detail, error) {
@@ -42,13 +69,20 @@ func Detail(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, for
 			return d, err
 		}
 	}
-	page, err := c.Page(ctx, p.ContestID, p.Index)
-	if err != nil {
-		return nil, err
-	}
-	d, err := scrape.Parse(page)
-	if err != nil {
-		return nil, err
+	var d *scrape.Detail
+	if p.Source() == cf.SourceCSES {
+		var err error
+		if d, err = CSES.Page(ctx, p.ContestID); err != nil {
+			return nil, err
+		}
+	} else {
+		page, err := c.Page(ctx, p.ContestID, p.Index)
+		if err != nil {
+			return nil, err
+		}
+		if d, err = scrape.Parse(page); err != nil {
+			return nil, err
+		}
 	}
 	return d, s.SaveDetail(p.ContestID, p.Index, d, now)
 }

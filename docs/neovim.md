@@ -1,4 +1,6 @@
-# Neovim
+# Neovim and other editors
+
+Neovim is the default and gets the most (pane reuse, `verd test` from inside it). Set `editor` in Settings or `config.toml` to use another: `vim`, `hx`, `nano`, `micro`, `emacs`, `kak`, `code`, `subl`, `zed` or any command. verd passes the line number the way each editor expects. Other terminal editors open in the same split but a second `e` replaces the pane; GUI editors (`code`, `subl`, `zed`) open their own window.
 
 verd edits Solutions in Neovim (`nvim` must be on your `PATH`). How the editor appears is the `split` setting.
 

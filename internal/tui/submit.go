@@ -140,7 +140,7 @@ func (m Model) onSubmitMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 				m.sub.detail = fmt.Sprintf("%d ms  %.1f MB", s.TimeMS, float64(s.MemoryBytes)/(1<<20))
 			}
 		}
-		id := fmt.Sprintf("%d%s", m.sub.problem.ContestID, m.sub.problem.Index)
+		id := m.sub.problem.Code()
 		reload := m.reload()
 		m.toastSeq++
 		t := &toast{id: m.toastSeq}

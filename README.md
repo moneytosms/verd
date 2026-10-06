@@ -24,6 +24,7 @@
 - **Neovim stays Neovim.** It opens in a tmux or herdr split next to verd (or embedded in the pane, opt-in). `verd test`, `verd submit` and `verd stress` run from inside Neovim and report in verd's pane.
 - **Stress testing built in.** `gen` and `brute` Templates per language; `S` finds a counterexample, shows the diff, and `w` saves it as the next Custom Test.
 - **Your history, used.** Solved marks, per-topic stats, rating chart, and a Problem Picker with a weak-topics preset.
+- **More than Codeforces.** Turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse it in the same list, with a Source filter and solved marks you set by hand. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
 - **Offline-tolerant.** Everything renders from a local cache; the network refreshes it in the background.
 - **Safe submit by default.** Browser handoff copies the Solution, opens the submit page and tracks the Verdict. Direct submit is opt-in and [experimental](./docs/submit.md#direct-mode).
 
@@ -123,6 +124,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 | [Configuration](./docs/config.md) | Every config key, languages, Templates, file locations. |
 | [Keys](./docs/keys.md) | Key bindings for each screen. |
 | [Testing and stress](./docs/testing.md) | Test Runs, Comparison Modes, Custom Tests, stress workflow. |
+| [Sources](./docs/sources.md) | CSES next to Codeforces, the Source filter, manual solved marks, and what USACO would need. |
 | [Neovim](./docs/neovim.md) | Split modes and copy-pasteable keymaps. |
 | [Submitting](./docs/submit.md) | Browser handoff, direct mode, `verd login`, risks. |
 | [Embedded pane](./docs/embedded-pane.md) | Running Neovim inside verd, known gaps, promotion checklist. |
@@ -133,6 +135,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 ## Limits
 
 - Linux and macOS only. Windows is not supported.
+- CSES has no API verd can use without a login: no verdict tracking, so solved marks are manual.
 - Interactive Problems cannot be run locally; verd tells you so and you can still submit.
 - Direct submit is experimental and carries account risk. Read [the risks](./docs/submit.md#direct-mode) before turning it on.
 - verd is not affiliated with Codeforces. It reads the public API and statement pages, and respects rate limits.

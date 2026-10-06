@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -16,6 +17,7 @@ type Filter struct {
 	AnyOf                []string // presets: at least one of these tags (prefix match)
 	Unsolved             bool
 	Status               string // "", "unsolved", "solved" or "attempted"
+	Source               string // "" (any) or a source: "cf", "cses"
 	Search               string
 	SearchMode           string // "all" (default), "name", "tag" or "id"
 }
@@ -28,6 +30,11 @@ func ParseFilter(expr string) (Filter, error) {
 		switch {
 		case tok == "unsolved" || tok == "u":
 			f.Unsolved = true
+		case strings.HasPrefix(tok, "src:"):
+			if !slices.Contains(cf.Sources, tok[4:]) {
+				return f, fmt.Errorf("unknown source %q (have %s)", tok[4:], strings.Join(cf.Sources, ", "))
+			}
+			f.Source = tok[4:]
 		case strings.HasPrefix(tok, "+") && len(tok) > 1:
 			f.Include = append(f.Include, tag(tok[1:]))
 		case strings.HasPrefix(tok, "-") && len(tok) > 1 && !isDigit(tok[1]):
@@ -48,7 +55,7 @@ func ParseFilter(expr string) (Filter, error) {
 				return f, fmt.Errorf("empty rating range %q", tok)
 			}
 		default:
-			return f, fmt.Errorf("unknown filter %q (use 800-1200, +tag, -tag, unsolved)", tok)
+			return f, fmt.Errorf("unknown filter %q (use 800-1200, +tag, -tag, unsolved, src:cses)", tok)
 		}
 	}
 	return f, nil
@@ -77,6 +84,9 @@ func hasTagPrefix(p cf.Problem, prefix string) bool {
 // Match reports whether p passes every active criterion.
 func (f Filter) Match(p cf.Problem, st store.Status) bool {
 	if (f.MinRating > 0 || f.MaxRating > 0) && (p.Rating == 0 || p.Rating < f.MinRating || (f.MaxRating > 0 && p.Rating > f.MaxRating)) {
+		return false
+	}
+	if f.Source != "" && p.Source() != f.Source {
 		return false
 	}
 	for _, t := range f.Include {
@@ -150,6 +160,9 @@ func (f Filter) Expr() string {
 	}
 	for _, t := range f.Exclude {
 		parts = append(parts, "-"+strings.ReplaceAll(t, " ", "_"))
+	}
+	if f.Source != "" {
+		parts = append(parts, "src:"+f.Source)
 	}
 	if f.Unsolved || f.Status == "unsolved" {
 		parts = append(parts, "unsolved")

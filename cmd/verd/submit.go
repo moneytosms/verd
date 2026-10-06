@@ -88,6 +88,16 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 	if err != nil {
 		return nil, fmt.Errorf("no Solution at %s", ref.Path)
 	}
+	if p.Source() != cf.SourceCF {
+		// No Verdict feed without a login: hand the Solution over, and the user marks it solved (m).
+		st := &Started{Problem: p, Text: string(src)}
+		s.handoff(st, src, submit.URL(p.ContestID, p.Index))
+		st.Notes = append(st.Notes, "verd cannot see the verdict here: press m on the Problem to mark it solved")
+		done := make(chan submit.Update)
+		close(done)
+		st.Updates = done
+		return st, nil
+	}
 	tr := submit.Tracker{Interval: s.interval, Timeout: s.timeout, Fetch: func(ctx context.Context, count int) ([]cf.Submission, error) {
 		return s.client.UserStatus(ctx, s.cfg.Handle, 1, count)
 	}}
@@ -111,12 +121,17 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 	if sent {
 		return s.track(ctx, st, tr, base), nil
 	}
+	s.handoff(st, src, submit.URL(p.ContestID, p.Index))
+	return s.track(ctx, st, tr, base), nil
+}
+
+// handoff copies the Solution and opens the submit page, noting what went wrong.
+func (s *submitter) handoff(st *Started, src []byte, url string) {
 	if clip := s.env.ClipboardCommand(); clip != nil {
 		if err := s.run(clip, src); err != nil {
 			st.Notes = append(st.Notes, "clipboard tool failed: "+err.Error())
 		}
 	}
-	url := submit.URL(p.ContestID, p.Index)
 	if open := s.env.OpenCommand(url); open != nil {
 		if err := s.run(open, nil); err != nil {
 			st.Notes = append(st.Notes, "could not open the browser: "+err.Error())
@@ -125,7 +140,6 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		st.Notes = append(st.Notes, "no browser opener found")
 	}
 	st.Notes = append(st.Notes, "paste and submit at "+url)
-	return s.track(ctx, st, tr, base), nil
 }
 
 // track follows the new Submission, upserting each update into the store.

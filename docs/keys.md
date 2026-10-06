@@ -17,7 +17,9 @@ Press `?` on any screen to see its keys. Keys are the same everywhere the same a
 | --- | --- |
 | `j`/`k`, `pgup`/`pgdn` | Move |
 | `enter` | Open the Problem |
-| `f` | Filters modal: rating range, status, sort and a tag picker (`+` include, `−` exclude) |
+| `m` | Mark the selected task solved or not (CSES; Codeforces marks come from your Submissions) |
+| `f` | Filters modal: rating range, status, sort, source and a tag picker (`+` include, `−` exclude) |
+| `m` | Mark the selected CSES task solved or not (Codeforces marks come from your Submissions). Also works in the Problem view |
 | `:` | Filter expression, e.g. `800-1200 +dp -graphs unsolved` |
 | `X` | Clear all filters |
 | `/` | Live fuzzy search: the list narrows and re-ranks as you type |
@@ -26,7 +28,7 @@ Search: type letters in order (`wmln` finds Watermelon), several words must all 
 
 Filter syntax: a rating range (`800-1200`, `800-`, `-1200`, or one value), `+tag` to include, `-tag` to exclude (prefix match, `_` for a space: `+two_pointers`), and `unsolved` (or `u`).
 
-The filter bar above the list shows what is active as chips; click it to open the filters. In the filters modal `tab` moves between fields, digits type a rating, `←`/`→` change status and sort, typing in the tag list searches it, `space` cycles a tag (include, exclude, off), `ctrl+u` resets and `esc` closes.
+The filter bar above the list shows what is active as chips; click it to open the filters. In the filters modal `tab` moves between fields, digits type a rating, `←`/`→` change status, sort and source, typing in the tag list searches it, `space` cycles a tag (include, exclude, off), `ctrl+u` resets and `esc` closes.
 
 ## Contests
 
@@ -75,7 +77,7 @@ Theme, background, default language and autotest apply immediately. Settings mar
 | `<` / `>` | Narrow or widen the right column (drag the gap between the columns with the mouse) |
 | `-` / `+` | Shrink or grow the test list |
 | `j`/`k`, `pgup`/`pgdn`, `g`/`G` | Scroll the focused pane; in the test list, move the selection |
-| `e` | Edit the Solution in Neovim |
+| `e` | Edit the Solution in your editor (`editor` setting, Neovim by default) |
 | `y` | Copy the focused pane: question with difficulty, tags and tests; all tests; or the selected test |
 | `T` | Test manager: browse, add, edit, copy and delete tests |
 | `a` | Add a Custom Test (opens the in-place editor) |

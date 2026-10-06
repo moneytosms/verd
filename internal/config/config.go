@@ -21,6 +21,9 @@ type Config struct {
 	Autotest       bool    `toml:"autotest"`
 	Theme          string  `toml:"theme"`
 	Background     string  `toml:"background"`
+	SourceCF       bool    `toml:"source_cf"`
+	SourceCSES     bool    `toml:"source_cses"`
+	Editor         string  `toml:"editor"`
 	Split          string  `toml:"split"`
 	EmbedRatio     float64 `toml:"embed_ratio"`
 	EmbedFocusKey  string  `toml:"embed_focus_key"`
@@ -64,7 +67,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},

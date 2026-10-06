@@ -88,3 +88,36 @@ func TestAllSubmissionsRoundTrip(t *testing.T) {
 		t.Fatalf("%+v %v", got, err)
 	}
 }
+
+func TestOtherSourcesSurviveCFSyncAndMarksShowAsSolved(t *testing.T) {
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	now := time.Unix(1000, 0)
+	if err := s.SaveSource(cf.SourceCSES, []cf.Problem{{ContestID: 1068, Name: "Weird Algorithm", Tags: []string{"Introductory Problems"}}}, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveProblemset([]cf.Problem{{ContestID: 4, Index: "A", Name: "Watermelon", Tags: []string{}}}, now); err != nil {
+		t.Fatal(err)
+	}
+	ps, _ := s.Problems()
+	if len(ps) != 2 {
+		t.Fatalf("a Codeforces sync must keep CSES rows: %+v", ps)
+	}
+	if err := s.SaveSource(cf.SourceCSES, nil, now); err != nil {
+		t.Fatal(err)
+	}
+	if ps, _ = s.Problems(); len(ps) != 1 || ps[0].Index != "A" {
+		t.Fatalf("a CSES sync must keep Codeforces rows: %+v", ps)
+	}
+	s.SetMark(1068, cf.SourceCSES, true)
+	if st, _ := s.Statuses(); st["1068cses"] != StatusSolved {
+		t.Fatalf("mark: %v", st)
+	}
+	s.SetMark(1068, cf.SourceCSES, false)
+	if st, _ := s.Statuses(); len(st) != 0 {
+		t.Fatalf("cleared: %v", st)
+	}
+}

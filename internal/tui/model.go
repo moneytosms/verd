@@ -59,6 +59,8 @@ type Deps struct {
 	Settings    map[string]string
 	SaveSetting func(key, value string) error
 	// SaveCreds stores the browser session direct submit uses and says where it went; HasCreds reports whether one is saved.
+	// SetMark records a hand-made solved mark for a Problem of a source with no Submission feed.
+	SetMark   func(p cf.Problem, on bool) error
 	SaveCreds func(cookie, ua string) (string, error)
 	HasCreds  func() bool
 	// EditConfig opens config.toml in the editor; LangSummary describes each configured language.
@@ -251,6 +253,62 @@ func (m Model) WithStatuses(st map[string]store.Status) Model {
 	return m.refilter()
 }
 
+// enabledProblems are the cached Problems of the sources switched on in Settings.
+func (m Model) enabledProblems() []cf.Problem {
+	out := make([]cf.Problem, 0, len(m.Problems))
+	for _, p := range m.Problems {
+		if m.sourceOn(p.Source()) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// toggleMark flips a hand-made solved mark. Codeforces Problems are marked by their Submissions.
+func (m Model) toggleMark(p cf.Problem) Model {
+	if p.Source() == cf.SourceCF {
+		m.Notice = "Codeforces marks come from your Submissions"
+		return m
+	}
+	on := m.statusOf(p) != store.StatusSolved
+	if m.deps.SetMark != nil {
+		if err := m.deps.SetMark(p, on); err != nil {
+			m.errMsg = "mark: " + err.Error()
+			return m
+		}
+	}
+	st := make(map[string]store.Status, len(m.status)+1)
+	for k, v := range m.status {
+		st[k] = v
+	}
+	if on {
+		st[fmt.Sprintf("%d%s", p.ContestID, p.Index)] = store.StatusSolved
+	} else {
+		delete(st, fmt.Sprintf("%d%s", p.ContestID, p.Index))
+	}
+	return m.WithStatuses(st)
+}
+
+// sourceOn reports whether Problems from a source are shown (Settings: source_cf, source_cses).
+func (m Model) sourceOn(source string) bool {
+	v, ok := m.cfgVals["source_"+source]
+	if !ok {
+		return source == cf.SourceCF
+	}
+	return v == "true"
+}
+
+// sourceOpts are the choices of the filter's Source field: any, then each enabled source.
+func (m Model) sourceOpts() []string {
+	out := []string{"any"}
+	for _, s := range cf.Sources {
+		if m.sourceOn(s) {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 func (m Model) statusOf(p cf.Problem) store.Status {
 	return m.status[fmt.Sprintf("%d%s", p.ContestID, p.Index)]
 }
@@ -259,7 +317,7 @@ func (m Model) refilter() Model {
 	m.visible = make([]cf.Problem, 0, len(m.Problems))
 	scores := map[string]int{}
 	for _, p := range m.Problems {
-		if m.filter.Match(p, m.statusOf(p)) {
+		if m.sourceOn(p.Source()) && m.filter.Match(p, m.statusOf(p)) {
 			m.visible = append(m.visible, p)
 			if m.filter.Search != "" {
 				scores[fmt.Sprintf("%d%s", p.ContestID, p.Index)], _ = m.filter.Score(p)
@@ -712,6 +770,10 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.cursor = min(len(m.visible)-1, m.cursor+m.page())
 	case "f":
 		m = m.openFilters()
+	case "m":
+		if len(m.visible) > 0 {
+			m = m.toggleMark(m.visible[m.cursor])
+		}
 	case ":":
 		m.input, m.inputErr = &input{kind: 'f', text: m.filter.Expr()}, ""
 	case "X":
@@ -867,10 +929,12 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.pane = (m.pane + 1) % panes
 	case "shift+tab":
 		m.pane = (m.pane + panes - 1) % panes
+	case "m":
+		m = m.toggleMark(*m.open)
 	case "o":
 		if open, p := m.deps.OpenURL, *m.open; open != nil {
 			return m, func() tea.Msg {
-				open(fmt.Sprintf("%s/problemset/problem/%d/%s", cf.BaseURL, p.ContestID, p.Index))
+				open(p.URL())
 				return nil
 			}
 		}
@@ -910,7 +974,7 @@ func (m Model) moveInPane(d int) Model {
 // content is the whole Problem view as lines: header, statement, Sample Tests.
 func (m Model) content() []string {
 	p := *m.open
-	lines := []string{fmt.Sprintf("%d%s  %s", p.ContestID, clean(p.Index), clean(p.Name))}
+	lines := []string{fmt.Sprintf("%s  %s", p.Code(), clean(p.Name))}
 	if m.detail != nil {
 		d := m.detail
 		lim := fmt.Sprintf("time %.4g s   memory %d MB", float64(d.TimeLimitMS)/1000, d.MemoryLimitMB)

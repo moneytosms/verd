@@ -89,7 +89,7 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 		t.Fatal("overwrote existing Solution")
 	}
 	t.Setenv("PATH", t.TempDir())
-	if _, err := editOpen(cfg, ctrl, p, "cpp"); err == nil || !strings.Contains(err.Error(), "nvim not found") {
+	if _, err := editOpen(cfg, ctrl, p, "cpp"); err == nil || !strings.Contains(err.Error(), "not found in PATH") {
 		t.Fatalf("missing nvim: %v", err)
 	}
 }

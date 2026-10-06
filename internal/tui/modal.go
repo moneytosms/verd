@@ -75,7 +75,7 @@ func (m Model) subBox() []string {
 	st := m.styles()
 	s := m.sub
 	w, _ := m.modalSize(84, 20)
-	title := fmt.Sprintf("Submission %d%s", s.problem.ContestID, clean(s.problem.Index))
+	title := fmt.Sprintf("Submission %s", s.problem.Code())
 	status := clean(s.status)
 	switch {
 	case s.final && s.ok:

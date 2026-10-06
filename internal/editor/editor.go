@@ -1,4 +1,5 @@
-// Package editor opens Solutions in Neovim: in a multiplexer split when possible, else suspend-and-resume.
+// Package editor opens Solutions in the user's editor (Neovim by default): in a multiplexer split when
+// possible, else suspend-and-resume. Only Neovim gets the reuse-the-open-pane treatment.
 package editor
 
 import (
@@ -15,13 +16,62 @@ import (
 // Controller owns at most one editor pane. Open is called from the Bubble Tea update loop,
 // Alive from its tick; the mutex keeps the pane state consistent between them.
 type Controller struct {
-	Mux     mux.Mux // nil: no multiplexer, use suspend
-	Bin     string  // nvim executable
-	SockDir string  // short directory for nvim's --listen socket
+	Mux     mux.Mux  // nil: no multiplexer, use suspend
+	Bin     string   // editor executable
+	Args    []string // extra arguments from the editor setting, e.g. {"-w"} for "code -w"
+	SockDir string   // short directory for nvim's --listen socket
 
 	mu   sync.Mutex
 	pane *mux.Pane
 	sock string
+}
+
+// SetEditor switches the editor to a command line such as "nvim", "hx" or "code -w". The first
+// word is resolved through PATH when it can be.
+func (c *Controller) SetEditor(command string) {
+	f := strings.Fields(command)
+	if len(f) == 0 {
+		f = []string{"nvim"}
+	}
+	bin := f[0]
+	if p, err := exec.LookPath(bin); err == nil {
+		bin = p
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Bin, c.Args, c.pane = bin, f[1:], nil
+}
+
+// profile is how an editor takes "open this file at this line" and "open these two side by side".
+type profile struct {
+	gui  bool // opens its own window: never put it in a split pane
+	nvim bool // supports the --listen / --remote-expr reuse
+	line func(path string, line int) []string
+	pair func(l, r string) []string
+}
+
+func vi(path string, line int) []string { return []string{fmt.Sprintf("+%d", line), path} }
+func two(l, r string) []string          { return []string{l, r} }
+
+func (c *Controller) profile() profile {
+	base := strings.TrimSuffix(filepath.Base(c.Bin), filepath.Ext(c.Bin))
+	switch base {
+	case "nvim":
+		return profile{nvim: true, line: vi, pair: func(l, r string) []string { return []string{"-O", l, r} }}
+	case "vim", "vi":
+		return profile{line: vi, pair: func(l, r string) []string { return []string{"-O", l, r} }}
+	case "hx", "helix":
+		return profile{line: func(p string, n int) []string { return []string{fmt.Sprintf("%s:%d", p, n)} }, pair: two}
+	case "code", "codium", "cursor":
+		return profile{gui: true, line: func(p string, n int) []string { return []string{"-g", fmt.Sprintf("%s:%d", p, n)} }, pair: two}
+	case "subl", "zed":
+		return profile{gui: true, line: func(p string, n int) []string { return []string{fmt.Sprintf("%s:%d", p, n)} }, pair: two}
+	}
+	return profile{line: vi, pair: two} // nano, micro, emacs, kak and most others take +N file
+}
+
+func (c *Controller) argv(args []string) []string {
+	return append(append([]string{c.Bin}, c.Args...), args...)
 }
 
 // SetMux switches the multiplexer (a changed `split` setting); a pane of the old one is forgotten.
@@ -37,30 +87,36 @@ func (c *Controller) SetMux(m mux.Mux) {
 func (c *Controller) Open(path string, line int) (*exec.Cmd, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Mux == nil {
-		cmd := exec.Command(c.Bin, fmt.Sprintf("+%d", line), path)
-		cmd.Dir = filepath.Dir(path)
-		return cmd, nil
+	pr := c.profile()
+	args := pr.line(path, line)
+	if c.Mux == nil || pr.gui {
+		return c.foreground(filepath.Dir(path), args), nil
 	}
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
-		if err := c.remoteEdit(path, line); err == nil {
-			c.Mux.Focus(*c.pane) // best effort: herdr cannot focus by id
-			return nil, nil
+		if pr.nvim {
+			if err := c.remoteEdit(path, line); err == nil {
+				c.Mux.Focus(*c.pane) // best effort: herdr cannot focus by id
+				return nil, nil
+			}
 		}
-		// nvim does not answer (hung or mid-exit): fall through and open a fresh pane
+		// not nvim, or nvim does not answer (hung or mid-exit): open a fresh pane
 		c.Mux.Close(*c.pane)
 	}
-	return nil, c.openPane(filepath.Dir(path), fmt.Sprintf("+%d", line), path)
+	return nil, c.openPane(filepath.Dir(path), pr.nvim, args...)
 }
 
 // openPane starts nvim in a new split with its --listen socket. The caller holds c.mu.
-func (c *Controller) openPane(cwd string, args ...string) error {
-	if err := os.MkdirAll(c.SockDir, 0o700); err != nil {
-		return err
+func (c *Controller) openPane(cwd string, nvim bool, args ...string) error {
+	sock := ""
+	if nvim {
+		if err := os.MkdirAll(c.SockDir, 0o700); err != nil {
+			return err
+		}
+		sock = filepath.Join(c.SockDir, fmt.Sprintf("nvim-%d.sock", os.Getpid()))
+		os.Remove(sock) // stale socket from a crashed editor
+		args = append([]string{"--listen", sock}, args...)
 	}
-	sock := filepath.Join(c.SockDir, fmt.Sprintf("nvim-%d.sock", os.Getpid()))
-	os.Remove(sock) // stale socket from a crashed editor
-	p, err := c.Mux.OpenEditor(cwd, append([]string{c.Bin, "--listen", sock}, args...))
+	p, err := c.Mux.OpenEditor(cwd, c.argv(args))
 	if err != nil {
 		return err
 	}
@@ -68,24 +124,34 @@ func (c *Controller) openPane(cwd string, args ...string) error {
 	return nil
 }
 
+// foreground is the editor as a command to run in the foreground (suspend, or a GUI editor).
+func (c *Controller) foreground(dir string, args []string) *exec.Cmd {
+	argv := c.argv(args)
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Dir = dir
+	return cmd
+}
+
 // OpenPair opens two files side by side (a Custom Test's .in and .ans), with the same
 // pane / suspend behavior as Open.
 func (c *Controller) OpenPair(left, right string) (*exec.Cmd, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Mux == nil {
-		cmd := exec.Command(c.Bin, "-O", left, right)
-		cmd.Dir = filepath.Dir(left)
-		return cmd, nil
+	pr := c.profile()
+	args := pr.pair(left, right)
+	if c.Mux == nil || pr.gui {
+		return c.foreground(filepath.Dir(left), args), nil
 	}
 	if c.pane != nil && c.Mux.Alive(*c.pane) {
-		if err := c.remote(fmt.Sprintf("execute('edit ' . fnameescape('%s') . ' | vsplit ' . fnameescape('%s'))", vimQuote(left), vimQuote(right))); err == nil {
-			c.Mux.Focus(*c.pane)
-			return nil, nil
+		if pr.nvim {
+			if err := c.remote(fmt.Sprintf("execute('edit ' . fnameescape('%s') . ' | vsplit ' . fnameescape('%s'))", vimQuote(left), vimQuote(right))); err == nil {
+				c.Mux.Focus(*c.pane)
+				return nil, nil
+			}
 		}
 		c.Mux.Close(*c.pane)
 	}
-	return nil, c.openPane(filepath.Dir(left), "-O", left, right)
+	return nil, c.openPane(filepath.Dir(left), pr.nvim, args...)
 }
 
 // Alive reports whether a split-pane editor is still open.

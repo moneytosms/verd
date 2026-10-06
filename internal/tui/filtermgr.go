@@ -15,6 +15,7 @@ const (
 	ffMax
 	ffStatus
 	ffSort
+	ffSource
 	ffTags
 	ffFields
 )
@@ -25,7 +26,7 @@ var (
 	sortNames  = map[string]string{"default": "default order", "rating": "rating, easiest first", "-rating": "rating, hardest first", "solved": "most solved", "id": "contest id"}
 )
 
-// filterMgr is the filter modal: rating range, status, sort and a tag picker.
+// filterMgr is the filter modal: rating range, status, sort, source and a tag picker.
 type filterMgr struct {
 	field int
 	query string // tag list search
@@ -195,6 +196,22 @@ func (m Model) updateFilters(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.applyFilter(), nil
+	case ffSource:
+		opts := m.sourceOpts()
+		switch k {
+		case "up":
+			f.field--
+		case "down", "enter":
+			f.field++
+		case "right", "l", " ":
+			m.filter.Source = statusChoice(nextOf(opts, orAny(m.filter.Source)))
+		case "left", "h":
+			m.filter.Source = statusChoice(prevOf(opts, orAny(m.filter.Source)))
+		case "q":
+			m.fm = nil
+			return m, nil
+		}
+		return m.applyFilter(), nil
 	case ffSort:
 		cur := m.sortBy
 		if cur == "" {
@@ -311,6 +328,7 @@ func (m Model) filterBox() []string {
 		row(ffMin, "Rating", num(m.filter.MinRating, ffMin)+st.Dim.Render("  to  ")+num(m.filter.MaxRating, ffMax)),
 		row(ffStatus, "Status", choice(ffStatus, orAny(m.filter.Status))),
 		row(ffSort, "Sort", choice(ffSort, sortNames[sortV])),
+		row(ffSource, "Source", choice(ffSource, orAny(m.filter.Source))),
 		"",
 	}
 	_ = ffMax
@@ -361,7 +379,7 @@ func (m Model) fmGrid() (cols, cw, perCol, start int) {
 	w, h := m.modalSize(96, 30)
 	cols = 3
 	cw = (w - 6) / cols
-	perCol = max(3, h-2-5-1) // five lines above the grid: rating, status, sort, blank, tags header
+	perCol = max(3, h-2-6-1) // six lines above the grid: rating, status, sort, source, blank, tags header
 	if total := perCol * cols; m.fm.tsel >= total {
 		start = max(0, m.fm.tsel-total+1)
 	}

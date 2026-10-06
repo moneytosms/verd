@@ -61,7 +61,7 @@ func (m Model) roll() Model {
 	if m.rng == nil {
 		m.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
-	p, n, ok := Pick(m.Problems, m.statusOf, m.pickFilter, m.rng, m.picked)
+	p, n, ok := Pick(m.enabledProblems(), m.statusOf, m.pickFilter, m.rng, m.picked)
 	m.pickMatches = n
 	if !ok {
 		m.picked = nil
@@ -120,7 +120,7 @@ func (m Model) viewPicker(b *strings.Builder) string {
 	switch {
 	case m.picked != nil:
 		p := *m.picked
-		card = append(card, st.Accent.Render(fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)))+"  "+clean(p.Name), "")
+		card = append(card, st.Accent.Render(p.Code())+"  "+clean(p.Name), "")
 		card = append(card, st.Dim.Render("rating ")+m.ratingText(p)+st.Dim.Render("    solved by ")+fmt.Sprint(p.SolvedCount))
 		card = append(card, m.tagChips(p, w-6))
 	case m.pickInit:

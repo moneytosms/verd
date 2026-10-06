@@ -58,12 +58,12 @@ func ensureSolution(cfg config.Config, p cf.Problem, lang string) (path string, 
 
 func requireEditor(ctrl *editor.Controller) error {
 	if _, err := exec.LookPath(ctrl.Bin); err != nil {
-		return fmt.Errorf("nvim not found in PATH")
+		return fmt.Errorf("editor %q not found in PATH (set `editor` in the config or Settings)", ctrl.Bin)
 	}
 	return nil
 }
 
-// editOpen opens the Solution in Neovim: in a split pane (nil command) or, without a
+// editOpen opens the Solution in the editor: in a split pane (nil command) or, without a
 // multiplexer, as a foreground command to suspend for.
 func editOpen(cfg config.Config, ctrl *editor.Controller, p cf.Problem, lang string) (*exec.Cmd, error) {
 	if err := requireEditor(ctrl); err != nil {

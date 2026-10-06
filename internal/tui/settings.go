@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,9 +27,12 @@ var settingDefs = []settingDef{
 	{"Testing", "autotest", "Autotest", "Run the tests whenever you save the Solution.", "bool", true},
 	{"Testing", "time_multiplier", "Time multiplier", "Scales every time limit for local runs. Use 2.0 on a slow machine.", "text", false},
 	{"Testing", "float_eps", "Float tolerance", "Absolute and relative tolerance for the float Comparison Mode.", "text", false},
-	{"Editor", "split", "Editor split", "How Neovim opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
-	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when Neovim is embedded (0.1 to 0.9).", "text", false},
-	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded Neovim.", "text", false},
+	{"Sources", "source_cf", "Codeforces", "Show Codeforces Problems in the list, the picker and search.", "bool", true},
+	{"Sources", "source_cses", "CSES", "Show the CSES Problem Set (400 tasks, grouped by topic). Press ctrl+r to load it after turning it on. Mark tasks solved with m: CSES has no feed verd can read.", "bool", true},
+	{"Editor", "editor", "Editor", "Your editor command: nvim (default), vim, hx, nano, micro, emacs, code and so on. Any command works from config.toml. Only Neovim reuses its pane on the next e.", "enum", true},
+	{"Editor", "split", "Editor split", "How the editor opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
+	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
+	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
@@ -54,6 +58,12 @@ func (m Model) options(key string) []string {
 		return out
 	case "default_lang":
 		return m.deps.Langs
+	case "editor":
+		out := []string{"nvim", "vim", "hx", "nano", "micro", "emacs", "kak", "code", "subl", "zed"}
+		if cur := m.setting("editor"); cur != "" && !slices.Contains(out, cur) {
+			out = append(out, cur) // a custom command from config.toml stays selectable
+		}
+		return out
 	}
 	return config.Options(key)
 }
@@ -90,6 +100,16 @@ func (m Model) apply(d settingDef, value string) Model {
 		m.deps.Autotest = value == "true"
 	case "default_lang":
 		m.deps.DefaultLang = value
+	case "source_cf", "source_cses":
+		if m.filter.Source != "" && !m.sourceOn(m.filter.Source) {
+			m.filter.Source = ""
+		}
+		m.cursor = 0
+		m = m.refilter()
+		if value == "true" && d.key == "source_cses" {
+			m.setNote = "saved: press ctrl+r on a list to load the CSES tasks"
+			return m
+		}
 	}
 	if d.key == "submit_mode" && value == "direct" && m.deps.SaveCreds != nil && (m.deps.HasCreds == nil || !m.deps.HasCreds()) {
 		m.setEdit = &settingEdit{cred: 1} // direct needs a saved session: ask for it now

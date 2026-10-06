@@ -86,7 +86,7 @@ func (m Model) viewList(b *strings.Builder) string {
 	start := m.listStart()
 	for i := start; i < min(start+rows, len(m.visible)); i++ {
 		p := m.visible[i]
-		id := fmt.Sprintf("%-8s", fmt.Sprintf("%d%s", p.ContestID, clean(p.Index)))
+		id := fmt.Sprintf("%-8s", p.Code())
 		tagW := max(10, w-nameW-34)
 		if i == m.cursor {
 			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + fmt.Sprintf(" %7d  ", p.SolvedCount) + m.tagChips(p, tagW)
