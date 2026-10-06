@@ -92,6 +92,8 @@ func run(args []string, out io.Writer) error {
 			return nil
 		}
 		return setupCmd(out, os.Stdin, path, credStore())
+	case "update":
+		return updateCmd(out, slices.Contains(args[1:], "--check"))
 	case "setup":
 		return setupCmd(out, os.Stdin, path, credStore())
 	case "test":
@@ -195,7 +197,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, update [--check], config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
 }
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.

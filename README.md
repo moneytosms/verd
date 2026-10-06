@@ -53,11 +53,7 @@ go install github.com/moneytosms/verd/cmd/verd@latest   # needs Go
 
 Or download a tarball from the [Releases](https://github.com/moneytosms/verd/releases) page and put `verd` on your `PATH`. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
 
-Check it worked:
-
-```sh
-verd --version
-```
+Check it worked with `verd --version`. Update later with `verd update` (or re-run the installer).
 
 You also need `nvim` for editing, a compiler or interpreter for your languages (`g++`, `gcc`, `python3` by default), and optionally `tmux` or `herdr` for the editor split.
 
@@ -114,6 +110,7 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
 | `verd stress [--iter N] [--time S] <file>` | Search for a counterexample. Exit `0` only if none was found. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
+| `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |
 | `verd login` / `verd logout` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |
 | `verd --version` | Print the version. |
 
