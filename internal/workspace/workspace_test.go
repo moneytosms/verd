@@ -157,3 +157,18 @@ func TestCustomsSaveCaseAndDelete(t *testing.T) {
 		t.Fatalf("%+v", ts)
 	}
 }
+
+func TestNote(t *testing.T) {
+	w := New(t.TempDir())
+	if w.Note(1900, "A") != "" {
+		t.Fatal("note before create")
+	}
+	p, err := w.EnsureNote(1900, "A")
+	if err != nil || p != w.NotePath(1900, "A") {
+		t.Fatalf("EnsureNote = %q, %v", p, err)
+	}
+	os.WriteFile(p, []byte("# idea\n"), 0o644)
+	if _, err := w.EnsureNote(1900, "A"); err != nil || w.Note(1900, "A") != "# idea\n" {
+		t.Fatalf("EnsureNote must keep the existing note, got %q (%v)", w.Note(1900, "A"), err)
+	}
+}

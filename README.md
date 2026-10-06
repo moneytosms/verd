@@ -107,11 +107,13 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd [--here]` | Open the TUI. `--here` keeps Solutions in the current directory (`<dir>/<contest>/<index>/`) instead of the configured Workspace. |
 | `verd init [--force] [--no-setup]` | Write the default config and Templates, then offer the guided setup (skipped when not in a terminal). |
 | `verd setup` | Guided setup: handle, Workspace, language, theme, editor split and submit mode, written into `config.toml`. Safe to re-run. |
+| `verd --help` | List the commands. |
 | `verd config` | Print the effective, merged config. |
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
 | `verd stress [--iter N] [--time S] <file>` | Search for a counterexample. Exit `0` only if none was found. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
 | `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |
+| `verd daily` | Today's pick: an unsolved Codeforces Problem near your rating, from your weak topics when you have any. Same all day. |
 | `verd sync [cses]` | Pull your solved CSES tasks into verd as marks. Asks for your CSES login the first time; the password is never stored. |
 | `verd login` / `verd logout [cses]` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |
 | `verd --version` | Print the version. |

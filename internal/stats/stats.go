@@ -55,6 +55,7 @@ type Stats struct {
 	Tags                           []TagStat // by solved desc, then name
 	Strengths, Weaknesses          []TagStat
 	Streak, MaxStreak              int
+	Days                           map[string]int // "2006-01-02" -> AC Submissions that day
 	Verdicts                       map[string]int
 	Unsolved                       []Attempt // most recently attempted first
 	Band                           [2]int
@@ -123,6 +124,7 @@ func Compute(in Input) Stats {
 	}
 	h := map[key]*hist{}
 	days := map[string]bool{}
+	st.Days = map[string]int{}
 	ok := 0
 	for _, s := range subs {
 		k := key{s.Problem.ContestID, s.Problem.Index}
@@ -137,7 +139,9 @@ func Compute(in Input) Stats {
 		if s.Verdict == "OK" {
 			ok++
 			x.solved = true
-			days[time.Unix(s.Created, 0).In(loc).Format("2006-01-02")] = true
+			d := time.Unix(s.Created, 0).In(loc).Format("2006-01-02")
+			days[d] = true
+			st.Days[d]++
 		}
 	}
 	st.Submissions = len(subs)

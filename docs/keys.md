@@ -79,6 +79,7 @@ Theme, background, default language and autotest apply immediately. Settings mar
 | `-` / `+` | Shrink or grow the test list |
 | `j`/`k`, `pgup`/`pgdn`, `g`/`G` | Scroll the focused pane; in the test list, move the selection |
 | `e` | Edit the Solution in your editor (`editor` setting, Neovim by default) |
+| `N` | Edit the Problem's `notes.md` (next to the Solution); its first line shows in the Problem box |
 | `y` | Copy the focused pane: question with difficulty, tags and tests; all tests; or the selected test |
 | `T` | Test manager: browse, add, edit, copy and delete tests |
 | `a` | Add a Custom Test (opens the in-place editor) |

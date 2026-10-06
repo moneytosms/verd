@@ -96,6 +96,9 @@ func (m Model) statsLines() []string {
 	}
 
 	add("", fmt.Sprintf("Streak: %d day(s), best %d", st.Streak, st.MaxStreak))
+	for _, r := range Heatmap(st.Days, m.clock(), min(26, (w-4)/2)) {
+		add(ds.Good.Render(r))
+	}
 	type vc struct {
 		v string
 		n int

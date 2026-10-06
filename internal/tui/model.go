@@ -34,6 +34,9 @@ type Deps struct {
 	// Edit creates the Problem's Solution if needed and opens it in the editor.
 	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
 	Edit func(p cf.Problem, lang string) (*exec.Cmd, error)
+	// Note returns the Problem's note text ("" if none); EditNote opens it in the editor (like Edit).
+	Note     func(p cf.Problem) string
+	EditNote func(p cf.Problem) (*exec.Cmd, error)
 	// AddCustom creates the next Custom Test files and opens them in the editor (like Edit).
 	AddCustom func(p cf.Problem) (*exec.Cmd, error)
 	// Ensure creates the Problem's Solution in lang from its Template if absent.
@@ -946,6 +949,12 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		cmd, err := m.deps.Edit(*m.open, m.lang())
 		return m.afterOpen(cmd, err, "edit")
+	case "N":
+		if m.deps.EditNote == nil {
+			break
+		}
+		cmd, err := m.deps.EditNote(*m.open)
+		return m.afterOpen(cmd, err, "note")
 	case "T":
 		m = m.openTM(false)
 	case "a":
@@ -1006,7 +1015,13 @@ func (m Model) content() []string {
 		if d.Interactive {
 			lim += "   [interactive: local run unsupported]"
 		}
-		lines = append(lines, lim, "")
+		lines = append(lines, lim)
+		if m.deps.Note != nil {
+			if first := firstLine(m.deps.Note(p)); first != "" {
+				lines = append(lines, "note: "+clean(first))
+			}
+		}
+		lines = append(lines, "")
 		lines = append(lines, m.submissionLines()...)
 		lines = append(lines, m.testsPanel()...)
 		lines = append(lines, m.stressPanel()...)
@@ -1184,7 +1199,7 @@ func (m Model) viewProblem(b *strings.Builder) string {
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  s submit  a add test  l lang  t test  S stress  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "esc back  e edit  N note  s submit  a add test  l lang  t test  S stress  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
 }
 
 func ago(d time.Duration) string {

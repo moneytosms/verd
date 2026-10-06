@@ -1314,3 +1314,24 @@ func statsFixtureNoWeak() stats.Stats {
 	s.Weaknesses, s.Strengths, s.Rating = nil, nil, 0
 	return s
 }
+
+func TestNoteKeyAndInfoLine(t *testing.T) {
+	edited := 0
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"></div>`}, nil
+		},
+		Note:        func(cf.Problem) string { return "\n## use a sweep line\nmore" },
+		EditNote:    func(cf.Problem) (*exec.Cmd, error) { edited++; return nil, nil },
+		EditorAlive: func() bool { return true },
+	}
+	m, cmd := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
+	m, _ = step(t, m, cmd)
+	m, _ = send(m, "N")
+	if edited != 1 || !m.editorOpen {
+		t.Fatalf("N should open the note: edited=%d", edited)
+	}
+	if !strings.Contains(plain(m), "note: use a sweep line") {
+		t.Fatalf("first note line missing from the Problem box:\n%s", plain(m))
+	}
+}

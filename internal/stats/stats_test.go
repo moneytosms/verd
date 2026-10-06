@@ -182,3 +182,14 @@ func TestBandCoverageStrengthsWeaknesses(t *testing.T) {
 		seen[ts.Tag] = true
 	}
 }
+
+func TestDaysCountsACPerDay(t *testing.T) {
+	day := time.Date(2026, 10, 1, 12, 0, 0, 0, ist)
+	st := Compute(Input{
+		Submissions: []cf.Submission{sub(1, 1, "A", "OK", day), sub(2, 1, "B", "OK", day), sub(3, 1, "C", "WRONG_ANSWER", day), sub(4, 2, "A", "OK", day.AddDate(0, 0, 1))},
+		Now:         day, Loc: ist,
+	})
+	if st.Days["2026-10-01"] != 2 || st.Days["2026-10-02"] != 1 || len(st.Days) != 2 {
+		t.Fatalf("Days = %v", st.Days)
+	}
+}

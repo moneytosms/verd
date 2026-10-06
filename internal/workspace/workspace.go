@@ -264,3 +264,29 @@ func removeIfExists(p string) error {
 	}
 	return nil
 }
+
+// NotePath is the Problem's free-form markdown note, next to its Solution.
+func (w Workspace) NotePath(contest int, index string) string {
+	return filepath.Join(w.Dir(contest, index), "notes.md")
+}
+
+// Note is the note's text, "" when there is none.
+func (w Workspace) Note(contest int, index string) string {
+	b, _ := os.ReadFile(w.NotePath(contest, index))
+	return string(b)
+}
+
+// EnsureNote creates an empty note (and its directory) if absent and returns its path.
+func (w Workspace) EnsureNote(contest int, index string) (string, error) {
+	p := w.NotePath(contest, index)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return "", err
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if err == nil {
+		f.Close()
+	} else if !os.IsExist(err) {
+		return "", err
+	}
+	return p, nil
+}

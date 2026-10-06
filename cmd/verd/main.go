@@ -61,6 +61,10 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "verd %s (%s)\n", version, commit)
 		return nil
 	}
+	if len(args) == 1 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
+		fmt.Fprint(out, helpText)
+		return nil
+	}
 	path := filepath.Join(config.Dir(), "config.toml")
 	if i := slices.Index(args, "--here"); i >= 0 { // keep Solutions in the current directory
 		args, hereWorkspace = slices.Delete(slices.Clone(args), i, i+1), true
@@ -202,6 +206,21 @@ func run(args []string, out io.Writer) error {
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()
 		return syncCmd(ctx, out, os.Stdin, args[1:], s)
+	case "daily":
+		cfg, err := loadConfig(path)
+		if err != nil {
+			return err
+		}
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		d, err := loadData(s, cfg.Handle)
+		if err != nil {
+			return err
+		}
+		return dailyCmd(out, d, time.Now())
 	case "config":
 		cfg, err := loadConfig(path)
 		if err != nil {
@@ -214,8 +233,31 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, update [--check], config, test <file>, submit <file>, stress <file>, login, logout [cses], sync [cses])", args[0])
+	return fmt.Errorf("unknown command %q (see verd --help)", args[0])
 }
+
+const helpText = `verd: terminal Codeforces + CSES
+
+usage: verd [--here] [command]
+
+  (none)                          open the TUI
+  init [--force] [--no-setup]     write config and Templates, offer setup
+  setup                           guided setup
+  config                          print effective config
+  test <file>                     run Sample and Custom Tests
+  stress [--iter N] [--time S] <file>
+                                  search for a counterexample
+  submit <file>                   submit and track the Verdict
+  update [--check]                update verd
+  daily                           today's unsolved pick, weak topics first
+  sync [cses]                     pull solved CSES tasks into marks
+  login | logout [cses]           manage direct-submit sessions
+  version, --version              print version
+
+flags:
+  --here                          use the current directory as Workspace
+  -h, --help                      show this help
+`
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
 var hereWorkspace bool
@@ -279,8 +321,19 @@ func runTUI(path string) error {
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
-		OpenURL:   openURL,
-		Edit:      func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
+		OpenURL: openURL,
+		Edit:    func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
+		Note:    func(p cf.Problem) string { return workspace.New(cfg.Workspace).Note(p.ContestID, p.Index) },
+		EditNote: func(p cf.Problem) (*exec.Cmd, error) {
+			if err := requireEditor(ctrl); err != nil {
+				return nil, err
+			}
+			path, err := workspace.New(cfg.Workspace).EnsureNote(p.ContestID, p.Index)
+			if err != nil {
+				return nil, err
+			}
+			return ctrl.Open(path, 1)
+		},
 		AddCustom: func(p cf.Problem) (*exec.Cmd, error) { return addCustom(cfg, ctrl, p) },
 		Ensure: func(p cf.Problem, lang string) error {
 			_, _, err := ensureSolution(cfg, p, lang)

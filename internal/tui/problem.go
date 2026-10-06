@@ -182,7 +182,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}
-	return "tab pane  j/k move  e edit  T tests  t run  s submit  S stress  c mode  l lang  o browser  esc back  ? help  q quit"
+	return "tab pane  j/k move  e edit  N note  T tests  t run  s submit  S stress  c mode  l lang  o browser  esc back  ? help  q quit"
 }
 
 // infoLines is the Problem box: rating, limits, tags, language and Submission status.
@@ -227,6 +227,11 @@ func (m Model) infoLines(w int) []string {
 			first = false
 		}
 		lines = append(lines, cur)
+	}
+	if m.deps.Note != nil {
+		if first := firstLine(m.deps.Note(p)); first != "" {
+			lines = append(lines, st.Dim.Render("note   ")+clip(clean(first), max(8, w-7)))
+		}
 	}
 	for _, l := range m.submissionLines() {
 		lines = append(lines, l)
@@ -371,3 +376,13 @@ func (m Model) detailLines(w int) ([]string, string) {
 }
 
 func xansiStrip(s string) string { return xansi.Strip(s) }
+
+// firstLine is the first non-blank line of s, markdown heading marks removed.
+func firstLine(s string) string {
+	for _, l := range strings.Split(s, "\n") {
+		if l = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(l), "#")); l != "" {
+			return l
+		}
+	}
+	return ""
+}
