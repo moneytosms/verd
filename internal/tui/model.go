@@ -58,6 +58,9 @@ type Deps struct {
 	// Settings are the current config values by key; SaveSetting persists one change (and validates it).
 	Settings    map[string]string
 	SaveSetting func(key, value string) error
+	// SaveCreds stores the browser session direct submit uses and says where it went; HasCreds reports whether one is saved.
+	SaveCreds func(cookie, ua string) (string, error)
+	HasCreds  func() bool
 	// EditConfig opens config.toml in the editor; LangSummary describes each configured language.
 	EditConfig  func() (*exec.Cmd, error)
 	LangSummary []string
@@ -614,7 +617,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		return m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
 	case tea.PasteMsg:
-		if m.tm != nil && m.tm.ed != nil {
+		if m.tab == 4 && m.setEdit != nil {
+			m.setEdit.text += clean(msg.Content)
+		} else if m.tm != nil && m.tm.ed != nil {
 			m.tm.ed.insert(clean(msg.Content))
 		} else if m.input != nil {
 			m.input.text += clean(msg.Content)

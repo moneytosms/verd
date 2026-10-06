@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -12,11 +13,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/creds"
 	"github.com/moneytosms/verd/internal/editor"
 	"github.com/moneytosms/verd/internal/embed"
 	"github.com/moneytosms/verd/internal/ipc"
@@ -30,6 +33,7 @@ import (
 	"github.com/moneytosms/verd/internal/tui"
 	"github.com/moneytosms/verd/internal/watch"
 	"github.com/moneytosms/verd/internal/workspace"
+	"golang.org/x/term"
 )
 
 func main() {
@@ -74,7 +78,22 @@ func run(args []string, out io.Writer) error {
 		for _, p := range tmpls {
 			fmt.Fprintln(out, "wrote", p)
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		if slices.Contains(args[1:], "--no-setup") || !term.IsTerminal(int(os.Stdin.Fd())) {
+			fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
+			return nil
+		}
+		fmt.Fprint(out, "Run the guided setup now? [Y/n] ")
+		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if a := strings.ToLower(strings.TrimSpace(line)); a == "n" || a == "no" {
+			fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
+			return nil
+		}
+		return setupCmd(out, os.Stdin, path, credStore())
+	case "setup":
+		return setupCmd(out, os.Stdin, path, credStore())
 	case "test":
 		if len(args) != 2 {
 			return &exitError{2, "usage: verd test <file>"}
@@ -176,7 +195,7 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (commands: init [--force], config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
+	return fmt.Errorf("unknown command %q (commands: init [--force] [--no-setup], setup, config, test <file>, submit <file>, stress <file>, login, logout)", args[0])
 }
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
@@ -319,6 +338,11 @@ func runTUI(path string) error {
 			"split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
 			"submit_mode": cfg.SubmitMode,
 		},
+		SaveCreds: func(cookie, ua string) (string, error) {
+			where, _, err := credStore().Save(creds.Creds{Cookie: cookie, UserAgent: ua})
+			return where, err
+		},
+		HasCreds: func() bool { _, err := credStore().Load(); return err == nil },
 		SaveSetting: func(key, value string) error {
 			if err := config.Set(path, key, value); err != nil {
 				return err

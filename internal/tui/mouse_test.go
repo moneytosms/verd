@@ -131,3 +131,32 @@ func TestMouseViewEnablesMouse(t *testing.T) {
 		t.Fatal("mouse must be on")
 	}
 }
+
+func TestSettingsDirectAsksForSession(t *testing.T) {
+	var cookie, ua string
+	deps := Deps{
+		Settings:    map[string]string{"submit_mode": "browser"},
+		SaveSetting: func(k, v string) error { return nil },
+		HasCreds:    func() bool { return false },
+		SaveCreds:   func(c, u string) (string, error) { cookie, ua = c, u; return "keyring", nil },
+	}
+	m := New(nil, "", deps)
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m, _ = send(nm.(Model), "5")
+	m, _ = send(m, "G") // submit mode is the last row
+	m, _ = send(m, "right")
+	if m.setEdit == nil || m.setEdit.cred != 1 {
+		t.Fatalf("choosing direct opens the paste prompt: %+v", m.setEdit)
+	}
+	nm, _ = m.Update(tea.PasteMsg{Content: "a=b; c=d"})
+	m = nm.(Model)
+	if strings.Contains(plain(m), "a=b") {
+		t.Fatal("cookie must be masked")
+	}
+	m, _ = send(m, "enter")
+	nm, _ = m.Update(tea.PasteMsg{Content: "Mozilla/5.0"})
+	m, _ = send(nm.(Model), "enter")
+	if cookie != "a=b; c=d" || ua != "Mozilla/5.0" || m.setEdit != nil || !strings.Contains(m.setNote, "keyring") {
+		t.Fatalf("cookie=%q ua=%q edit=%v note=%q", cookie, ua, m.setEdit, m.setNote)
+	}
+}

@@ -1,6 +1,6 @@
 # Configuration
 
-verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if set). Every key is optional. `verd init` writes a fully commented file; `verd config` prints the effective, merged result.
+verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if set). Every key is optional. `verd init` writes a fully commented file and offers `verd setup`, a guided walk through the main keys that edits the file in place (re-run it any time); `verd config` prints the effective, merged result.
 
 ## Keys
 

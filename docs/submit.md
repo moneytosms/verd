@@ -41,12 +41,10 @@ What it does: it fetches the submit page with a Chrome TLS fingerprint, reads th
 3. Open DevTools (`F12`), go to **Network**, and reload the page.
 4. Click the first request, `submit` (type `document`).
 5. Under **Request Headers**, right-click the `cookie:` value and choose **Copy value**.
-6. Run `verd login`. Paste the cookie when asked (input is hidden), then paste the `user-agent:` value from the same list. Nothing is echoed.
-7. Set the mode in `~/.config/verd/config.toml`:
-
-   ```toml
-   submit_mode = "direct"
-   ```
+6. Save the session, either way:
+   - In verd: open the Settings tab (`5`), move to **Submit mode** and choose `direct`. verd asks for the cookie (shown as dots) and then the `user-agent:` value; paste each and press `enter`. Press `L` on that row to paste a new session later.
+   - Or run `verd login` and paste the same two values (input is hidden). `verd setup` also offers this when you pick `direct`.
+7. Set the mode, unless you chose it in Settings or `verd setup`: put `submit_mode = "direct"` in `~/.config/verd/config.toml`. It applies the next time verd starts.
 
 8. Submit as usual with `s` or `verd submit <file>`.
 

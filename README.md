@@ -37,19 +37,34 @@ These are real frames rendered by verd's own model (Tokyo Night theme), not mock
 
 ## Install
 
+**One line** (Linux and macOS, amd64 and arm64):
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh
 ```
 
-This installs the latest release to `~/.local/bin` after checking its checksum (`VERD_VERSION=v0.1.0` pins a version, `VERD_INSTALL_DIR` changes the target). Or `go install github.com/moneytosms/verd/cmd/verd@latest`, or download a Linux/macOS binary (amd64, arm64) from the [Releases](https://github.com/moneytosms/verd/releases) page. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
+It installs the latest release to `~/.local/bin` after checking its SHA-256. Set `VERD_VERSION=v0.1.0` to pin a version or `VERD_INSTALL_DIR` to change the target, and make sure the target is on your `PATH`.
 
-You also need: `nvim` for editing, a compiler or interpreter for your languages (`g++`, `gcc`, `python3` by default), and optionally `tmux` or `herdr` for the editor split.
+**Other ways**
+
+```sh
+go install github.com/moneytosms/verd/cmd/verd@latest   # needs Go
+```
+
+Or download a tarball from the [Releases](https://github.com/moneytosms/verd/releases) page and put `verd` on your `PATH`. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
+
+Check it worked:
+
+```sh
+verd --version
+```
+
+You also need `nvim` for editing, a compiler or interpreter for your languages (`g++`, `gcc`, `python3` by default), and optionally `tmux` or `herdr` for the editor split.
 
 ## Quickstart (five minutes)
 
 ```sh
-verd init                       # writes ~/.config/verd/config.toml and starter Templates
-$EDITOR ~/.config/verd/config.toml   # set: handle = "your_codeforces_handle"
+verd init                       # writes the config and starter Templates, then offers a guided setup
 verd                            # open the TUI
 verd --here                     # same, but keep Solutions in the current directory
 ```
@@ -93,7 +108,8 @@ More in [docs/neovim.md](./docs/neovim.md).
 | Command | What it does |
 | --- | --- |
 | `verd [--here]` | Open the TUI. `--here` keeps Solutions in the current directory (`<dir>/<contest>/<index>/`) instead of the configured Workspace. |
-| `verd init [--force]` | Write the default config and Templates. |
+| `verd init [--force] [--no-setup]` | Write the default config and Templates, then offer the guided setup (skipped when not in a terminal). |
+| `verd setup` | Guided setup: handle, Workspace, language, theme, editor split and submit mode, written into `config.toml`. Safe to re-run. |
 | `verd config` | Print the effective, merged config. |
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
 | `verd stress [--iter N] [--time S] <file>` | Search for a counterexample. Exit `0` only if none was found. |

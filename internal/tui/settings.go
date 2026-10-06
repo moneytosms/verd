@@ -32,7 +32,13 @@ var settingDefs = []settingDef{
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
-type settingEdit struct{ text string }
+// settingEdit is a text edit in the Settings tab. cred is non-zero while pasting a browser session
+// for direct submit: 1 the cookie header (shown masked), 2 the user-agent.
+type settingEdit struct {
+	text   string
+	cred   int
+	cookie string
+}
 
 // options are the allowed values of an enum setting.
 func (m Model) options(key string) []string {
@@ -85,6 +91,11 @@ func (m Model) apply(d settingDef, value string) Model {
 	case "default_lang":
 		m.deps.DefaultLang = value
 	}
+	if d.key == "submit_mode" && value == "direct" && m.deps.SaveCreds != nil && (m.deps.HasCreds == nil || !m.deps.HasCreds()) {
+		m.setEdit = &settingEdit{cred: 1} // direct needs a saved session: ask for it now
+		m.setNote = "paste your browser session (see docs/submit.md); esc skips"
+		return m
+	}
 	if !d.live {
 		m.setNote = "saved: applies the next time verd starts"
 	} else {
@@ -115,6 +126,9 @@ func (m Model) step(d settingDef, dir int) Model {
 }
 
 func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.setEdit != nil && m.setEdit.cred > 0 {
+		return m.updateCred(msg)
+	}
 	if m.setEdit != nil {
 		d := settingDefs[m.setSel]
 		switch msg.String() {
@@ -164,6 +178,10 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m = m.step(d, 1)
 		}
+	case "L":
+		if d.key == "submit_mode" && m.deps.SaveCreds != nil {
+			m.setEdit, m.setNote = &settingEdit{cred: 1}, "paste your browser session (see docs/submit.md); esc cancels"
+		}
 	case "e":
 		if m.deps.EditConfig != nil {
 			cmd, err := m.deps.EditConfig()
@@ -208,6 +226,13 @@ func (m Model) settingLines(w int) []settingLine {
 				shown = m.setEdit.text + st.Accent.Render("▏")
 			} else if val == "" {
 				shown = st.Dim.Render("(not set)")
+			}
+		}
+		if e := m.setEdit; e != nil && e.cred > 0 && i == m.setSel {
+			if e.cred == 1 {
+				shown = st.Accent.Render("cookie ") + strings.Repeat("•", min(len([]rune(e.text)), 24)) + st.Accent.Render("▏")
+			} else {
+				shown = st.Accent.Render("user-agent ") + e.text + st.Accent.Render("▏")
 			}
 		}
 		label := fit(d.label, 18)
@@ -284,7 +309,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}
-	return "j/k move  ←/→ change  enter edit  e open config.toml  ? help  q quit"
+	return "j/k move  ←/→ change  enter edit  L paste login (submit mode)  e open config.toml  ? help  q quit"
 }
 
 // themeGallery lists every theme with its palette swatch, the current one marked.
@@ -330,4 +355,42 @@ func wrap(text string, w int) []string {
 		out = append(out, cur)
 	}
 	return out
+}
+
+// updateCred collects the cookie header, then the user-agent, and saves them for direct submit.
+func (m Model) updateCred(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	e := m.setEdit
+	switch msg.String() {
+	case "esc":
+		m.setEdit, m.setNote = nil, "cancelled: direct submit needs a session (verd login, or L here)"
+	case "enter":
+		text := strings.TrimSpace(e.text)
+		if text == "" {
+			return m, nil
+		}
+		if e.cred == 1 {
+			m.setEdit = &settingEdit{cred: 2, cookie: text}
+			return m, nil
+		}
+		m.setEdit = nil
+		where, err := m.deps.SaveCreds(e.cookie, text)
+		if err != nil {
+			m.setNote = "login: " + err.Error()
+		} else {
+			m.setNote = "saved session to " + where + "; direct applies the next time verd starts"
+		}
+	case "backspace":
+		if r := []rune(e.text); len(r) > 0 {
+			e.text = string(r[:len(r)-1])
+		}
+	case "ctrl+u":
+		e.text = ""
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		if msg.Text != "" {
+			e.text += clean(msg.Text)
+		}
+	}
+	return m, nil
 }
