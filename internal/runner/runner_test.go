@@ -213,3 +213,19 @@ func TestModeNoneAndFloat(t *testing.T) {
 		t.Fatalf("none: %+v", res[0])
 	}
 }
+
+// A big parent must not make a small child look big (children inherit the parent's peak RSS).
+func TestMemoryNotInheritedFromParent(t *testing.T) {
+	need(t, "g++")
+	ballast := make([]byte, 150<<20)
+	for i := 0; i < len(ballast); i += 4096 {
+		ballast[i] = 1
+	}
+	f := newFixture(t)
+	src := f.write("main.cpp", cppSum)
+	res, _ := f.run(src, "cpp", []workspace.Test{f.test("sample-1", "1 2\n", "3\n")}, func(s *Spec) { s.MemoryMB = 64 })
+	if res[0].Verdict != AC || res[0].MemoryMB > 64 {
+		t.Fatalf("%+v", res[0])
+	}
+	_ = ballast[len(ballast)-1]
+}

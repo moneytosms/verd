@@ -238,6 +238,7 @@ func (r *run) runTest(t workspace.Test) Result {
 		res.Verdict, res.Note = RE, err.Error()
 		return res
 	}
+	probe := startMemProbe(cmd)
 	done := make(chan struct{})
 	defer close(done)
 	go func() { // runaway printer: kill it rather than buffer forever
@@ -260,7 +261,7 @@ func (r *run) runTest(t workspace.Test) Result {
 
 	res.TimeMS = int(elapsed / time.Millisecond)
 	res.ExitCode = cmd.ProcessState.ExitCode()
-	res.MemoryMB = maxRSSMB(cmd.ProcessState)
+	res.MemoryMB = probe.result(cmd.ProcessState)
 	res.Output, res.Stderr = stdout.buf.String(), stderr.buf.String()
 	mu.Lock()
 	killed := killedByUs
