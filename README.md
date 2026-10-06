@@ -3,6 +3,9 @@
 </p>
 
 <p align="center">
+  <a href="https://moneytosms.github.io/verd/"><img alt="Website" src="https://img.shields.io/badge/website-moneytosms.github.io%2Fverd-7aa2f7?labelColor=1a1b26"></a>
+  <a href="https://github.com/moneytosms/verd/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/moneytosms/verd?color=9ece6a&labelColor=1a1b26"></a>
+  <a href="https://github.com/moneytosms/verd/actions/workflows/pages.yml"><img alt="Pages deploy" src="https://github.com/moneytosms/verd/actions/workflows/pages.yml/badge.svg"></a>
   <a href="https://github.com/moneytosms/verd/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/moneytosms/verd/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/go-1.27-7aa2f7?labelColor=1a1b26">
   <img alt="Platforms" src="https://img.shields.io/badge/linux%20%C2%B7%20macos-9ece6a?labelColor=1a1b26">
@@ -111,6 +114,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 | [Submitting](./docs/submit.md) | Browser handoff, direct mode, `verd login`, risks. |
 | [Embedded pane](./docs/embedded-pane.md) | Running Neovim inside verd, known gaps, promotion checklist. |
 | [Design decisions](./docs/adr) | Why submit defaults to the browser, why a multiplexer split, why no daemon. |
+| [Website](https://moneytosms.github.io/verd/) | The landing page, built from [`site/`](./site) and deployed to GitHub Pages on every change. |
 | [Glossary](./CONTEXT.md) | Problem, Solution, Local Verdict, Comparison Mode and the rest. |
 
 ## Limits
