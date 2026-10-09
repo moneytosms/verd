@@ -84,6 +84,8 @@ type Deps struct {
 	SaveKeys func(ctx, action string, keys []string) error
 	// EmbedSide is the editor's column: right (default) or left.
 	EmbedSide string
+	// EmbedZoom starts the editor zoomed if true.
+	EmbedZoom bool
 	// Watch reports saved files in the Problem's directory (debounced) until ctx is done.
 	Watch func(ctx context.Context, p cf.Problem) (<-chan string, error)
 	// SolutionPath is where the Problem's Solution in lang lives.

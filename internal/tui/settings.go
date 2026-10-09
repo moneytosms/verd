@@ -34,6 +34,7 @@ var settingDefs = []settingDef{
 	{"Editor", "split", "Editor split", "How the editor opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
+	{"Editor", "embed_zoom", "Start zoomed", "Start the editor zoomed (fullscreen) when it opens.", "bool", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
 	{"Appearance", "border", "Borders", "Box frame style: rounded, square, heavy, double, ascii, or none.", "enum", true},
 	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
@@ -133,6 +134,8 @@ func (m Model) applyLive(key, value string) Model {
 	case "embed_side":
 		m.deps.EmbedSide = value
 		m.resizeEmbed()
+	case "embed_zoom":
+		m.deps.EmbedZoom = value == "true"
 	case "autotest":
 		m.deps.Autotest = value == "true"
 	case "default_lang":

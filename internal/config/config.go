@@ -30,6 +30,7 @@ type Config struct {
 	EmbedRatio      float64 `toml:"embed_ratio"`
 	EmbedFocusKey   string  `toml:"embed_focus_key"`
 	EmbedSide       string  `toml:"embed_side"`
+	EmbedZoom       bool    `toml:"embed_zoom"`
 	SubmitMode      string  `toml:"submit_mode"`
 	ReadingWidth    int     `toml:"reading_width"`
 	ReadingMargin   int     `toml:"reading_margin"`
