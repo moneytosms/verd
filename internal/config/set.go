@@ -36,6 +36,7 @@ var settable = map[string]struct {
 	"split":            {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
 	"embed_focus_key":  {kString, nil},
 	"embed_side":       {kString, []string{"left", "right"}},
+	"embed_zoom":       {kBool, nil},
 	"submit_mode":      {kString, []string{"browser", "direct"}},
 	"time_multiplier":  {kFloat, nil},
 	"float_eps":        {kFloat, nil},

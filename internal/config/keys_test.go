@@ -43,3 +43,17 @@ func TestSetKeysRoundTrip(t *testing.T) {
 		t.Fatalf("kb: %v", kb)
 	}
 }
+
+func TestEmbedZoomSettable(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.toml")
+	if err := Set(p, "embed_zoom", "true"); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(p)
+	if err != nil || !c.EmbedZoom {
+		t.Fatalf("%v %v", c.EmbedZoom, err)
+	}
+	if v, ok := c.Get("embed_zoom"); !ok || v != "true" {
+		t.Fatalf("get: %q %v", v, ok)
+	}
+}

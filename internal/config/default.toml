@@ -46,6 +46,8 @@
 
 # Which side the embedded Neovim is on: right | left
 # embed_side = "right"
+# Start with the editor fullscreen (verd hidden) when it opens.
+# embed_zoom = false
 # Keys: alt+h / alt+l move the keyboard to the left / right column, embed_focus_key toggles,
 # alt+z hides verd (Neovim fullscreen) and brings it back.
 
