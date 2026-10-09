@@ -19,9 +19,32 @@ func fit(s string, w int) string {
 	return s + strings.Repeat(" ", max(0, w-xansi.StringWidth(s)))
 }
 
-// box draws body inside a w x h rounded frame with title in the top border and note in the bottom
+// borderGlyphs returns the box-drawing characters for the given border style.
+type borderGlyphs struct {
+	topLeft, topRight, botLeft, botRight, horizontal, vertical string
+}
+
+func getBorderGlyphs(style string) borderGlyphs {
+	switch style {
+	case "square":
+		return borderGlyphs{"┌", "┐", "└", "┘", "─", "│"}
+	case "heavy":
+		return borderGlyphs{"┏", "┓", "┗", "┛", "━", "┃"}
+	case "double":
+		return borderGlyphs{"╔", "╗", "╚", "╝", "═", "║"}
+	case "ascii":
+		return borderGlyphs{"+", "+", "+", "+", "-", "|"}
+	case "none":
+		return borderGlyphs{"", "", "", "", "", ""}
+	default: // rounded
+		return borderGlyphs{"╭", "╮", "╰", "╯", "─", "│"}
+	}
+}
+
+// box draws body inside a w x h frame with title in the top border and note in the bottom
 // one. The frame is accented when focused. Body lines are truncated, missing lines left blank.
-func box(title string, body []string, note string, w, h int, focus bool, st theme.Styles) []string {
+// borderStyle is one of: rounded (default), square, heavy, double, ascii, none.
+func box(title string, body []string, note string, w, h int, focus bool, st theme.Styles, borderStyle string) []string {
 	if w < 6 || h < 3 {
 		return nil
 	}
@@ -29,22 +52,38 @@ func box(title string, body []string, note string, w, h int, focus bool, st them
 	if focus {
 		line = st.Accent
 	}
-	top := "╭─ " + title + " "
+	bg := getBorderGlyphs(borderStyle)
+
+	// For "none" style, draw just the top bar with the title
+	if borderStyle == "none" {
+		out := make([]string, 0, h)
+		out = append(out, line.Render("─ "+title+" "))
+		for i := 1; i < h; i++ {
+			l := ""
+			if i-1 < len(body) {
+				l = body[i-1]
+			}
+			out = append(out, " "+fit(l, w-2)+" ")
+		}
+		return out
+	}
+
+	top := bg.topLeft + strings.Repeat(bg.horizontal, 1) + " " + title + " "
 	bot := ""
 	if note != "" {
 		bot = " " + note + " "
 	}
-	topFill := max(0, w-2-xansi.StringWidth(top)+1)
+	topFill := max(0, w-len(bg.topRight)-xansi.StringWidth(top)+len(bg.horizontal))
 	out := make([]string, 0, h)
-	out = append(out, line.Render(xansi.Truncate(top+strings.Repeat("─", topFill), w-1, ""))+line.Render("╮"))
+	out = append(out, line.Render(xansi.Truncate(top+strings.Repeat(bg.horizontal, topFill), w-len(bg.topRight), ""))+line.Render(bg.topRight))
 	for i := 0; i < h-2; i++ {
 		l := ""
 		if i < len(body) {
 			l = body[i]
 		}
-		out = append(out, line.Render("│")+" "+fit(l, w-4)+" "+line.Render("│"))
+		out = append(out, line.Render(bg.vertical)+" "+fit(l, w-4)+" "+line.Render(bg.vertical))
 	}
-	out = append(out, line.Render("╰"+strings.Repeat("─", max(0, w-2-xansi.StringWidth(bot)))+bot+"╯"))
+	out = append(out, line.Render(bg.botLeft+strings.Repeat(bg.horizontal, max(0, w-len(bg.botRight)-xansi.StringWidth(bot)))+bot+bg.botRight))
 	return out
 }
 
