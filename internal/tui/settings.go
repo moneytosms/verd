@@ -49,7 +49,7 @@ var settingDefs = []settingDef{
 	{"Mouse", "mouse", "Mouse reporting", "Enable mouse support. Off allows terminal-native selection everywhere.", "bool", true},
 	{"Mouse", "wheel_lines", "Wheel lines", "Lines scrolled per wheel notch (1-20).", "text", true},
 	{"Mouse", "mouse_select", "Drag to select", "Enable drag-to-select-lines in the Problem view.", "bool", true},
-	{"Keys", "keys", "Keyboard shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
+	{"Keys", "keys", "Shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
