@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -146,5 +148,50 @@ func TestKeyEditorFuzzySearchAndHintsFollowBindings(t *testing.T) {
 	}
 	if strings.Contains(plain(m), " S stress") {
 		t.Fatal("old key still in the footer")
+	}
+}
+
+func TestKeyTableMarkdownContainsAllActions(t *testing.T) {
+	md := KeyTableMarkdown()
+	infos := KeyActions(nil)
+	for _, info := range infos {
+		id := "`" + info.Action + "`"
+		if !strings.Contains(md, "| "+id+" |") {
+			t.Errorf("action %q not found in markdown", info.Action)
+		}
+	}
+	// Check that each context appears exactly once as a heading
+	for _, g := range keyGroupOrder {
+		title := keyGroupTitle[g]
+		count := strings.Count(md, "## "+title)
+		if count != 1 {
+			t.Errorf("## %s should appear exactly once in markdown, got %d", title, count)
+		}
+	}
+}
+
+func TestDocsKeysMarkdownInSync(t *testing.T) {
+	// Read docs/keys.md relative to the package directory
+	keysFile := filepath.Join("..", "..", "docs", "keys.md")
+	b, err := os.ReadFile(keysFile)
+	if err != nil {
+		t.Fatalf("read %s: %v (run from the repository root or package dir)", keysFile, err)
+	}
+	text := string(b)
+	const begin, end = "<!-- keys:begin -->", "<!-- keys:end -->"
+	beginIdx := strings.Index(text, begin)
+	endIdx := strings.Index(text, end)
+	if beginIdx == -1 || endIdx == -1 || beginIdx >= endIdx {
+		t.Fatalf("markers not found in docs/keys.md (need %q and %q)", begin, end)
+	}
+	// Extract the block content (what's between the markers)
+	blockStart := beginIdx + len(begin)
+	blockContent := text[blockStart:endIdx]
+	// Trim leading/trailing whitespace
+	blockContent = strings.TrimSpace(blockContent)
+	// Get the generated markdown
+	generated := strings.TrimSpace(KeyTableMarkdown())
+	if blockContent != generated {
+		t.Errorf("docs/keys.md keys block is out of sync\nrun: go run ./cmd/verd keys markdown --write docs/keys.md")
 	}
 }
