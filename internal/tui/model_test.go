@@ -23,7 +23,7 @@ import (
 )
 
 func TestViewAndQuit(t *testing.T) {
-	m := New([]cf.Problem{{ContestID: 1900, Index: "A", Name: "Cut the Triangle", Rating: 800, Tags: []string{"math"}, SolvedCount: 9}}, "", Deps{})
+	m := New([]cf.Problem{{ContestID: 1900, Index: "A", Name: "Cut the Triangle", Rating: 800, Tags: []string{"math"}, SolvedCount: 9}}, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	out := plain(m)
 	for _, want := range []string{"Problems", "Contests", "1900A", "Cut the Triangle", "800", "math"} {
 		if !strings.Contains(out, want) {
@@ -40,7 +40,7 @@ func TestViewAndQuit(t *testing.T) {
 }
 
 func TestControlCharsStripped(t *testing.T) {
-	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "evil\x1b]0;pwn\x07name", Tags: []string{"a\x1b[2Jb"}}}, "x\x1by", Deps{})
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "evil\x1b]0;pwn\x07name", Tags: []string{"a\x1b[2Jb"}}}, "x\x1by", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	if out := plain(m); strings.ContainsAny(out, "\x1b\x07") {
 		t.Fatalf("control chars leaked: %q", out)
 	}
@@ -150,7 +150,7 @@ func TestFilterSearchAndMarks(t *testing.T) {
 		{ContestID: 2, Index: "B", Name: "Beta", Rating: 1500, Tags: []string{"dp", "math"}},
 		{ContestID: 1, Index: "C", Name: "Gamma", Rating: 800, Tags: []string{"math"}},
 	}
-	m := New(ps, "", Deps{}).WithStatuses(map[string]store.Status{"3A": store.StatusSolved, "2B": store.StatusAttempted})
+	m := New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithStatuses(map[string]store.Status{"3A": store.StatusSolved, "2B": store.StatusAttempted})
 	out := plain(m)
 	if !strings.Contains(out, "✓ 3A") || !strings.Contains(out, "✗ 2B") || !strings.Contains(out, "3 problems") {
 		t.Fatalf("marks/count wrong:\n%s", out)
@@ -346,7 +346,7 @@ func TestRefreshStagesRunInOrderAndStopOffline(t *testing.T) {
 }
 
 func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
-	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "X"}}, "", Deps{})
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "X"}}, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m, _ = send(m, "?")
 	out := plain(m)
 	for _, want := range []string{"Keys: Problems", "filter", "live fuzzy search", "open Problem"} {
@@ -384,15 +384,15 @@ func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
 }
 
 func TestStatusLineAndTheme(t *testing.T) {
-	m := New(nil, "", Deps{}).WithData(Data{Handle: "tourist", Rating: 3800})
+	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Handle: "tourist", Rating: 3800})
 	if out := plain(m); !strings.Contains(out, "tourist 3800") {
 		t.Fatalf("status line missing handle/rating:\n%s", out)
 	}
-	if out := plain(New(nil, "", Deps{}).WithData(Data{Handle: "newbie"})); !strings.Contains(out, "newbie") || strings.Contains(out, "(0)") {
+	if out := plain(New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Handle: "newbie"})); !strings.Contains(out, "newbie") || strings.Contains(out, "(0)") {
 		t.Fatalf("unrated user should show handle only:\n%s", out)
 	}
 	// theme switch changes rendered colors; unknown theme falls back with a notice
-	term := New(nil, "", Deps{}).WithData(Data{Handle: "h"})
+	term := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Handle: "h"})
 	drac := term.WithTheme("dracula")
 	if term.View().Content == drac.View().Content {
 		t.Fatal("theme must change rendered output")
@@ -1111,13 +1111,13 @@ func TestStatsTab(t *testing.T) {
 }
 
 func TestStatsEmptyAndNarrow(t *testing.T) {
-	m := New(nil, "", Deps{}).WithData(Data{Stats: stats.Stats{}})
+	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Stats: stats.Stats{}})
 	m, _ = send(m, "3")
 	if out := plain(m); !strings.Contains(out, "No Submissions cached yet") || !strings.Contains(out, "ctrl+r") {
 		t.Fatalf("empty state:\n%s", out)
 	}
 	// narrow pane (40 cols): no line wider than the window
-	m = New(nil, "", Deps{}).WithData(Data{Stats: statsFixture()})
+	m = New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Stats: statsFixture()})
 	nm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 60})
 	m = nm.(Model)
 	m, _ = send(m, "3")
@@ -1129,7 +1129,7 @@ func TestStatsEmptyAndNarrow(t *testing.T) {
 }
 
 func TestStatsScrollsAndHelp(t *testing.T) {
-	m := New(nil, "", Deps{}).WithData(Data{Stats: statsFixture()})
+	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Stats: statsFixture()})
 	nm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 12})
 	m = nm.(Model)
 	m, _ = send(m, "3")
@@ -1281,7 +1281,7 @@ func TestStatsPJumpsToWeakTopicsPicker(t *testing.T) {
 	st := statsFixture()
 	st.Rating = 1000
 	st.Weaknesses = []stats.TagStat{{Tag: "graphs"}, {Tag: "greedy"}}
-	m := New(nil, "", Deps{}).WithData(Data{Problems: pickProblems(), Stats: st}).WithRand(rand.New(rand.NewSource(3)))
+	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Problems: pickProblems(), Stats: st}).WithRand(rand.New(rand.NewSource(3)))
 	m, _ = send(m, "3")
 	m, _ = send(m, "p")
 	out := plain(m)
@@ -1298,7 +1298,7 @@ func TestStatsPJumpsToWeakTopicsPicker(t *testing.T) {
 		}
 	}
 	// no weaknesses yet: explains instead of silently using everything
-	m2 := New(nil, "", Deps{}).WithData(Data{Problems: pickProblems(), Stats: statsFixtureNoWeak()}).WithRand(rand.New(rand.NewSource(3)))
+	m2 := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Problems: pickProblems(), Stats: statsFixtureNoWeak()}).WithRand(rand.New(rand.NewSource(3)))
 	m2, _ = send(m2, "3")
 	m2, _ = send(m2, "p")
 	if out := plain(m2); !strings.Contains(out, "no weak topics yet") || m2.picked == nil {

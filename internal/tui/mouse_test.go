@@ -27,7 +27,7 @@ func listModel() Model {
 	for i := 0; i < 40; i++ {
 		ps = append(ps, cf.Problem{ContestID: 100 + i, Index: "A", Name: "P" + strings.Repeat("x", i%5), Rating: 800 + 100*(i%10)})
 	}
-	return New(ps, "", Deps{})
+	return New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 }
 
 func TestMouseTabsListAndWheel(t *testing.T) {
