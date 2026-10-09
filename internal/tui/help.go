@@ -49,12 +49,12 @@ var mouseHelp = [][2]string{
 
 var guide = []string{
 	"1  Pick     Browse Problems (1). / searches fuzzily, f filters by rating, status and tags.",
-	"2  Edit     enter opens a Problem; e opens Neovim next to verd on your Solution.",
-	"3  Test     t runs Sample and Custom Tests (or just save: autotest). tab moves to the tests;",
-	"            the selected test shows input, expected and your output. d diffs a failure.",
-	"4  Cases    a adds a test, T manages them: edit, copy a sample, delete.",
-	"5  Stress   S creates gen and brute, then hunts for a counterexample. w saves it as a test.",
-	"6  Submit   s sends the Solution. The Submission modal shows the Verdict live.",
+	"2  Edit     {problems.open} opens a Problem; {problem.edit} opens Neovim next to verd on your Solution.",
+	"3  Test     {problem.run_tests} runs Sample and Custom Tests (or just save: autotest). tab moves to the tests;",
+	"            the selected test shows input, expected and your output. {problem.diff} diffs a failure.",
+	"4  Cases    {problem.add_test} adds a test, {problem.manage_tests} manages them: edit, copy a sample, delete.",
+	"5  Stress   {problem.stress} creates gen and brute, then hunts for a counterexample. {problem.stress_save} saves it as a test.",
+	"6  Submit   {problem.submit} sends the Solution. The Submission modal shows the Verdict live.",
 	"7  Tune     Settings (5) changes theme, language, editor and submit mode without editing files.",
 	"",
 	"Docs: docs/keys.md, docs/config.md, docs/testing.md, docs/submit.md",
@@ -75,6 +75,7 @@ func (m Model) helpLines(page int) []string {
 	default:
 		out := make([]string, len(guide))
 		for i, g := range guide {
+			g = m.kx(g) // apply keybindings to template references
 			if g != "" && g[0] >= '1' && g[0] <= '9' {
 				out[i] = st.Accent2.Render(g[:12]) + g[12:]
 			} else {
