@@ -98,7 +98,28 @@ func (m Model) apply(d settingDef, value string) Model {
 		m.cfgVals = map[string]string{}
 	}
 	m.cfgVals[d.key] = value
-	switch d.key {
+	m = m.applyLive(d.key, value)
+	// source_cses special case
+	if value == "true" && d.key == "source_cses" {
+		m.setNote = m.kx("saved: press {app.refresh} on a list to load the CSES tasks")
+		return m
+	}
+	if d.key == "submit_mode" && value == "direct" && m.deps.SaveCreds != nil && (m.deps.HasCreds == nil || !m.deps.HasCreds()) {
+		m.setEdit = &settingEdit{cred: 1} // direct needs a saved session: ask for it now
+		m.setNote = "paste your browser session (see docs/submit.md); esc skips"
+		return m
+	}
+	if !d.live {
+		m.setNote = "saved: applies the next time verd starts"
+	} else {
+		m.setNote = "saved"
+	}
+	return m
+}
+
+// applyLive applies the live effects of a config key change (for hot reload).
+func (m Model) applyLive(key, value string) Model {
+	switch key {
 	case "theme":
 		m.theme, _ = theme.Get(value)
 	case "background":
@@ -119,25 +140,11 @@ func (m Model) apply(d settingDef, value string) Model {
 		}
 		m.cursor = 0
 		m = m.refilter()
-		if value == "true" && d.key == "source_cses" {
-			m.setNote = m.kx("saved: press {app.refresh} on a list to load the CSES tasks")
-			return m
-		}
 	case "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
 		// Invalidate bodyW to force re-render with new reading preferences
 		if m.detail != nil {
 			m.bodyW = 0
 		}
-	}
-	if d.key == "submit_mode" && value == "direct" && m.deps.SaveCreds != nil && (m.deps.HasCreds == nil || !m.deps.HasCreds()) {
-		m.setEdit = &settingEdit{cred: 1} // direct needs a saved session: ask for it now
-		m.setNote = "paste your browser session (see docs/submit.md); esc skips"
-		return m
-	}
-	if !d.live {
-		m.setNote = "saved: applies the next time verd starts"
-	} else {
-		m.setNote = "saved"
 	}
 	return m
 }
@@ -229,6 +236,55 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// onConfigChanged reloads the config file when it changes.
+func (m Model) onConfigChanged() (tea.Model, tea.Cmd) {
+	if m.deps.LoadConfig == nil {
+		return m, nil
+	}
+	settings, keys, err := m.deps.LoadConfig()
+	if err != nil {
+		m.Notice = "config reload failed: " + err.Error()
+		return m, nil
+	}
+	// Apply the new settings
+	for key, value := range settings {
+		if m.cfgVals[key] != value {
+			m.cfgVals[key] = value
+			m = m.applyLive(key, value)
+		}
+	}
+	// Reload keys if they changed
+	if !mapsEqual(m.deps.Keys, keys) {
+		m.deps.Keys = keys
+		km, err := newKeymap(keys)
+		if err != nil {
+			m.Notice = "keys: " + err.Error()
+			return m, nil
+		}
+		m.km = km
+	}
+	m.Notice = "config reloaded"
+	return m, nil
+}
+
+func mapsEqual(a, b map[string][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if u, ok := b[k]; !ok || len(u) != len(v) {
+			return false
+		} else {
+			for i, x := range v {
+				if x != u[i] {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 // settingLine is one row of the settings list; idx is -1 for a group heading.

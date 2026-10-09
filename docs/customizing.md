@@ -13,6 +13,8 @@ Config location: `verd config path` (default `~/.config/verd/config.toml`, or `$
 5. [Layout and editor](#layout-and-editor)
 6. [Languages and Templates](#languages-and-templates)
 7. [Verify your changes](#verify-your-changes)
+8. [Live reload](#live-reload)
+9. [Reading and fonts](#reading-and-fonts)
 
 ## Set up from scratch
 
@@ -197,6 +199,10 @@ verd themes show <name>     # does your theme resolve to the colors you meant?
 ```
 
 If `config.toml` cannot be loaded, verd names the file and the problem (`themes.midnight: dark: accent: "red": want #rrggbb, #rgb or ansiN`) and does not start the TUI, so a bad edit never silently falls back to defaults. Footers, help and messages are built from the live bindings, so after changing a shortcut open the TUI and press `?` to confirm.
+
+## Live reload
+
+Changes to `config.toml` apply while verd runs, within about one second. Edit the file in your editor (or use `verd config set` / `verd keys set`), and you'll see the updates in the TUI: theme changes, reading options, shortcuts, autotest, source toggles, and embed settings all take effect immediately. Invalid edits show an error notice and are ignored; the old values stay in use.
 
 ## Reading and fonts
 

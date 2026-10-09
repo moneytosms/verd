@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/editor"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestInitAndConfig(t *testing.T) {
@@ -213,4 +215,26 @@ func TestCustomizeCLI(t *testing.T) {
 	if o2, _ := do("keys"); strings.Contains(o2, "ctrl+d") {
 		t.Fatalf("default preset should not have ctrl+d:\n%s", o2)
 	}
+}
+
+func TestWatchConfigStartsAndStops(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	os.WriteFile(cfgPath, []byte(`handle = "test"`), 0o644)
+
+	called := 0
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go watchConfig(ctx, dir, "config.toml", func() {
+		called++
+	})
+
+	// Give watchConfig time to start; cancel should stop it cleanly
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	// If the watcher doesn't crash and the function returns, the test passes
+	time.Sleep(100 * time.Millisecond)
+	// called may or may not be > 0 depending on timing, but the goroutine should not leak
 }

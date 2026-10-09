@@ -300,6 +300,20 @@ func loadConfig(path string) (config.Config, error) {
 	return cfg, err
 }
 
+// buildSettings constructs the Settings map for a config, reused by startup and hot reload.
+func buildSettings(cfg config.Config) map[string]string {
+	return map[string]string{
+		"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
+		"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
+		"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
+		"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
+		"embed_side": cfg.EmbedSide, "border": cfg.Border, "submit_mode": cfg.SubmitMode,
+		"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
+		"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
+		"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
+	}
+}
+
 func runTUI(path string) error {
 	cfg, err := loadConfig(path)
 	if err != nil {
@@ -441,16 +455,7 @@ func runTUI(path string) error {
 			}
 			return stress.Run(ctx, spec), nil
 		},
-		Settings: map[string]string{
-			"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
-			"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
-			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
-			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
-			"embed_side": cfg.EmbedSide, "border": cfg.Border, "submit_mode": cfg.SubmitMode,
-			"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
-			"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
-			"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
-		},
+		Settings: buildSettings(cfg),
 		Sync: func(source string) (string, error) {
 			for _, p := range providers() {
 				if p.source == source {
@@ -520,6 +525,17 @@ func runTUI(path string) error {
 				return nil
 			}),
 		},
+		LoadConfig: func() (map[string]string, map[string][]string, error) {
+			c, err := loadConfig(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			keys, err := c.KeyBindings()
+			if err != nil {
+				return nil, nil, err
+			}
+			return buildSettings(c), keys, nil
+		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
 	prog = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithBackground(cfg.Background).WithData(data))
@@ -535,6 +551,10 @@ func runTUI(path string) error {
 		"submit": submitHandler(sub, func(r tui.ExternalSubmit) { prog.Send(r) }),
 		"stress": stressHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
 	}))
+	// Watch config file for changes (hot reload).
+	go watchConfig(context.Background(), filepath.Dir(path), filepath.Base(path), func() {
+		prog.Send(tui.ConfigChangedMsg{})
+	})
 	_, err = prog.Run()
 	return err
 }
@@ -583,6 +603,20 @@ func loadData(s *store.Store, handle string) (tui.Data, error) {
 	}
 	d.Stats = stats.Compute(stats.Input{Problems: cfOnly, Submissions: subs, Rating: rs, Now: time.Now()})
 	return d, nil
+}
+
+// watchConfig watches the config file for changes and calls send when it changes.
+func watchConfig(ctx context.Context, dir, name string, send func()) {
+	ch, err := watch.Dir(ctx, dir, 200*time.Millisecond)
+	if err != nil {
+		return
+	}
+	configPath := filepath.Join(dir, name)
+	for p := range ch {
+		if p == configPath {
+			send()
+		}
+	}
 }
 
 func openURL(url string) error {
