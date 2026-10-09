@@ -140,6 +140,9 @@ var keyActions = []keyAction{
 	{"editor", "focus_left", "keyboard to the left column", ks("alt+h")},
 	{"editor", "focus_right", "keyboard to the right column", ks("alt+l")},
 	{"editor", "zoom", "hide or show verd (editor fullscreen)", ks("alt+z")},
+	{"editor", "wider", "grow the editor column", ks("alt+]")},
+	{"editor", "narrower", "shrink the editor column", ks("alt+[")},
+	{"editor", "swap_side", "move editor between left and right", ks("alt+s")},
 }
 
 // keyGroups lists the action groups live in each context, innermost first. Keys in one chain

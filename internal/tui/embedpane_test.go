@@ -228,3 +228,83 @@ func TestEmbeddedLeftSideAndDirectionalFocus(t *testing.T) {
 		t.Fatal("click on verd's column should focus verd")
 	}
 }
+
+func TestEmbeddedResizeKeys(t *testing.T) {
+	term := startTerm(t, `sleep 5`)
+	m := embedModel(t, term, 100, 12)
+	m.deps.EmbedRatio = 0.4
+	press := func(m Model, msg tea.Msg) Model {
+		nm, _ := m.Update(msg)
+		return nm.(Model)
+	}
+	// alt+] widens (increases embed_ratio: verd gets less)
+	orig := m.deps.EmbedRatio
+	m = press(m, tea.KeyPressMsg{Code: ']', Mod: tea.ModAlt})
+	widened := m.deps.EmbedRatio
+	if widened <= orig {
+		t.Fatalf("alt+] should widen: %f -> %f", orig, widened)
+	}
+	// alt+[ narrows (decreases embed_ratio: verd gets more)
+	m = press(m, tea.KeyPressMsg{Code: '[', Mod: tea.ModAlt})
+	if m.deps.EmbedRatio >= widened {
+		t.Fatalf("alt+[ should narrow: %f back toward %f", widened, orig)
+	}
+	// clamp at 0.1 and 0.9
+	m.deps.EmbedRatio = 0.1
+	m = press(m, tea.KeyPressMsg{Code: '[', Mod: tea.ModAlt})
+	if m.deps.EmbedRatio != 0.1 {
+		t.Fatalf("alt+[ should clamp at 0.1, got %f", m.deps.EmbedRatio)
+	}
+	m.deps.EmbedRatio = 0.9
+	m = press(m, tea.KeyPressMsg{Code: ']', Mod: tea.ModAlt})
+	if m.deps.EmbedRatio != 0.9 {
+		t.Fatalf("alt+] should clamp at 0.9, got %f", m.deps.EmbedRatio)
+	}
+}
+
+func TestEmbeddedSwapSide(t *testing.T) {
+	term := startTerm(t, `printf 'EDITOR-HERE'; sleep 5`)
+	m := embedModel(t, term, 100, 12)
+	m.deps.EmbedRatio = 0.4
+	m.deps.EmbedSide = "right"
+	waitUntil(t, "editor output", func() bool { return strings.Contains(plain(m), "EDITOR-HERE") })
+	line := strings.Split(plain(m), "\n")[0]
+	if strings.Index(line, "Problems") >= strings.Index(line, "EDITOR-HERE") {
+		t.Fatalf("editor should be on the right:\n%s", line)
+	}
+	press := func(m Model, msg tea.Msg) Model {
+		nm, _ := m.Update(msg)
+		return nm.(Model)
+	}
+	// alt+s swaps sides
+	m = press(m, tea.KeyPressMsg{Code: 's', Mod: tea.ModAlt})
+	if m.deps.EmbedSide != "left" {
+		t.Fatal("alt+s should swap to left")
+	}
+	line = strings.Split(plain(m), "\n")[0]
+	if strings.Index(line, "EDITOR-HERE") >= strings.Index(line, "Problems") {
+		t.Fatalf("editor should now be on the left:\n%s", line)
+	}
+	// swap back
+	m = press(m, tea.KeyPressMsg{Code: 's', Mod: tea.ModAlt})
+	if m.deps.EmbedSide != "right" {
+		t.Fatal("alt+s should swap back to right")
+	}
+}
+
+func TestEmbeddedZoomConfig(t *testing.T) {
+	// Create a fresh model with EmbedZoom enabled before the editor opens
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "Theatre"}}, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true, EmbedZoom: true})
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 12})
+	m = nm.(Model)
+	term := startTerm(t, `printf 'EDITOR-HERE'; sleep 5`)
+	nm, _ = m.Update(embed.OpenedMsg{Term: term})
+	m = nm.(Model)
+	if !m.embed.zoom {
+		t.Fatal("embed_zoom should start the editor zoomed")
+	}
+	left, right := m.layout()
+	if left != 0 || right != m.width {
+		t.Fatalf("zoomed should return (0, width): got left=%d, right=%d, width=%d", left, right, m.width)
+	}
+}

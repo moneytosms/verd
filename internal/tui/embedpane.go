@@ -72,7 +72,7 @@ func (m Model) resizeEmbed() {
 func (m Model) onEmbedMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case embed.OpenedMsg:
-		m.embed = embedPane{term: msg.Term, focus: true}
+		m.embed = embedPane{term: msg.Term, focus: true, zoom: m.deps.EmbedZoom}
 		m.resizeEmbed()
 		m.editorOpen = true
 		return m, m.relayout(), true
@@ -109,7 +109,8 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if slices.Contains(m.edKeys("zoom"), msg.String()) {
+		key := msg.String()
+		if slices.Contains(m.edKeys("zoom"), key) {
 			m.embed.zoom = !m.embed.zoom
 			m.embed.focus = m.embed.zoom // hiding verd hands keys to the editor
 			if m.embed.focus {
@@ -117,6 +118,42 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 			} else {
 				t.Blur()
 			}
+			m.resizeEmbed()
+			return m, m.relayout(), true
+		}
+		if slices.Contains(m.edKeys("wider"), key) && m.embed.focus {
+			r := m.deps.EmbedRatio + 0.05
+			if r > 0.9 {
+				r = 0.9
+			}
+			if m.deps.SaveSetting != nil {
+				m.deps.SaveSetting("embed_ratio", fmt.Sprintf("%.1f", r))
+			}
+			m.deps.EmbedRatio = r
+			m.resizeEmbed()
+			return m, m.relayout(), true
+		}
+		if slices.Contains(m.edKeys("narrower"), key) && m.embed.focus {
+			r := m.deps.EmbedRatio - 0.05
+			if r < 0.1 {
+				r = 0.1
+			}
+			if m.deps.SaveSetting != nil {
+				m.deps.SaveSetting("embed_ratio", fmt.Sprintf("%.1f", r))
+			}
+			m.deps.EmbedRatio = r
+			m.resizeEmbed()
+			return m, m.relayout(), true
+		}
+		if slices.Contains(m.edKeys("swap_side"), key) && m.embed.focus {
+			side := "right"
+			if m.deps.EmbedSide == "right" {
+				side = "left"
+			}
+			if m.deps.SaveSetting != nil {
+				m.deps.SaveSetting("embed_side", side)
+			}
+			m.deps.EmbedSide = side
 			m.resizeEmbed()
 			return m, m.relayout(), true
 		}
