@@ -16,5 +16,3 @@ jobs:
       - uses: goreleaser/goreleaser-action@v6
         with:
           args: release --snapshot --clean
-        env:
-          HOMEBREW_TAP_TOKEN: dummy
