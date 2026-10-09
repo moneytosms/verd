@@ -15,3 +15,12 @@ checksum:
   name_template: checksums.txt
 changelog:
   use: github
+brews:
+  - name: verd
+    homepage: https://github.com/moneytosms/verd
+    description: Codeforces TUI with local tests, stress testing and live verdicts
+    license: MIT
+    repository:
+      owner: moneytosms
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
