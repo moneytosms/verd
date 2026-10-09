@@ -27,7 +27,7 @@ func splitModel(t *testing.T, deps Deps) Model {
 }
 
 func TestSplitTagsHiddenUntilToggled(t *testing.T) {
-	m := splitModel(t, Deps{})
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	if strings.Contains(plain(m), "brute force") {
 		t.Fatal("tags shown by default")
 	}
@@ -38,7 +38,7 @@ func TestSplitTagsHiddenUntilToggled(t *testing.T) {
 }
 
 func TestSplitDigitLeavesProblemAndResizes(t *testing.T) {
-	m := splitModel(t, Deps{})
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	_, rw0, _ := m.split()
 	m, _ = send(m, ">")
 	if _, rw, _ := m.split(); rw != rw0+4 {
@@ -143,7 +143,7 @@ func TestEditorCursorEditing(t *testing.T) {
 
 func TestContestProblemsOpenInModalClosedByQ(t *testing.T) {
 	ps := []cf.Problem{{ContestID: 7, Index: "A", Name: "First"}}
-	m := New(ps, "", Deps{}).WithContests([]cf.Contest{{ID: 7, Name: "Round 7", Phase: "FINISHED", Start: 1}}).WithData(Data{Problems: ps, Contests: []cf.Contest{{ID: 7, Name: "Round 7", Phase: "FINISHED", Start: 1}}})
+	m := New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithContests([]cf.Contest{{ID: 7, Name: "Round 7", Phase: "FINISHED", Start: 1}}).WithData(Data{Problems: ps, Contests: []cf.Contest{{ID: 7, Name: "Round 7", Phase: "FINISHED", Start: 1}}})
 	m, _ = send(m, "2")
 	m, _ = send(m, "enter")
 	out := plain(m)
@@ -161,7 +161,7 @@ func TestLiveSearchFiltersWhileTypingAndEscUndoes(t *testing.T) {
 		{ContestID: 2, Index: "A", Name: "Way Too Long Words"},
 		{ContestID: 3, Index: "A", Name: "Team"},
 	}
-	m := New(ps, "", Deps{})
+	m := New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m, _ = send(m, "/")
 	for _, k := range []string{"w", "m", "l"} {
 		m, _ = send(m, k)
@@ -182,7 +182,7 @@ func TestLiveSearchFiltersWhileTypingAndEscUndoes(t *testing.T) {
 }
 
 func TestSplitViewHasNoTabs(t *testing.T) {
-	m := splitModel(t, Deps{})
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	if strings.Contains(m.View().Content, "\t") {
 		t.Fatal("tabs break column alignment")
 	}
@@ -194,7 +194,7 @@ func TestFilterModalRatingStatusTagsAndSort(t *testing.T) {
 		{ContestID: 2, Index: "B", Name: "Beta", Rating: 1500, Tags: []string{"dp", "math"}},
 		{ContestID: 1, Index: "C", Name: "Gamma", Rating: 1000, Tags: []string{"math"}},
 	}
-	m := New(ps, "", Deps{})
+	m := New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m, _ = send(m, "f")
 	if m.fm == nil {
 		t.Fatal("f opens the filter modal")
@@ -240,7 +240,7 @@ func TestSortOrdersTheList(t *testing.T) {
 		{ContestID: 2, Index: "B", Name: "Beta", Rating: 800},
 		{ContestID: 1, Index: "C", Name: "Gamma"},
 	}
-	m := New(ps, "", Deps{})
+	m := New(ps, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m.sortBy = "rating"
 	m = m.refilter()
 	if m.visible[0].Name != "Beta" || m.visible[2].Name != "Gamma" {
@@ -254,7 +254,7 @@ func TestSortOrdersTheList(t *testing.T) {
 }
 
 func TestHelpPagesAndSettingsKeys(t *testing.T) {
-	m := New(nil, "", Deps{})
+	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m, _ = send(m, "5")
 	m, _ = send(m, "?")
 	out := plain(m)
@@ -282,7 +282,7 @@ func TestHelpPagesAndSettingsKeys(t *testing.T) {
 }
 
 func TestSplitYCopiesFocusedPane(t *testing.T) {
-	m := splitModel(t, Deps{})
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	what, text := m.copyText()
 	for _, want := range []string{"4A  Watermelon", "Difficulty: 800", "Tags: brute force, math", "Divide the watermelon", "sample-1", "Input:", "Expected:"} {
 		if !strings.Contains(text, want) {
@@ -303,7 +303,7 @@ func TestSplitYCopiesFocusedPane(t *testing.T) {
 }
 
 func TestSplitMouseDragCopiesLines(t *testing.T) {
-	m := splitModel(t, Deps{})
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	m, _ = click(m, 5, contentTop+1)
 	if m.sel.moved {
 		t.Fatal("a click alone is not a selection")

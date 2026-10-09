@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -47,9 +48,20 @@ func ensureSolution(cfg config.Config, p cf.Problem, lang string) (path string, 
 	if err != nil {
 		return "", 0, err
 	}
-	tmpl, err := workspace.LoadTemplate(filepath.Join(config.Dir(), "templates"), lang, l)
-	if err != nil {
-		return "", 0, err
+	// Use language-specific template if set, else load the default.
+	var tmpl string
+	if l.Template != "" {
+		// User specified a custom template path for this language.
+		if b, err := os.ReadFile(l.Template); err == nil {
+			tmpl = string(b)
+		} else {
+			return "", 0, fmt.Errorf("template for %s at %s: %w", lang, l.Template, err)
+		}
+	} else {
+		tmpl, err = workspace.LoadTemplate(filepath.Join(config.Dir(), "templates"), lang, l)
+		if err != nil {
+			return "", 0, err
+		}
 	}
 	vars := workspace.NewVars(p.ContestID, p.Index, p.Name, cfg.Handle, time.Now())
 	path, line, _, err = workspace.New(cfg.Workspace).Ensure(p.ContestID, p.Index, lang, l, tmpl, vars)

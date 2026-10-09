@@ -169,8 +169,22 @@ func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.
 	if mode == "" {
 		mode = runner.Mode(d.DefaultMode())
 	}
+	// Use language-specific overrides if set, else global config.
+	timeMultiplier := cfg.TimeMultiplier
+	floatEps := cfg.FloatEps
+	memoryMB := float64(d.MemoryLimitMB)
+	lang := cfg.Lang[ref.Lang]
+	if lang.TimeMultiplier != 0 {
+		timeMultiplier = lang.TimeMultiplier
+	}
+	if lang.FloatEps != 0 {
+		floatEps = lang.FloatEps
+	}
+	if lang.MemoryMultiplier != 0 {
+		memoryMB *= lang.MemoryMultiplier
+	}
 	return runner.Spec{
-		Solution: ref.Path, Lang: cfg.Lang[ref.Lang], CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
-		TimeLimitMS: d.TimeLimitMS, MemoryMB: d.MemoryLimitMB, Multiplier: cfg.TimeMultiplier, Mode: mode, FloatEps: cfg.FloatEps,
+		Solution: ref.Path, Lang: lang, CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
+		TimeLimitMS: d.TimeLimitMS, MemoryMB: int(memoryMB), Multiplier: timeMultiplier, Mode: mode, FloatEps: floatEps,
 	}, nil
 }

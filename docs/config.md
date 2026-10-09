@@ -22,6 +22,9 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `embed_side` | `"right"` | Which column the embedded Neovim takes: `right` or `left`. |
 | `embed_focus_key` | `"ctrl+\\"` | Toggles keyboard focus between verd and the embedded Neovim. Same as `[keys.editor] focus`. |
 | `reading_width`, `reading_margin`, `reading_spacing`, `reading_headings`, `reading_math`, `reading_emphasis` | `0`, `1`, `normal`, `bar`, `unicode`, `true` | How statements are laid out. See [Reading and fonts](./customizing.md#reading-and-fonts). |
+| `mouse` | `true` | Enable mouse reporting. `false` disables it for terminal-native selection everywhere. |
+| `wheel_lines` | `3` | Lines scrolled per mouse wheel notch (1–20). |
+| `mouse_select` | `true` | Enable drag-to-select-lines and copy in the Problem view. |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
 | `border` | `"rounded"` | Box border glyphs: `rounded`, `square`, `heavy`, `double`, `ascii`, or `none` (no frame, title line only). |
 
@@ -59,6 +62,10 @@ cf_compiler_id = 75
 | `compile` | Build command. Omit for interpreted languages. |
 | `run` | Run command. With no `compile`, it runs `{src}` directly. |
 | `cf_compiler_id` | The Codeforces `programTypeId`, used by [direct submit](./submit.md#direct-mode). |
+| `time_multiplier` | Scales this language's time limit (overrides global `time_multiplier`; `0` = inherit). Use for slow languages like Python or JVM. |
+| `float_eps` | Float tolerance for this language (overrides global `float_eps`; `0` = inherit). |
+| `memory_multiplier` | Multiplies the Problem's memory limit for this language (default `0` = 1). For JVM languages that need more heap. |
+| `template` | Path to a custom Solution template for this language (overrides the default from `~/.config/verd/templates/`). |
 
 Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Problem directory. Compiled binaries are cached by content, so an unchanged Solution is never rebuilt.
 

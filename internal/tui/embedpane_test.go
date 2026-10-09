@@ -34,7 +34,7 @@ func waitUntil(t *testing.T, what string, cond func() bool) {
 }
 
 func embedModel(t *testing.T, term *embed.Term, w, h int) Model {
-	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "Theatre"}}, "", Deps{})
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "Theatre"}}, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	nm, _ := m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	nm, _ = nm.Update(embed.OpenedMsg{Term: term})
 	return nm.(Model)

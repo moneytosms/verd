@@ -90,6 +90,10 @@ type Deps struct {
 	SolutionPath func(p cf.Problem, lang string) string
 	// Autotest runs a Test Run whenever the active Solution is saved.
 	Autotest bool
+	// Mouse controls mouse reporting and wheel behavior.
+	Mouse       bool
+	WheelLines  int
+	MouseSelect bool
 	// LoadState and SaveState persist per-Problem choices (Comparison Mode).
 	LoadState func(p cf.Problem) ProblemState
 	SaveState func(p cf.Problem, s ProblemState) error

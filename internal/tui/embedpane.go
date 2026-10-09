@@ -192,16 +192,20 @@ func translateMouse(msg tea.MouseMsg, rel tea.Mouse) tea.MouseMsg {
 // View draws verd, with the embedded editor as a right column when there is one.
 func (m Model) View() tea.View {
 	left, right := m.layout()
+	mouseMode := tea.MouseModeCellMotion
+	if !m.deps.Mouse {
+		mouseMode = tea.MouseModeNone
+	}
 	if m.embed.term == nil || right == 0 {
 		v := tea.NewView(m.screen())
 		v.AltScreen = true
-		v.MouseMode = tea.MouseModeCellMotion
+		v.MouseMode = mouseMode
 		return v
 	}
 	if left == 0 { // zoomed: editor only
 		v := tea.NewView(m.embed.term.Render())
 		v.AltScreen = true
-		v.MouseMode = tea.MouseModeCellMotion
+		v.MouseMode = mouseMode
 		x, y := m.embed.term.Cursor()
 		v.Cursor = tea.NewCursor(x, y)
 		return v
@@ -237,7 +241,7 @@ func (m Model) View() tea.View {
 	}
 	v := tea.NewView(b.String())
 	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
+	v.MouseMode = mouseMode
 	if m.embed.focus {
 		x, y := m.embed.term.Cursor()
 		if m.paneLeft() {
