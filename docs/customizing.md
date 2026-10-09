@@ -55,6 +55,18 @@ verd keys contexts        # the contexts and what they are
 
 Always read `verd keys --json` for the authoritative, current action list; it is generated from the same table the TUI uses and cannot drift from the code.
 
+### Presets
+
+Quick-apply curated binding sets:
+
+```sh
+verd keys presets list                                    # show available presets
+verd keys presets preset vim                             # apply vim preset (j/k, ctrl+d/u)
+verd keys presets preset arrows                          # arrow keys only
+verd keys presets preset emacs                           # emacs-style (ctrl+n/p, alt+v/ctrl+v)
+verd keys presets preset default                         # clear all custom bindings
+```
+
 ### Change
 
 ```sh
@@ -63,6 +75,14 @@ verd keys set problem.down j down ctrl+n      # several keys for one action
 verd keys set editor.focus_left alt+h
 verd keys reset problem.run_tests             # back to the default
 verd keys check                               # validate [keys.*] in config.toml
+```
+
+Export and import:
+
+```sh
+verd keys presets export                      # print current bindings as [keys.*] TOML blocks
+verd keys presets import shortcuts.toml       # import from a file
+verd keys presets export | ssh host verd keys presets import -  # save elsewhere or paste
 ```
 
 or write the table yourself:
@@ -97,7 +117,7 @@ down = ["j", "down", "ctrl+n"]
 | `help` | The help overlay. |
 | `editor` | The embedded editor pane: `focus`, `focus_left`, `focus_right`, `zoom`. These work even while Neovim has the keyboard. |
 
-The same shortcuts can be edited in the TUI: Settings (`5`) > **Keyboard shortcuts**. `/` fuzzy-searches by description, group, id or key; `enter` rebinds, `a` adds a key, `backspace` resets.
+The same shortcuts can be edited in the TUI: Settings (`5`) > **Keyboard shortcuts**. `/` fuzzy-searches by description, group, id or key; `enter` rebinds, `a` adds a key, `backspace` resets one action, `R` resets all (with y/n confirmation).
 
 ## Themes and styling
 

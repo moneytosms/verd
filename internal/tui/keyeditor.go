@@ -12,11 +12,12 @@ import (
 // keyEditor is the Settings modal that rebinds shortcuts. cap: 0 browsing, 1 waiting for the key
 // that replaces the action's keys, 2 waiting for a key to add.
 type keyEditor struct {
-	sel    int
-	cap    int
-	note   string
-	q      string // fuzzy filter over group, description, id and keys
-	typing bool   // keys go into q
+	sel      int
+	cap      int
+	note     string
+	q        string // fuzzy filter over group, description, id and keys
+	typing   bool   // keys go into q
+	resetAll bool   // waiting for y/n to confirm reset all
 }
 
 // editableActions are the actions the editor lists, in group order.
@@ -118,18 +119,20 @@ func (m Model) keyEditorBox() []string {
 	start := max(0, min(selAt-room/2, len(lines)-room))
 	body := append([]string{search, ""}, lines[start:min(len(lines), start+room)]...)
 	switch {
+	case m.ke.resetAll:
+		body = append(body, "", st.Accent.Render("reset all shortcuts to defaults? y/n (esc cancels)"))
 	case m.ke.cap == 1:
 		body = append(body, "", st.Accent.Render("press the new key for "+actionID(acts[m.ke.sel])+" (esc cancels)"))
 	case m.ke.cap == 2:
 		body = append(body, "", st.Accent.Render("press a key to add to "+actionID(acts[m.ke.sel])+" (esc cancels)"))
 	case m.ke.note != "":
 		style := st.Good
-		if !strings.HasPrefix(m.ke.note, "saved") && !strings.HasPrefix(m.ke.note, "reset") {
+		if !strings.HasPrefix(m.ke.note, "saved") && !strings.HasPrefix(m.ke.note, "reset") && !strings.HasPrefix(m.ke.note, "cleared") {
 			style = st.Bad
 		}
 		body = append(body, "", style.Render(clean(m.ke.note)))
 	}
-	note := "/ search  j/k move  enter rebind  a add a key  backspace reset  esc close"
+	note := "/ search  j/k move  enter rebind  a add a key  backspace reset  R reset all  esc close"
 	if m.ke.typing {
 		note = "type to filter  up/down move  enter done  esc clear"
 	}
@@ -201,6 +204,32 @@ func (m Model) updateKeyEditor(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if e.resetAll {
+		switch msg.String() {
+		case "y":
+			// Reset all actions by clearing user bindings
+			user := map[string][]string{}
+			for id := range m.km.user {
+				parts := strings.Split(id, ".")
+				if len(parts) != 2 {
+					continue
+				}
+				if err := m.deps.SaveKeys(parts[0], parts[1], nil); err != nil {
+					e.note = err.Error()
+					break
+				}
+			}
+			if e.note == "" {
+				m.km, _ = newKeymap(user)
+				e.note = fmt.Sprintf("cleared all %d custom shortcuts", len(m.km.user))
+			}
+			e.resetAll = false
+		case "n", "esc":
+			e.note = ""
+			e.resetAll = false
+		}
+		return m, nil
+	}
 	if len(acts) == 0 { // nothing matches: only searching or leaving makes sense
 		switch msg.String() {
 		case "/":
@@ -259,6 +288,8 @@ func (m Model) updateKeyEditor(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		e.cap = 2
 	case "backspace", "delete", "d":
 		m = m.setKeys(a, nil)
+	case "R":
+		e.resetAll = true
 	}
 	return m, nil
 }
