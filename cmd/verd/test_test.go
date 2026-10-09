@@ -205,3 +205,43 @@ func TestStressHelpersMissingUntilBothExist(t *testing.T) {
 		t.Fatal("both exist")
 	}
 }
+
+func TestPerLanguageTimeAndFloatOverrides(t *testing.T) {
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 missing")
+	}
+	cfg, path, cache, _ := setup(t, "a,b=map(int,input().split())\nprint(a+b)\n", "main.py", sumDetail)
+	cfg.TimeMultiplier = 1.0
+	cfg.FloatEps = 1e-6
+	py := cfg.Lang["python"]
+	py.TimeMultiplier = 2.5
+	py.FloatEps = 1e-8
+	cfg.Lang["python"] = py
+	ref := workspace.Ref{Contest: 1, Index: "A", Lang: "python", Path: path}
+	spec, err := buildSpec(cfg, cache, ref, sumDetail, "")
+	if err != nil {
+		t.Fatalf("buildSpec: %v", err)
+	}
+	if spec.Multiplier != 2.5 || spec.FloatEps != 1e-8 {
+		t.Fatalf("language overrides not applied: Multiplier=%v FloatEps=%v", spec.Multiplier, spec.FloatEps)
+	}
+}
+
+func TestPerLanguageMemoryOverride(t *testing.T) {
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 missing")
+	}
+	cfg, path, cache, _ := setup(t, "", "main.py", sumDetail)
+	py := cfg.Lang["python"]
+	py.MemoryMultiplier = 2.0
+	cfg.Lang["python"] = py
+	ref := workspace.Ref{Contest: 1, Index: "A", Lang: "python", Path: path}
+	spec, err := buildSpec(cfg, cache, ref, sumDetail, "")
+	if err != nil {
+		t.Fatalf("buildSpec: %v", err)
+	}
+	// sumDetail has MemoryLimitMB = 256, so with 2x multiplier should be 512
+	if spec.MemoryMB != 512 {
+		t.Fatalf("memory override not applied: expected 512, got %d", spec.MemoryMB)
+	}
+}

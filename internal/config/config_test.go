@@ -102,3 +102,86 @@ func TestSubmitModeDefaultAndValidation(t *testing.T) {
 		t.Fatal("unknown submit_mode must error")
 	}
 }
+
+func TestMouseOptionsDefaults(t *testing.T) {
+	d := Default()
+	if !d.Mouse || d.WheelLines != 3 || !d.MouseSelect {
+		t.Fatalf("mouse defaults: mouse=%v wheel_lines=%v mouse_select=%v", d.Mouse, d.WheelLines, d.MouseSelect)
+	}
+}
+
+func TestMouseOptionsValidation(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "c.toml")
+	// Valid wheel_lines
+	os.WriteFile(p, []byte(`wheel_lines = 5`), 0o644)
+	if c, err := Load(p); err != nil || c.WheelLines != 5 {
+		t.Fatalf("valid wheel_lines: %+v %v", c, err)
+	}
+	// Invalid wheel_lines (too low)
+	os.WriteFile(p, []byte(`wheel_lines = 0`), 0o644)
+	if _, err := Load(p); err == nil {
+		t.Fatal("wheel_lines=0 must error")
+	}
+	// Invalid wheel_lines (too high)
+	os.WriteFile(p, []byte(`wheel_lines = 21`), 0o644)
+	if _, err := Load(p); err == nil {
+		t.Fatal("wheel_lines=21 must error")
+	}
+	// Valid mouse flags
+	os.WriteFile(p, []byte(`mouse = false`+"\n"+`mouse_select = false`), 0o644)
+	if c, err := Load(p); err != nil || c.Mouse || c.MouseSelect {
+		t.Fatalf("mouse false: %+v %v", c, err)
+	}
+}
+
+func TestPerLanguageOverrides(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "c.toml")
+	os.WriteFile(p, []byte("[lang.python]\ntime_multiplier = 2.5\nfloat_eps = 1e-7\nmemory_multiplier = 1.5\n\n[lang.rust]\ntemplate = \"/path/to/template.rs\"\n"), 0o644)
+	c, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	py := c.Lang["python"]
+	if py.TimeMultiplier != 2.5 || py.FloatEps != 1e-7 || py.MemoryMultiplier != 1.5 {
+		t.Fatalf("python overrides: %+v", py)
+	}
+	rs := c.Lang["rust"]
+	if rs.Template != "/path/to/template.rs" {
+		t.Fatalf("rust template: %+v", rs)
+	}
+	// Verify defaults are preserved for other fields
+	if py.Ext != "py" || py.Run[0] != "python3" {
+		t.Fatalf("python should inherit defaults: %+v", py)
+	}
+}
+
+func TestPerLanguageInheritance(t *testing.T) {
+	// 0 values should inherit from global config
+	p := filepath.Join(t.TempDir(), "c.toml")
+	os.WriteFile(p, []byte("[lang.cpp]\ntime_multiplier = 0\nfloat_eps = 0\nmemory_multiplier = 0\n"), 0o644)
+	c, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpp := c.Lang["cpp"]
+	// When 0, they should inherit from defaults (even though Load() doesn't explicitly set them,
+	// they were already set to defaults when Lang struct was created from default values)
+	// After Load(), time_multiplier=0 should be set to the default
+	if cpp.TimeMultiplier == 0 {
+		t.Fatalf("cpp should inherit global time_multiplier, got: %+v", cpp)
+	}
+}
+
+func TestEffectiveConfigIncludesMouseAndLanguageOverrides(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "c.toml")
+	os.WriteFile(p, []byte(`handle = "test"`+"\n"+`mouse = false`+"\n"+`wheel_lines = 5`+"\n"+`[lang.python]`+"\n"+`time_multiplier = 2.0`), 0o644)
+	c, _ := Load(p)
+	b, _ := c.Effective()
+	out := string(b)
+	if !strings.Contains(out, `mouse = false`) || !strings.Contains(out, `wheel_lines = 5`) {
+		t.Errorf("effective config missing mouse options:\n%s", out)
+	}
+	if !strings.Contains(out, `time_multiplier = 2`) {
+		t.Errorf("effective config missing per-language override:\n%s", out)
+	}
+}
