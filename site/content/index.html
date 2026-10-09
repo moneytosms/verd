@@ -6,69 +6,10 @@
 <title>verd: competitive programming in your terminal</title>
 <meta name="description" content="verd is a keyboard-driven TUI for competitive programming, with Codeforces and CSES today and more providers planned: browse problems, edit in Neovim, test locally, stress test, submit and watch the verdict.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2316161e%27/%3E%3Ctext x=%274%27 y=%2723%27 font-family=%27monospace%27 font-size=%2720%27 font-weight=%27700%27 fill=%27%239ece6a%27%3Ev_%3C/text%3E%3C/svg%3E">
-<style>
-:root{--bg:#16161e;--panel:#1a1b26;--line:#2a2e42;--fg:#c0caf5;--dim:#7982a9;--blue:#7aa2f7;--green:#9ece6a;--purple:#bb9af7;--amber:#e0af68;--red:#f7768e;--mono:ui-monospace,"JetBrains Mono","Fira Code",SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
-a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
-code,kbd,pre{font-family:var(--mono)}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-nav{position:sticky;top:0;z-index:10;background:rgba(22,22,30,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-nav .wrap{display:flex;align-items:center;gap:22px;height:54px}
-nav .logo{font:700 20px var(--mono);color:var(--green);margin-right:auto}
-nav .logo span{color:var(--dim)}
-nav a{color:var(--dim);font-size:14px}nav a:hover{color:var(--fg);text-decoration:none}
-nav .gh{color:var(--fg);border:1px solid var(--line);padding:5px 12px;border-radius:8px}
-.hero{padding:84px 0 40px;text-align:center}
-.pill{display:inline-block;font:13px var(--mono);color:var(--green);border:1px solid #2f3b2a;background:#1d2619;padding:4px 12px;border-radius:99px}
-h1{font-size:clamp(36px,6vw,64px);line-height:1.08;margin:22px 0 16px;letter-spacing:-.02em}
-h1 em{font-style:normal;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
-.lead{max-width:640px;margin:0 auto;color:var(--dim);font-size:19px}
-.install{max-width:680px;margin:34px auto 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;gap:12px;padding:6px 6px 6px 18px;text-align:left}
-.install code{flex:1;overflow-x:auto;white-space:nowrap;color:var(--green);font-size:14px;padding:10px 0}
-.install code b{color:var(--dim);font-weight:400}
-button{font:600 13px var(--sans);cursor:pointer;background:var(--blue);color:#16161e;border:0;border-radius:8px;padding:10px 16px}
-button:hover{filter:brightness(1.1)}
-.sub{color:var(--dim);font-size:14px}
-.shot{margin:44px auto 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(122,162,247,.35)}
-.shot img{display:block;width:100%;height:auto}
-section{padding:72px 0}
-h2{font-size:clamp(26px,4vw,36px);margin:0 0 10px;letter-spacing:-.01em}
-.kicker{font:13px var(--mono);color:var(--purple);text-transform:uppercase;letter-spacing:.12em}
-.sec-lead{color:var(--dim);max-width:640px;margin:0 0 36px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;transition:border-color .2s,transform .2s}
-.card:hover{border-color:#41476b;transform:translateY(-2px)}
-.card .ic{font:700 14px var(--mono);display:inline-block;padding:3px 9px;border-radius:7px;margin-bottom:12px}
-.card h3{margin:0 0 6px;font-size:18px}
-.card p{margin:0;color:var(--dim);font-size:15px}
-.c1 .ic{color:var(--green);background:#1d2619}.c2 .ic{color:var(--blue);background:#1b2238}.c3 .ic{color:var(--amber);background:#2a2316}
-.c4 .ic{color:var(--purple);background:#251e36}.c5 .ic{color:var(--red);background:#2d1b22}.c6 .ic{color:var(--green);background:#1d2619}
-.steps{counter-reset:s;display:grid;gap:12px;margin:0;padding:0;list-style:none}
-.steps li{counter-increment:s;display:flex;gap:16px;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
-.steps li::before{content:counter(s);font:700 15px var(--mono);color:var(--bg);background:var(--blue);min-width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;align-self:center}
-.steps b{color:var(--fg)}.steps span{color:var(--dim)}
-kbd{background:#24283b;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:.88em;color:var(--fg)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
-@media(max-width:800px){.two{grid-template-columns:1fr}nav a:not(.gh){display:none}}
-pre{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto;font-size:13.5px;line-height:1.55;margin:0}
-.k{color:var(--purple)}.s{color:var(--green)}.c{color:var(--dim)}
-.table{width:100%;border-collapse:collapse;font-size:15px}
-.table td,.table th{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line)}
-.table th{color:var(--dim);font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
-.table td:first-child{font-family:var(--mono);color:var(--green);white-space:nowrap}
-.ac{color:var(--green)}.wa{color:var(--red)}.tle{color:var(--amber)}
-.cta{text-align:center;background:linear-gradient(180deg,var(--panel),var(--bg));border:1px solid var(--line);border-radius:18px;padding:56px 20px}
-footer{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);font-size:14px}
-footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
-</style>
+<link rel="stylesheet" href="{{ROOT}}assets/site.css">
 </head>
 <body>
-<nav><div class="wrap">
-  <a class="logo" href="#top">verd<span>_</span></a>
-  <a href="#features">Features</a><a href="#loop">The loop</a><a href="#neovim">Neovim</a><a href="#install">Install</a><a href="https://github.com/moneytosms/verd/tree/main/docs">Docs</a>
-  <a class="gh" href="https://github.com/moneytosms/verd">GitHub</a>
-</div></nav>
+{{NAV}}
 
 <header class="hero" id="top"><div class="wrap">
   <span class="pill">v0.1.4 · Linux &amp; macOS</span>
@@ -79,13 +20,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
     <button id="copy" type="button">Copy</button>
   </div>
   <p class="sub">or <code>go install github.com/moneytosms/verd/cmd/verd@latest</code></p>
-  <div class="shot"><img src="assets/hero.svg" alt="verd showing a problem with all local tests AC, then a stress run that found a counterexample"></div>
+  <div class="shot"><img src="{{ROOT}}assets/hero.svg" alt="verd showing a problem with all local tests AC, then a stress run that found a counterexample"></div>
 </div></header>
 
 <section id="features"><div class="wrap">
   <div class="kicker">Features</div>
   <h2>Everything the contest loop needs</h2>
-  <p class="sec-lead">Local first, offline tolerant, and out of your way.</p>
+  <p class="sec-lead">Local first, offline tolerant, and out of your way. <a href="{{ROOT}}usage.html">See the full tour</a>.</p>
   <div class="grid">
     <div class="card c1"><span class="ic">AC WA TLE</span><h3>Local verdicts first</h3><p>AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a Codeforces submission.</p></div>
     <div class="card c2"><span class="ic">nvim</span><h3>Neovim stays Neovim</h3><p>It opens in a tmux or herdr split beside verd, or embedded in the pane. Run <code>verd test</code>, <code>submit</code> and <code>stress</code> from inside Neovim.</p></div>
@@ -94,6 +35,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
     <div class="card c5"><span class="ic">cache</span><h3>Offline tolerant</h3><p>Everything renders from a local SQLite cache. The network refreshes it in the background and respects rate limits.</p></div>
     <div class="card c1"><span class="ic">CSES</span><h3>More than one provider</h3><p>Codeforces plus the CSES Problem Set in one list. Switch providers on in Settings, filter by source, mark tasks solved by hand. USACO is next; adding a provider is one fetcher.</p></div>
     <div class="card c2"><span class="ic">$EDITOR</span><h3>Your editor</h3><p>Neovim by default. Switch to vim, helix, nano, micro, emacs or VS Code in Settings, live.</p></div>
+    <div class="card c3"><span class="ic">keys</span><h3>Every key is yours</h3><p>Rebind any shortcut from Settings or <code>config.toml</code>, with fuzzy search, presets (vim, emacs, arrows) and export/import. Hints and help follow your bindings.</p></div>
+    <div class="card c4"><span class="ic">theme</span><h3>Themes and reading</h3><p>Eight themes or your own palette, border styles, statement width, spacing and heading style. Edits to <code>config.toml</code> apply live.</p></div>
     <div class="card c6"><span class="ic">safe</span><h3>Safe submit by default</h3><p>Browser handoff copies the solution, opens the submit page and tracks the verdict. Direct submit is opt-in and experimental.</p></div>
   </div>
 </div></section>
@@ -106,9 +49,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
       <p class="sec-lead" style="margin-bottom:18px">Click tabs, rows, panes and settings. Drag the divider to resize. Drag over the statement or a test to select lines and copy them. Press <kbd>y</kbd> to copy the whole question with difficulty, tags and every test, neatly laid out.</p>
       <p class="sec-lead" style="margin:0">Eight themes ship, switchable live in the Settings tab: tokyo-night, dracula, catppuccin, gruvbox, nord, one-dark, solarized and your terminal's own.</p>
     </div>
-    <div class="shot" style="margin:0"><img src="assets/loop.svg" alt="The verd loop: pick, read, edit, test, stress, submit"></div>
+    <div class="shot" style="margin:0"><img src="{{ROOT}}assets/loop.svg" alt="The verd loop: pick, read, edit, test, stress, submit"></div>
   </div>
-  <div class="shot"><img src="assets/screens.svg" alt="Problems list, filter modal, split problem view and settings tab"></div>
+  <div class="shot"><img src="{{ROOT}}assets/screens.svg" alt="Problems list, filter modal, split problem view and settings tab"></div>
 </div></section>
 
 <section id="loop"><div class="wrap">
@@ -175,13 +118,10 @@ curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | s
 <span class="c"># set your handle, then go</span>
 verd init
 verd</pre>
-  <p class="sub" style="margin-top:22px">Pin a version with <code>VERD_VERSION=v0.1.4</code>. Not affiliated with Codeforces or CSES.</p>
+  <p class="sub" style="margin-top:22px"><a href="{{ROOT}}install.html">More install options</a> · Pin a version with <code>VERD_VERSION=v0.1.4</code>. Not affiliated with Codeforces or CSES.</p>
 </div></div></section>
 
-<footer><div class="wrap">
-  <span>verd · MIT licensed</span>
-  <span><a href="https://github.com/moneytosms/verd">GitHub</a> · <a href="https://github.com/moneytosms/verd/releases">Releases</a> · <a href="https://github.com/moneytosms/verd/tree/main/docs">Docs</a> · <a href="https://github.com/moneytosms/verd/issues">Issues</a></span>
-</div></footer>
+{{FOOTER}}
 
 <script>
 document.getElementById('copy').onclick=function(){
