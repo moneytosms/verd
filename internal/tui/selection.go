@@ -43,14 +43,15 @@ func (m Model) selAt(x, y int, pane int) (idx int, ok bool) {
 	}
 	var body []string
 	var top, inner, scroll int
+	ct := m.contentTop()
 	switch pane {
 	case paneStatement:
-		body, top, inner, scroll = m.stmtBody(), contentTop+1, g.h-2, m.scroll
+		body, top, inner, scroll = m.stmtBody(), ct+1, g.h-2, m.scroll
 	case paneDetail:
 		if g.detH == 0 {
 			return 0, false
 		}
-		body, top, inner, scroll = m.detailBody(g.rw-4), contentTop+g.infoH+g.testsH+1, g.detH-2, m.detScroll
+		body, top, inner, scroll = m.detailBody(g.rw-4), ct+g.infoH+g.testsH+1, g.detH-2, m.detScroll
 	default:
 		return 0, false
 	}
@@ -67,10 +68,11 @@ func (m Model) paneAt(x, y int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
+	ct := m.contentTop()
 	switch {
 	case x < g.lw-1:
 		return paneStatement, true
-	case x > g.lw && g.detH > 0 && y >= contentTop+g.infoH+g.testsH:
+	case x > g.lw && g.detH > 0 && y >= ct+g.infoH+g.testsH:
 		return paneDetail, true
 	}
 	return 0, false

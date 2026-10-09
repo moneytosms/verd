@@ -57,3 +57,17 @@ func TestEmbedZoomSettable(t *testing.T) {
 		t.Fatalf("get: %q %v", v, ok)
 	}
 }
+
+func TestTabsValidation(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.toml")
+	for body, ok := range map[string]bool{
+		"tabs = [\"settings\", \"problems\"]\n":           true,
+		"tabs = [\"problems\", \"stats\"]\n":              false, // settings hidden
+		"tabs = [\"problems\", \"nope\", \"settings\"]\n": false,
+	} {
+		os.WriteFile(p, []byte(body), 0o644)
+		if _, err := Load(p); (err == nil) != ok {
+			t.Errorf("%q: err=%v want ok=%v", body, err, ok)
+		}
+	}
+}

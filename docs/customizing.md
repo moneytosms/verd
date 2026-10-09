@@ -219,3 +219,13 @@ Font family and size belong to your terminal emulator; verd cannot change them. 
 | `reading_emphasis` | `true`, `false` | `false` turns italics and bold into plain text, for fonts that render them badly. |
 
 Colors of headings and text come from the theme (see [Themes](#themes-and-styling)); `glamour_dark` / `glamour_light` in a theme pick the statement style.
+
+## Layout
+
+| Key | Values | Effect |
+| --- | --- | --- |
+| `header` | `true` (default), `false` | Show the tab bar and the rule under it. With it off, switch tabs with the number keys or `next_tab`. |
+| `footer` | `true` (default), `false` | Show the key-hint footer and status badges. Off gives the rows back to the content. |
+| `tabs` | list, default `["problems","contests","stats","picker","settings"]` | Which tabs are shown and in what order. `settings` cannot be removed. The number keys select the Nth visible tab. `verd config set tabs problems,stats,settings` |
+
+All three apply live from Settings (`5`) > Layout.

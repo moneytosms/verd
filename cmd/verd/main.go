@@ -311,6 +311,7 @@ func buildSettings(cfg config.Config) map[string]string {
 		"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
 		"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
 		"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
+		"header": fmt.Sprint(cfg.Header), "footer": fmt.Sprint(cfg.Footer), "tabs": strings.Join(cfg.Tabs, ","),
 		"mouse": fmt.Sprint(cfg.Mouse), "wheel_lines": fmt.Sprint(cfg.WheelLines), "mouse_select": fmt.Sprint(cfg.MouseSelect),
 	}
 }

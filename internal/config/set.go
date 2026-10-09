@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ const (
 	kFloat
 	kInt
 	kBool
+	kStrings
 )
 
 // settable lists the top-level keys Set edits, with their type and (optional) allowed values.
@@ -54,6 +56,9 @@ var settable = map[string]struct {
 	"mouse":            {kBool, nil},
 	"wheel_lines":      {kInt, nil},
 	"mouse_select":     {kBool, nil},
+	"header":           {kBool, nil},
+	"footer":           {kBool, nil},
+	"tabs":             {kStrings, nil},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.
@@ -102,6 +107,26 @@ func Set(path, key, value string) error {
 			return fmt.Errorf("%s: %q is not true or false", key, value)
 		}
 		lit = b
+	case kStrings:
+		parts := strings.Split(strings.TrimSpace(value), ",")
+		for i, p := range parts {
+			parts[i] = strings.TrimSpace(p)
+		}
+		if key == "tabs" {
+			if len(parts) == 0 {
+				return fmt.Errorf("tabs: cannot be empty")
+			}
+			valid := map[string]bool{"problems": true, "contests": true, "stats": true, "picker": true, "settings": true}
+			for _, p := range parts {
+				if !valid[p] {
+					return fmt.Errorf("tabs: %q is not one of problems, contests, stats, picker, settings", p)
+				}
+			}
+			if !slices.Contains(parts, "settings") {
+				return fmt.Errorf("tabs: settings tab cannot be hidden")
+			}
+		}
+		lit = parts
 	}
 	if len(spec.opts) > 0 {
 		valid := false

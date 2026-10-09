@@ -102,6 +102,14 @@
 # mouse_select = true
 #   Enable drag-to-select-lines and copy in the Problem view.
 
+# Layout options.
+# header = true
+#   Show the tab bar and rule beneath it. Tab keys (1-5, tab) still work when hidden.
+# footer = true
+#   Show the footer with key hints and status badges.
+# tabs = ["problems", "contests", "stats", "picker", "settings"]
+#   Visible tabs in order. Settings tab cannot be hidden. Example: ["problems", "settings"]
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]

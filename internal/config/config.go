@@ -9,39 +9,43 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/moneytosms/verd/internal/theme"
 	"github.com/pelletier/go-toml/v2"
 )
 
 type Config struct {
-	Handle          string  `toml:"handle"`
-	Workspace       string  `toml:"workspace"`
-	DefaultLang     string  `toml:"default_lang"`
-	TimeMultiplier  float64 `toml:"time_multiplier"`
-	FloatEps        float64 `toml:"float_eps"`
-	Autotest        bool    `toml:"autotest"`
-	Theme           string  `toml:"theme"`
-	Background      string  `toml:"background"`
-	SourceCF        bool    `toml:"source_cf"`
-	SourceCSES      bool    `toml:"source_cses"`
-	Editor          string  `toml:"editor"`
-	Split           string  `toml:"split"`
-	EmbedRatio      float64 `toml:"embed_ratio"`
-	EmbedFocusKey   string  `toml:"embed_focus_key"`
-	EmbedSide       string  `toml:"embed_side"`
-	EmbedZoom       bool    `toml:"embed_zoom"`
-	SubmitMode      string  `toml:"submit_mode"`
-	ReadingWidth    int     `toml:"reading_width"`
-	ReadingMargin   int     `toml:"reading_margin"`
-	ReadingSpacing  string  `toml:"reading_spacing"`
-	ReadingHeadings string  `toml:"reading_headings"`
-	ReadingMath     string  `toml:"reading_math"`
-	ReadingEmphasis bool    `toml:"reading_emphasis"`
-	Border          string  `toml:"border"`
-	Mouse           bool    `toml:"mouse"`
-	WheelLines      int     `toml:"wheel_lines"`
-	MouseSelect     bool    `toml:"mouse_select"`
+	Handle          string   `toml:"handle"`
+	Workspace       string   `toml:"workspace"`
+	DefaultLang     string   `toml:"default_lang"`
+	TimeMultiplier  float64  `toml:"time_multiplier"`
+	FloatEps        float64  `toml:"float_eps"`
+	Autotest        bool     `toml:"autotest"`
+	Theme           string   `toml:"theme"`
+	Background      string   `toml:"background"`
+	SourceCF        bool     `toml:"source_cf"`
+	SourceCSES      bool     `toml:"source_cses"`
+	Editor          string   `toml:"editor"`
+	Split           string   `toml:"split"`
+	EmbedRatio      float64  `toml:"embed_ratio"`
+	EmbedFocusKey   string   `toml:"embed_focus_key"`
+	EmbedSide       string   `toml:"embed_side"`
+	EmbedZoom       bool     `toml:"embed_zoom"`
+	SubmitMode      string   `toml:"submit_mode"`
+	ReadingWidth    int      `toml:"reading_width"`
+	ReadingMargin   int      `toml:"reading_margin"`
+	ReadingSpacing  string   `toml:"reading_spacing"`
+	ReadingHeadings string   `toml:"reading_headings"`
+	ReadingMath     string   `toml:"reading_math"`
+	ReadingEmphasis bool     `toml:"reading_emphasis"`
+	Border          string   `toml:"border"`
+	Mouse           bool     `toml:"mouse"`
+	WheelLines      int      `toml:"wheel_lines"`
+	MouseSelect     bool     `toml:"mouse_select"`
+	Header          bool     `toml:"header"`
+	Footer          bool     `toml:"footer"`
+	Tabs            []string `toml:"tabs"`
 
 	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
 	Keys map[string]map[string]any `toml:"keys"`
@@ -94,6 +98,7 @@ func Default() Config {
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
 		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
+		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -159,6 +164,18 @@ func Load(path string) (Config, error) {
 		if err := theme.Register(name, spec); err != nil {
 			return c, fmt.Errorf("themes.%s: %w", name, err)
 		}
+	}
+	hasSettings := false
+	for i, t := range c.Tabs {
+		t = strings.ToLower(strings.TrimSpace(t))
+		c.Tabs[i] = t
+		if !slices.Contains([]string{"problems", "contests", "stats", "picker", "settings"}, t) {
+			return c, fmt.Errorf("tabs: %q is not a tab (problems, contests, stats, picker, settings)", t)
+		}
+		hasSettings = hasSettings || t == "settings"
+	}
+	if !hasSettings {
+		return c, fmt.Errorf("tabs: the settings tab cannot be hidden")
 	}
 	if !slices.Contains([]string{"rounded", "square", "heavy", "double", "ascii", "none"}, c.Border) {
 		return c, fmt.Errorf("border %q: want rounded, square, heavy, double, ascii or none", c.Border)
@@ -236,7 +253,7 @@ func (c Config) Get(key string) (string, bool) {
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
 		"reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
-		"mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,
+		"header": c.Header, "footer": c.Footer, "tabs": strings.Join(c.Tabs, ","), "mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,
 	}
 	v, ok := vals[key]
 	return fmt.Sprint(v), ok
