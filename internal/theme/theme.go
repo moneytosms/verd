@@ -10,8 +10,10 @@ import (
 
 // Palette is one theme on one background. Surface is the selected-row background, Bar the
 // header and footer background, OnAccent the text color drawn on an Accent fill.
+// Ac, Wa, Unk are optional verdict-specific colors, defaulting to Good, Bad, Dim respectively.
 type Palette struct {
 	Accent, Accent2, Dim, Good, Bad, Warn, Surface, Bar, OnAccent color.Color
+	Ac, Wa, Unk                                                   color.Color
 }
 
 type Theme struct {
@@ -24,6 +26,7 @@ type Theme struct {
 // Styles are the resolved lipgloss styles for one background.
 type Styles struct {
 	Accent, Accent2, Dim, Good, Bad, Warn lipgloss.Style
+	Ac, Wa, Unk                           lipgloss.Style // verdict colors: accepted, wrong answer, unjudged
 	Selected                              lipgloss.Style // the highlighted row
 	Bar                                   lipgloss.Style // header and footer background
 	PillOn, PillOff                       lipgloss.Style // tabs
@@ -41,8 +44,9 @@ func ansi(n int) color.Color { return lipgloss.ANSIColor(n) }
 func hex(s string) color.Color { return lipgloss.Color(s) }
 
 // pal builds a Palette from hex strings: accent, accent2, dim, good, bad, warn, surface, bar, onAccent.
+// Ac, Wa, Unk are optional and default to nil (use Good, Bad, Dim in Styles()).
 func pal(a, a2, dim, good, bad, warn, surface, bar, on string) Palette {
-	return Palette{hex(a), hex(a2), hex(dim), hex(good), hex(bad), hex(warn), hex(surface), hex(bar), hex(on)}
+	return Palette{Accent: hex(a), Accent2: hex(a2), Dim: hex(dim), Good: hex(good), Bad: hex(bad), Warn: hex(warn), Surface: hex(surface), Bar: hex(bar), OnAccent: hex(on)}
 }
 
 // ANSI 16 indices only: the terminal's own palette decides the actual colors.
@@ -116,9 +120,23 @@ func (t Theme) Styles(dark bool) Styles {
 		p, g = t.Light, t.GlamourLight
 	}
 	fg := func(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
+
+	// Verdict colors default to Good/Bad/Dim if not explicitly set
+	acColor, waColor, unkColor := p.Good, p.Bad, p.Dim
+	if p.Ac != nil {
+		acColor = p.Ac
+	}
+	if p.Wa != nil {
+		waColor = p.Wa
+	}
+	if p.Unk != nil {
+		unkColor = p.Unk
+	}
+
 	return Styles{
 		Accent: fg(p.Accent).Bold(true), Accent2: fg(p.Accent2).Bold(true), Dim: fg(p.Dim),
 		Good: fg(p.Good), Bad: fg(p.Bad), Warn: fg(p.Warn),
+		Ac: fg(acColor), Wa: fg(waColor), Unk: fg(unkColor),
 		Selected: lipgloss.NewStyle().Background(p.Surface).Bold(true),
 		Bar:      lipgloss.NewStyle().Background(p.Bar),
 		PillOn:   lipgloss.NewStyle().Background(p.Accent).Foreground(p.OnAccent).Bold(true),

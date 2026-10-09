@@ -290,7 +290,7 @@ func (m Model) tmBox() []string {
 	}
 	body := joinCols(list, lw, det, st.Dim.Render(" │ "))
 	body = body[:min(len(body), inner)]
-	return box("Tests", body, note, w, min(h, max(12, len(body)+2)), true, st)
+	return box("Tests", body, note, w, min(h, max(12, len(body)+2)), true, st, m.borderStyle())
 }
 
 // editorBox renders the in-place Custom Test editor.
@@ -344,5 +344,5 @@ func (m Model) editorBox(w, h int) []string {
 	if m.tm.note != "" {
 		note = st.Warn.Render(m.tm.note)
 	}
-	return box(title, body, note, w, h, true, st)
+	return box(title, body, note, w, h, true, st, m.borderStyle())
 }

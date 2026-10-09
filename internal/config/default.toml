@@ -88,6 +88,11 @@
 # reading_emphasis = true
 #   Render italics and bold; false = plain text for emphasis.
 
+# Box border glyph set: rounded | square | heavy | double | ascii | none
+# none draws no frame but keeps a title line; ascii uses + - |
+# border = "rounded"
+
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/moneytosms/verd/internal/theme"
 	"github.com/pelletier/go-toml/v2"
@@ -36,6 +37,7 @@ type Config struct {
 	ReadingHeadings string  `toml:"reading_headings"`
 	ReadingMath     string  `toml:"reading_math"`
 	ReadingEmphasis bool    `toml:"reading_emphasis"`
+	Border          string  `toml:"border"`
 
 	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
 	Keys map[string]map[string]any `toml:"keys"`
@@ -82,7 +84,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
-		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true,
+		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -137,6 +139,9 @@ func Load(path string) (Config, error) {
 		if err := theme.Register(name, spec); err != nil {
 			return c, fmt.Errorf("themes.%s: %w", name, err)
 		}
+	}
+	if !slices.Contains([]string{"rounded", "square", "heavy", "double", "ascii", "none"}, c.Border) {
+		return c, fmt.Errorf("border %q: want rounded, square, heavy, double, ascii or none", c.Border)
 	}
 	if c.EmbedSide != "left" && c.EmbedSide != "right" {
 		return c, fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)

@@ -242,6 +242,13 @@ func (m Model) WithBackground(mode string) Model {
 
 func (m Model) styles() theme.Styles { return m.theme.Styles(m.dark) }
 
+func (m Model) borderStyle() string {
+	if b, ok := m.cfgVals["border"]; ok && b != "" {
+		return b
+	}
+	return "rounded"
+}
+
 // WithData replaces everything rendered from the cache, keeping view state.
 func (m Model) WithData(d Data) Model {
 	m.handle, m.rating, m.syncedAt = d.Handle, d.Rating, d.SyncedAt

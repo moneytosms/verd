@@ -35,6 +35,7 @@ var settingDefs = []settingDef{
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
+	{"Appearance", "border", "Borders", "Box frame style: rounded, square, heavy, double, ascii, or none.", "enum", true},
 	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
 	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
 	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},
@@ -311,7 +312,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			body = append(body, " "+l.text)
 		}
 	}
-	left := box("Settings", body, "", lw, h, true, st)
+	left := box("Settings", body, "", lw, h, true, st, m.borderStyle())
 
 	d := settingDefs[m.setSel]
 	var info []string
@@ -348,7 +349,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			info = append(info, "  "+clean(l))
 		}
 	}
-	right := box("About", info, "", rw, h, false, st)
+	right := box("About", info, "", rw, h, false, st, m.borderStyle())
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}

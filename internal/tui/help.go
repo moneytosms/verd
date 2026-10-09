@@ -115,7 +115,7 @@ func (m Model) helpBox() []string {
 	if len(lines) > room {
 		note = fmt.Sprintf("%d/%d  ", off+1, len(lines)) + note
 	}
-	return box("Keys: "+screen, body, note, w, min(h, len(body)+2), true, st)
+	return box("Keys: "+screen, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
 func (m Model) updateHelp(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {

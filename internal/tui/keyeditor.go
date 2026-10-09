@@ -136,7 +136,7 @@ func (m Model) keyEditorBox() []string {
 	if m.ke.typing {
 		note = "type to filter  up/down move  enter done  esc clear"
 	}
-	return box("Keyboard shortcuts  (* = changed, saved to [keys.*] in config.toml)", body, note, w, min(h, len(body)+2), true, st)
+	return box("Keyboard shortcuts  (* = changed, saved to [keys.*] in config.toml)", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
 // setKeys saves keys for one action (nil resets it) and rebuilds the keymap; a conflict is refused.

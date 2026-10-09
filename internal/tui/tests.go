@@ -211,11 +211,11 @@ func (m Model) verdictStyle(v string) string {
 	st := m.styles()
 	switch v {
 	case runner.AC:
-		return st.Good.Render(fmt.Sprintf("%-3s", v))
+		return st.Ac.Render(fmt.Sprintf("%-3s", v))
 	case runner.Unk:
-		return st.Dim.Render(fmt.Sprintf("%-3s", v))
+		return st.Unk.Render(fmt.Sprintf("%-3s", v))
 	}
-	return st.Bad.Render(fmt.Sprintf("%-3s", v))
+	return st.Wa.Render(fmt.Sprintf("%-3s", v))
 }
 
 // cell returns line i of ls, padded or clipped to w columns.

@@ -49,6 +49,7 @@ var settable = map[string]struct {
 	"reading_headings": {kString, []string{"plain", "bold", "bar", "underline"}},
 	"reading_math":     {kString, []string{"unicode", "raw"}},
 	"reading_emphasis": {kBool, nil},
+	"border":           {kString, []string{"rounded", "square", "heavy", "double", "ascii", "none"}},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.

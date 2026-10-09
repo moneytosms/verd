@@ -23,8 +23,9 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `embed_focus_key` | `"ctrl+\\"` | Toggles keyboard focus between verd and the embedded Neovim. Same as `[keys.editor] focus`. |
 | `reading_width`, `reading_margin`, `reading_spacing`, `reading_headings`, `reading_math`, `reading_emphasis` | `0`, `1`, `normal`, `bar`, `unicode`, `true` | How statements are laid out. See [Reading and fonts](./customizing.md#reading-and-fonts). |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
+| `border` | `"rounded"` | Box border glyphs: `rounded`, `square`, `heavy`, `double`, `ascii`, or `none` (no frame, title line only). |
 
-An unknown `submit_mode` or `embed_side` is a config error.
+An unknown `submit_mode`, `embed_side` or `border` is a config error.
 
 Tables: `[lang.*]` (below), `[keys.<context>]` for shortcuts and `[themes.<name>]` for color themes. Both are covered in [Customizing](./customizing.md), along with the CLI that edits them (`verd config set`, `verd keys`, `verd themes`). `theme` accepts any theme you define there.
 

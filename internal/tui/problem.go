@@ -160,12 +160,12 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 		note = fmt.Sprintf("%d%%", 100*end/len(body))
 	}
 	title := fmt.Sprintf("%s  %s", p.Code(), clean(p.Name))
-	left := box(title, m.highlight(paneStatement, off, body[off:end]), note, lw, h, m.pane == paneStatement, st)
+	left := box(title, m.highlight(paneStatement, off, body[off:end]), note, lw, h, m.pane == paneStatement, st, m.borderStyle())
 
 	var right []string
-	right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st)...)
+	right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st, m.borderStyle())...)
 	tl, tnote, _ := m.testsLines(rw-4, g.testsH-2)
-	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, g.testsH, m.pane == paneTests, st)...)
+	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, g.testsH, m.pane == paneTests, st, m.borderStyle())...)
 	if g.detH > 0 {
 		dl, dtitle := m.detailLines(rw - 4)
 		if m.strs != nil {
@@ -177,7 +177,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 			dnote = fmt.Sprintf("%d/%d", off+1, len(dl))
 		}
 		end := min(len(dl), off+g.detH-2)
-		right = append(right, box(dtitle, m.highlight(paneDetail, off, dl[off:end]), dnote, rw, g.detH, m.pane == paneDetail, st)...)
+		right = append(right, box(dtitle, m.highlight(paneDetail, off, dl[off:end]), dnote, rw, g.detH, m.pane == paneDetail, st, m.borderStyle())...)
 	}
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
