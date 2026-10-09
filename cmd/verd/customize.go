@@ -92,8 +92,11 @@ func keysCmd(out io.Writer, path string, args []string) error {
 		sub = args[0]
 	}
 	// Handle preset commands (may need stdin)
-	if sub == "presets" || sub == "export" || sub == "import" {
-		return presetsCmd(out, path, nil, args[1:])
+	switch sub {
+	case "presets": // verd keys presets [list|preset <name>|export|import]
+		return presetsCmd(out, path, os.Stdin, args[1:])
+	case "preset", "export", "import": // shorthand: verd keys preset vim
+		return presetsCmd(out, path, os.Stdin, args)
 	}
 	// Handle markdown
 	if sub == "markdown" {

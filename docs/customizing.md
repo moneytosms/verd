@@ -62,11 +62,11 @@ Always read `verd keys --json` for the authoritative, current action list; it is
 Quick-apply curated binding sets:
 
 ```sh
-verd keys presets list                                    # show available presets
-verd keys presets preset vim                             # apply vim preset (j/k, ctrl+d/u)
-verd keys presets preset arrows                          # arrow keys only
-verd keys presets preset emacs                           # emacs-style (ctrl+n/p, alt+v/ctrl+v)
-verd keys presets preset default                         # clear all custom bindings
+verd keys presets                                        # show available presets
+verd keys preset vim                             # apply vim preset (j/k, ctrl+d/u)
+verd keys preset arrows                          # arrow keys only
+verd keys preset emacs                           # emacs-style (ctrl+n/p, alt+v/ctrl+v)
+verd keys preset default                         # clear all custom bindings
 ```
 
 ### Change
@@ -82,9 +82,9 @@ verd keys check                               # validate [keys.*] in config.toml
 Export and import:
 
 ```sh
-verd keys presets export                      # print current bindings as [keys.*] TOML blocks
-verd keys presets import shortcuts.toml       # import from a file
-verd keys presets export | ssh host verd keys presets import -  # save elsewhere or paste
+verd keys export                      # print current bindings as [keys.*] TOML blocks
+verd keys import shortcuts.toml       # import from a file
+verd keys export | ssh host verd keys import -  # save elsewhere or paste
 ```
 
 or write the table yourself:

@@ -140,55 +140,37 @@ func presetsCmd(out io.Writer, path string, in io.Reader, args []string) error {
 		if args[1] == "-" {
 			data, err = io.ReadAll(in)
 		} else {
-			// Read file relative to config dir
-			cfgDir := ""
-			if path != "" && strings.HasSuffix(path, "config.toml") {
-				cfgDir = path[:len(path)-len("config.toml")]
-			}
-			data, err = getConfigFile(cfgDir + args[1])
+			data, err = os.ReadFile(args[1])
 		}
 		if err != nil {
 			return err
 		}
-		// Parse the TOML block
-		importedRaw := map[string]any{}
-		if err := toml.Unmarshal(data, &importedRaw); err != nil {
+		// Parse the [keys.*] blocks the same way config.toml does.
+		var parsed config.Config
+		if err := toml.Unmarshal(data, &parsed); err != nil {
 			return fmt.Errorf("invalid TOML: %w", err)
 		}
-		// Convert to "context.action" -> []string format
-		imported := map[string][]string{}
-		for ctx, acts := range importedRaw {
-			if !strings.HasPrefix(ctx, "keys.") {
-				continue
-			}
-			ctxName := ctx[5:] // strip "keys."
-			actMap, ok := acts.(map[string]any)
-			if !ok {
-				continue
-			}
-			for act, v := range actMap {
-				id := ctxName + "." + act
-				switch v := v.(type) {
-				case string:
-					imported[id] = []string{v}
-				case []any:
-					for _, k := range v {
-						s, ok := k.(string)
-						if !ok {
-							return fmt.Errorf("keys.%s: %v is not a string", id, k)
-						}
-						imported[id] = append(imported[id], s)
-					}
-				default:
-					return fmt.Errorf("keys.%s: want a key or a list of keys", id)
-				}
-			}
+		imported, err := parsed.KeyBindings()
+		if err != nil {
+			return err
 		}
 		// Validate before writing anything
 		if err := tui.CheckKeys(imported); err != nil {
 			return err
 		}
-		// Write each action
+		// Import replaces: drop current bindings the file does not mention, then write the file's.
+		if cur, err := loadConfig(path); err == nil {
+			old, _ := cur.KeyBindings()
+			for id := range old {
+				if _, keep := imported[id]; !keep {
+					if ctx, act, ok := strings.Cut(id, "."); ok {
+						if err := config.SetKeys(path, ctx, act, nil); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
 		for id, keys := range imported {
 			parts := strings.Split(id, ".")
 			if len(parts) != 2 {
@@ -203,9 +185,4 @@ func presetsCmd(out io.Writer, path string, in io.Reader, args []string) error {
 		return fmt.Errorf("unknown presets command %q (list, preset, export, import)", sub)
 	}
 	return nil
-}
-
-// getConfigFile reads a file.
-func getConfigFile(path string) ([]byte, error) {
-	return os.ReadFile(path)
 }

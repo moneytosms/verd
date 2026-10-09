@@ -268,7 +268,7 @@ usage: verd [--here] [command]
   keys [--json]                   list every shortcut, default and current
   keys contexts                   list contexts
   keys set <ctx.action> <key>...  rebind (several keys allowed); keys reset <ctx.action>
-  keys presets [list | preset <name> | export | import <file|->]
+  keys presets | preset <name> | export | import <file|->
                                   apply presets, export or import shortcuts
   themes [show <name>]            list themes | print an editable [themes.*] block
   test <file>                     run Sample and Custom Tests

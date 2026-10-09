@@ -238,3 +238,37 @@ func TestWatchConfigStartsAndStops(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	// called may or may not be > 0 depending on timing, but the goroutine should not leak
 }
+
+func TestKeysImportExportRoundTrip(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	do := func(args ...string) (string, error) {
+		var out bytes.Buffer
+		err := run(args, &out)
+		return out.String(), err
+	}
+	if _, err := do("init", "--no-setup"); err != nil {
+		t.Fatal(err)
+	}
+	do("keys", "set", "problem.run_tests", "ctrl+t")
+	exported, err := do("keys", "export")
+	if err != nil || !strings.Contains(exported, "ctrl+t") {
+		t.Fatalf("%q %v", exported, err)
+	}
+	file := filepath.Join(t.TempDir(), "keys.toml")
+	os.WriteFile(file, []byte(exported), 0o644)
+	do("keys", "set", "problem.submit", "ctrl+s") // import must replace this away
+	if out, err := do("keys", "import", file); err != nil || !strings.Contains(out, "imported 1") {
+		t.Fatalf("%q %v", out, err)
+	}
+	if out, _ := do("keys", "--json"); strings.Contains(out, "ctrl+s") || !strings.Contains(out, "ctrl+t") {
+		t.Fatalf("import should replace:\n%s", out)
+	}
+	bad := filepath.Join(t.TempDir(), "bad.toml")
+	os.WriteFile(bad, []byte("[keys.problem]\nrun_tests = \"s\"\n"), 0o644) // s is submit
+	if _, err := do("keys", "import", bad); err == nil {
+		t.Fatal("conflicting import must fail")
+	}
+	if out, _ := do("keys", "--json"); !strings.Contains(out, "ctrl+t") {
+		t.Fatal("failed import must not change anything")
+	}
+}
