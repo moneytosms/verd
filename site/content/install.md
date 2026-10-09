@@ -60,3 +60,55 @@ verd update           # replace the binary (checksum verified)
 ```
 
 Uninstall by deleting the binary. verd keeps its data in `~/.config/verd`, `~/.local/share/verd` and `~/.cache/verd`; see [Configuration](docs/config.html#files-verd-writes).
+
+## Build from source (for development)
+
+You need **Go 1.27 or newer** (see `go` in `go.mod`), `git`, and the same tools as above to try it end to end.
+
+```sh
+git clone https://github.com/moneytosms/verd && cd verd
+go build -o verd ./cmd/verd     # a single static binary, no CGO
+./verd --version
+```
+
+Run it against a throwaway config so your real one is untouched:
+
+```sh
+export XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d) XDG_CACHE_HOME=$(mktemp -d)
+./verd init --no-setup && ./verd config set handle tourist
+./verd                           # the TUI, using the temp config and cache
+```
+
+### Check your change
+
+```sh
+gofmt -l .                       # must print nothing
+go vet ./...
+go test ./...                    # unit tests; embedded-pane tests use a pseudo-terminal
+```
+
+Tests use temporary directories and fake servers, not a Codeforces account.
+
+### Where things live
+
+| Path | What |
+| --- | --- |
+| `cmd/verd` | The CLI: command dispatch, `test`/`submit`/`stress`, `config`, `keys`, `themes`, `doctor`, `sync`. |
+| `internal/tui` | The Bubble Tea model: screens, the keymap (`keymap.go`), the shortcut editor, the embedded pane. |
+| `internal/config` | `config.toml` loading, validation and the comment-preserving writer (`Set`, `SetKeys`). |
+| `internal/theme` | Built-in themes, custom `[themes.*]`, palette and styles. |
+| `internal/scrape`, `internal/cf`, `internal/cses` | Fetching and rendering statements; the Codeforces and CSES clients. |
+| `internal/runner`, `internal/stress` | Compiling and running tests locally; the stress loop. |
+| `internal/editor`, `internal/mux`, `internal/embed` | Driving Neovim, tmux/herdr panes, and the embedded terminal. |
+| `internal/store`, `internal/refresh` | The SQLite cache and background refresh. |
+| `docs/` | The documentation. The site in `site/` is generated from it. |
+
+### Common tasks
+
+- **Add a shortcut.** Add a row to `keyActions` in `internal/tui/keymap.go`, handle its canonical key in the screen's handler, then regenerate the key reference: `go run ./cmd/verd keys markdown --write docs/keys.md`. A test fails if the docs drift.
+- **Add a config key.** Add the field and default in `internal/config/config.go`, register it in `settable` in `set.go`, document it in `default.toml` and `docs/config.md`, and, if it should be live in the TUI, add a row to `settingDefs` and a case in `applyLive` in `internal/tui/settings.go`.
+- **Add a theme.** Add an entry to `themes` in `internal/theme/theme.go` (a dark and a light palette), or try colors first with a `[themes.*]` block in your config; `verd themes show nord` prints a template.
+- **Preview the site.** `go run ./site/gen -out _site && python3 -m http.server -d _site 8000`.
+- **Try a release build.** `goreleaser release --snapshot --clean` builds every target without publishing.
+
+Issues and pull requests are welcome on [GitHub](https://github.com/moneytosms/verd/issues); the vocabulary used in the code (Problem, Solution, Sample Test, Verdict) is defined in [CONTEXT.md](https://github.com/moneytosms/verd/blob/main/CONTEXT.md).

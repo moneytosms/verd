@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="verd">
+  <defs>
+    <linearGradient id="g" x1="8" y1="50" x2="56" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9ece6a"/><stop offset=".55" stop-color="#73daca"/><stop offset="1" stop-color="#7aa2f7"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1f2335"/><stop offset="1" stop-color="#16161e"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
+    
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#bg)"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" fill="none" stroke="#2f3550" stroke-width="1.5"/>
+  <path opacity=".4" d="M14 33 L27 46 L51 17" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path  d="M14 33 L27 46 L51 17" fill="none" stroke="url(#g)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect  x="13" y="50" width="14" height="4.5" rx="2.25" fill="#9ece6a"/>
+</svg>

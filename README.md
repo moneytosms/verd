@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./assets/logo.svg" width="96" alt="verd logo: a green-to-blue check mark that is also a v, with a terminal cursor">
+</p>
+
+<p align="center">
   <img src="./assets/readme/hero.svg" width="100%" alt="verd: Codeforces and more, in your terminal. The TUI shows a Problem with local tests all AC, then a stress run that found a counterexample at seed 7.">
 </p>
 

@@ -46,6 +46,7 @@ type page struct {
 	Title, Desc, Root, Body string
 	Nav                     template.HTML
 	Footer                  template.HTML
+	HeadX, Boot, Tail       template.HTML
 	Side                    []navItem
 	SideTitle               string
 	TOC                     []navItem
@@ -93,7 +94,7 @@ func build(out string) (err error) {
 	// hand-written home page: only the chrome placeholders are filled in
 	home, err := os.ReadFile("site/content/index.html")
 	must(err)
-	s := strings.NewReplacer("{{ROOT}}", "", "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer("")).Replace(string(home))
+	s := strings.NewReplacer("{{ROOT}}", "", "{{HEADX}}", headX(""), "{{BOOT}}", bootHTML(""), "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer(""), "{{TAIL}}", tailHTML()).Replace(string(home))
 	must(os.WriteFile(filepath.Join(out, "index.html"), []byte(s), 0o644))
 
 	// prose pages: install, usage
@@ -105,7 +106,7 @@ func build(out string) (err error) {
 		must(err)
 		body, title, toc := render(src, "")
 		pg := page{Title: title, Desc: p.desc, Root: "", Body: body, TOC: toc}
-		pg.Nav, pg.Footer = template.HTML(nav("", p.file)), template.HTML(footer(""))
+		decorate(&pg, "", p.file)
 		must(write(filepath.Join(out, p.file+".html"), proseTmpl, pg))
 	}
 
@@ -136,11 +137,11 @@ func build(out string) (err error) {
 		if i < len(items)-1 {
 			pg.Next = &items[i+1]
 		}
-		pg.Nav, pg.Footer = template.HTML(nav("../", "docs")), template.HTML(footer("../"))
+		decorate(&pg, "../", "docs")
 		must(write(filepath.Join(out, "docs", d.file+".html"), docTmpl, pg))
 	}
 	idx := page{Title: "Documentation", Desc: "Guides and references for verd.", Root: "../", Side: nil}
-	idx.Nav, idx.Footer = template.HTML(nav("../", "docs")), template.HTML(footer("../"))
+	decorate(&idx, "../", "docs")
 	idx.TOC = items
 	must(write(filepath.Join(out, "docs", "index.html"), docIndexTmpl, idx))
 	fmt.Printf("built %d pages into %s\n", 3+len(items)+1, out)
@@ -158,6 +159,7 @@ func render(src []byte, root string) (body, title string, toc []navItem) {
 	for _, m := range h2Re.FindAllStringSubmatch(b, -1) {
 		toc = append(toc, navItem{Title: html.UnescapeString(tagRe.ReplaceAllString(m[2], "")), Href: "#" + m[1]})
 	}
+	b = highlightCode(b)
 	b = h2Re.ReplaceAllString(b, `<h2 id="$1">$2<a class="anchor" href="#$1">#</a></h2>`)
 	b = hrefRe.ReplaceAllStringFunc(b, func(a string) string {
 		m := hrefRe.FindStringSubmatch(a)
@@ -183,6 +185,35 @@ func fixLink(h string) string {
 	return h
 }
 
+func decorate(p *page, root, on string) {
+	p.Nav, p.Footer = template.HTML(nav(root, on)), template.HTML(footer(root))
+	p.HeadX, p.Boot, p.Tail = template.HTML(headX(root)), template.HTML(bootHTML(root)), template.HTML(tailHTML())
+}
+
+// headX is the shared <head> tail: icons, stylesheet and the once-per-session boot flag.
+func headX(root string) string {
+	return `<link rel="icon" type="image/svg+xml" href="` + root + `assets/favicon.svg"><link rel="apple-touch-icon" href="` + root + `assets/favicon.svg">` +
+		`<meta property="og:title" content="verd"><meta property="og:image" content="` + root + `assets/logo.svg">` +
+		`<link rel="stylesheet" href="` + root + `assets/site.css">` +
+		`<script>try{if(sessionStorage.getItem("verd-boot"))document.documentElement.classList.add("noboot");else sessionStorage.setItem("verd-boot","1")}catch(e){document.documentElement.classList.add("noboot")}</script>` +
+		`<noscript><style>#boot{display:none}</style></noscript>`
+}
+
+// bootHTML is the loading screen: the animated logo, shown on the first page of a visit.
+func bootHTML(root string) string {
+	return `<div id="boot" aria-hidden="true"><img src="` + root + `assets/logo.svg" alt="" width="112" height="112"><span class="bt">verd<i>_</i></span></div>`
+}
+
+// tailHTML hides the loading screen once the page has loaded and reveals sections as they scroll in.
+func tailHTML() string {
+	return `<script>(function(){var t=Date.now(),b=document.getElementById("boot");
+function hide(){if(b)b.classList.add("done")}
+addEventListener("load",function(){setTimeout(hide,Math.max(0,1400-(Date.now()-t)))});setTimeout(hide,3500);
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&"IntersectionObserver"in window){
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -8% 0px"});
+document.querySelectorAll(".card,.steps li,.shot,.cta,.table,.prose h2,.prose table,.prose pre,.docgrid a,.pager a").forEach(function(el,i){el.classList.add("rv");el.style.transitionDelay=Math.min(i%6,5)*45+"ms";io.observe(el)})}})()</script>`
+}
+
 func nav(root, on string) string {
 	l := func(key, href, label string) string {
 		c := ""
@@ -191,7 +222,7 @@ func nav(root, on string) string {
 		}
 		return `<a` + c + ` href="` + root + href + `">` + label + `</a>`
 	}
-	return `<nav><div class="wrap"><a class="logo" href="` + root + `index.html">verd<span>_</span></a>` +
+	return `<nav><div class="wrap"><a class="logo" href="` + root + `index.html"><img class="mark" src="` + root + `assets/favicon.svg" alt="" width="26" height="26">verd<span>_</span></a>` +
 		l("home", "index.html#features", "Features") + l("install", "install.html", "Install") + l("usage", "usage.html", "Usage") +
 		l("docs", "docs/index.html", "Docs") + `<a class="gh" href="` + repo + `">GitHub</a></div></nav>`
 }
@@ -228,11 +259,10 @@ func copyDir(src, dst string) error {
 }
 
 const head = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}} · verd</title><meta name="description" content="{{.Desc}}">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2316161e%27/%3E%3Ctext x=%274%27 y=%2723%27 font-family=%27monospace%27 font-size=%2722%27 font-weight=%27bold%27 fill=%27%239ece6a%27%3Ev%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="{{.Root}}assets/site.css"></head><body>{{.Nav}}`
+<title>{{.Title}} · verd</title><meta name="description" content="{{.Desc}}"><meta name="theme-color" content="#16161e">
+{{.HeadX}}</head><body>{{.Boot}}{{.Nav}}`
 
-const tail = `{{.Footer}}<script>
+const tail = `{{.Footer}}{{.Tail}}<script>
 document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
 b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
 </script></body></html>`

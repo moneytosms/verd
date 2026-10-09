@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>verd: competitive programming in your terminal</title>
 <meta name="description" content="verd is a keyboard-driven TUI for competitive programming, with Codeforces and CSES today and more providers planned: browse problems, edit in Neovim, test locally, stress test, submit and watch the verdict.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2316161e%27/%3E%3Ctext x=%274%27 y=%2723%27 font-family=%27monospace%27 font-size=%2720%27 font-weight=%27700%27 fill=%27%239ece6a%27%3Ev_%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="{{ROOT}}assets/site.css">
+{{HEADX}}
 </head>
-<body>
+<body>{{BOOT}}
 {{NAV}}
 
 <header class="hero" id="top"><div class="wrap">
@@ -129,5 +128,6 @@ document.getElementById('copy').onclick=function(){
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'});
 };
 </script>
+{{TAIL}}
 </body>
 </html>
