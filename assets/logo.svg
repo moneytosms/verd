@@ -1,41 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="verd: a gavel strikes, the verdict is AC">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="verd: a judge's gavel gives the verdict and turns into an AC check mark">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1f2335"/><stop offset="1" stop-color="#14141b"/></linearGradient>
-    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c0caf5"/><stop offset=".55" stop-color="#8f9cd8"/><stop offset="1" stop-color="#5a6aa8"/></linearGradient>
-    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c58a3a"/><stop offset=".5" stop-color="#e0af68"/><stop offset="1" stop-color="#b57a2e"/></linearGradient>
-    <linearGradient id="ok" x1="14" y1="100" x2="112" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ece6a"/><stop offset=".6" stop-color="#73daca"/><stop offset="1" stop-color="#7aa2f7"/></linearGradient>
+    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b9742e"/><stop offset=".28" stop-color="#e8b36c"/><stop offset=".6" stop-color="#d69a4f"/><stop offset="1" stop-color="#8c5420"/></linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4a3a2a"/><stop offset=".3" stop-color="#7a5a3a"/><stop offset="1" stop-color="#3a2c20"/></linearGradient>
+    <linearGradient id="grip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8b36c"/><stop offset=".5" stop-color="#d09248"/><stop offset="1" stop-color="#8d5a22"/></linearGradient>
+    <linearGradient id="ok" x1="20" y1="100" x2="108" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ece6a"/><stop offset=".6" stop-color="#73daca"/><stop offset="1" stop-color="#7aa2f7"/></linearGradient>
     <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
   </defs>
   <style>
-      .gavel{transform-origin:64px 20px;transform-box:view-box}
-      .block{transform-box:fill-box;transform-origin:center bottom}
-      .ring{fill:none;stroke:#9ece6a;stroke-width:3;opacity:0;transform-origin:64px 100px}
-      .sp{opacity:0;stroke-dasharray:14;stroke-dashoffset:14}
-
-      .gavel{animation:slam 2.6s cubic-bezier(.5,0,.2,1) both}
-      .block{animation:squash 2.6s ease both}
-      .ring{animation:ring 2.6s ease-out both}
-      .sp{animation:spark 2.6s ease-out both}
-      .badge{transform-box:fill-box;transform-origin:center;animation:pop 2.6s cubic-bezier(.3,1.5,.5,1) both}
-      #all{animation:shake 2.6s linear both}
-      @keyframes slam{0%{opacity:0;transform:rotate(28deg)}8%{opacity:1;transform:rotate(28deg)}24%{transform:rotate(36deg)}34%{transform:rotate(0)}40%{transform:rotate(7deg)}46%,100%{transform:rotate(0)}}
-      @keyframes squash{0%,32%{transform:scaleY(1)}35%{transform:scaleY(.82)}44%,100%{transform:scaleY(1)}}
-      @keyframes ring{0%,33%{opacity:0;transform:scale(.2)}35%{opacity:.9}60%,100%{opacity:0;transform:scale(2.6)}}
-      @keyframes spark{0%,33%{opacity:0;stroke-dashoffset:14}36%{opacity:1;stroke-dashoffset:0}60%,100%{opacity:0;stroke-dashoffset:-14}}
-      @keyframes pop{0%,44%{opacity:0;transform:scale(.2)}58%,100%{opacity:1;transform:scale(1)}}
-      @keyframes shake{0%,33%{transform:none}35%{transform:translate(0,2px)}38%{transform:translate(-1px,-1px)}42%,100%{transform:none}}
-      @media (prefers-reduced-motion:reduce){*{animation:none!important}.gavel,.badge{opacity:1}}
+      .gavel{transform-box:view-box;transform-origin:16px 80px;animation:slam 6.4s linear infinite}
+      .block{transform-box:fill-box;transform-origin:center bottom;animation:squash 6.4s linear infinite}
+      .ring{fill:none;stroke:#9ece6a;stroke-width:3;opacity:0;transform-box:view-box;transform-origin:67px 100px;animation:ring 6.4s linear infinite}
+      .sp{opacity:0;stroke-dasharray:14;stroke-dashoffset:14;animation:spark 6.4s linear infinite}
+      #all{animation:shake 6.4s linear infinite}
+      .ma,.mb{fill:none;opacity:0}
+      .ma{stroke-linecap:round;stroke-linejoin:round;animation:morphA 6.4s linear infinite}
+      .mb{stroke-linecap:butt;stroke-linejoin:round;animation:morphB 6.4s linear infinite}
+      .tk{fill:none;stroke:url(#ok);stroke-width:13;stroke-linecap:round;stroke-linejoin:round;opacity:0;animation:tick 6.4s linear infinite}
+      .hl{fill:none;stroke:url(#ok);stroke-width:20;stroke-linecap:round;stroke-linejoin:round;filter:url(#blur);opacity:0;animation:glow 6.4s linear infinite}
+      @keyframes slam{0.00%{opacity:0;transform:rotate(-52deg);animation-timing-function:ease-out}3.91%{opacity:1;transform:rotate(-52deg);animation-timing-function:ease-in-out}13.28%{transform:rotate(-66deg);animation-timing-function:cubic-bezier(.55,0,1,.6)}16.41%{transform:rotate(0);animation-timing-function:ease-out}17.81%{transform:rotate(-7deg);animation-timing-function:ease-in}20.31%{opacity:1;transform:rotate(0)}24.22%{opacity:1;transform:rotate(0)}24.38%{opacity:0;transform:rotate(0)}100.00%{opacity:0;transform:rotate(0)}}@keyframes squash{0.00%{transform:scaleY(1)}16.09%{transform:scaleY(1)}16.88%{transform:scaleY(.84)}19.53%{transform:scaleY(1)}100.00%{transform:scaleY(1)}}@keyframes ring{0.00%{opacity:0;transform:scale(.2)}16.09%{opacity:0;transform:scale(.2)}16.72%{opacity:.9}27.34%{opacity:0;transform:scale(2.8)}100.00%{opacity:0;transform:scale(2.8)}}@keyframes spark{0.00%{opacity:0;stroke-dashoffset:14}16.09%{opacity:0;stroke-dashoffset:14}17.19%{opacity:1;stroke-dashoffset:0}27.34%{opacity:0;stroke-dashoffset:-14}100.00%{opacity:0}}@keyframes shake{0.00%{transform:none}16.09%{transform:none}16.88%{transform:translate(0,2px)}17.66%{transform:translate(-1px,-1px)}18.75%{transform:none}100.00%{transform:none}}@keyframes morphA{0.00%{opacity:0;d:path("M16 80 L52 80");stroke-width:9;stroke:#d09248}24.06%{opacity:0;d:path("M16 80 L52 80");stroke-width:9;stroke:#d09248}24.22%{opacity:1;d:path("M16 80 L52 80");stroke-width:9;stroke:#d09248;animation-timing-function:cubic-bezier(.6,0,.2,1)}37.50%{opacity:1;d:path("M30 64 L52 86");stroke-width:13;stroke:#8fd6a0}41.41%{opacity:0;d:path("M30 64 L52 86");stroke-width:13;stroke:#8fd6a0}100.00%{opacity:0;d:path("M30 64 L52 86");stroke-width:13;stroke:#8fd6a0}}@keyframes morphB{0.00%{opacity:0;d:path("M67 60 L67 100");stroke-width:30;stroke:#d69a4f}24.06%{opacity:0;d:path("M67 60 L67 100");stroke-width:30;stroke:#d69a4f}24.22%{opacity:1;d:path("M67 60 L67 100");stroke-width:30;stroke:#d69a4f;animation-timing-function:cubic-bezier(.6,0,.2,1)}37.50%{opacity:1;d:path("M52 86 L98 32");stroke-width:13;stroke:#8fd6a0}41.41%{opacity:0;d:path("M52 86 L98 32");stroke-width:13;stroke:#8fd6a0}100.00%{opacity:0;d:path("M52 86 L98 32");stroke-width:13;stroke:#8fd6a0}}@keyframes tick{0.00%{opacity:0}32.81%{opacity:0}40.62%{opacity:1}71.87%{opacity:1}79.69%{opacity:0}100.00%{opacity:0}}@keyframes glow{0.00%{opacity:0}32.81%{opacity:0}43.75%{opacity:.55}71.87%{opacity:.55}79.69%{opacity:0}100.00%{opacity:0}}
+      @media (prefers-reduced-motion:reduce){*{animation:none!important}.gavel{opacity:1}.ma,.mb,.tk,.hl,.sp,.ring{opacity:0}}
   </style>
   <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#bg)"/>
   <rect x="3.75" y="3.75" width="120.5" height="120.5" rx="27.25" fill="none" stroke="#2f3550" stroke-width="1.5"/>
   <g id="all">
-  <circle class="ring" cx="64" cy="100" r="14"/>
-  <g class="block"><path d="M24 101h80a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5z" fill="#252a42" stroke="#414868" stroke-width="1.5"/><rect x="24" y="102.5" width="80" height="2" rx="1" fill="#5a6aa8" opacity=".55"/></g>
-  <g class="gavel"><rect x="59.5" y="20" width="9" height="58" rx="4.5" fill="url(#wood)"/><rect x="59.5" y="26" width="9" height="3" fill="#7a4f1c" opacity=".55"/><rect x="59.5" y="33" width="9" height="3" fill="#7a4f1c" opacity=".55"/>
-    <rect x="37" y="72" width="54" height="29" rx="7" fill="url(#steel)" stroke="#e8ecff" stroke-opacity=".35" stroke-width="1"/>
-    <rect x="37" y="72" width="11" height="29" rx="5" fill="#7aa2f7" opacity=".55"/><rect x="80" y="72" width="11" height="29" rx="5" fill="#7aa2f7" opacity=".55"/>
-    <path d="M58 81h12m-12 6h12m-12 6h12" stroke="#3b4261" stroke-width="2.2" stroke-linecap="round" opacity=".7"/></g>
-  <path class="sp s0" d="M64 99 L30 80" stroke="#9ece6a" stroke-width="3" stroke-linecap="round"/><path class="sp s1" d="M64 99 L40 66" stroke="#e0af68" stroke-width="3" stroke-linecap="round"/><path class="sp s2" d="M64 99 L98 80" stroke="#9ece6a" stroke-width="3" stroke-linecap="round"/><path class="sp s3" d="M64 99 L88 66" stroke="#e0af68" stroke-width="3" stroke-linecap="round"/><path class="sp s4" d="M64 99 L22 96" stroke="#73daca" stroke-width="3" stroke-linecap="round"/><path class="sp s5" d="M64 99 L106 96" stroke="#73daca" stroke-width="3" stroke-linecap="round"/>
-  <g class="badge"><circle cx="99" cy="33" r="17" fill="url(#ok)"/><path d="M90 33.5l6.5 6.5L109 26" fill="none" stroke="#14141b" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <circle class="ring" cx="67" cy="100" r="14"/>
+  <g class="block"><rect x="26" y="108" width="76" height="9" rx="4" fill="#1b1e30" stroke="#33395a" stroke-width="1.2"/><path d="M30 100h68a4 4 0 0 1 4 4v4H26v-4a4 4 0 0 1 4-4z" fill="#2b3150" stroke="#414868" stroke-width="1.2"/><rect x="31" y="101.5" width="66" height="1.8" rx=".9" fill="#7a88c8" opacity=".5"/></g>
+  <path class="hl" d="M30 64 L52 86 L98 32"/>
+  <g class="gavel">
+    <rect x="16" y="75.5" width="42" height="9" rx="4.5" fill="url(#grip)"/>
+    <path d="M24 75.5v9M29 75.5v9M34 75.5v9" stroke="#6b4217" stroke-width="1.6" opacity=".5"/>
+    <circle cx="16" cy="80" r="6.5" fill="url(#grip)"/>
+    <rect x="52" y="60" width="30" height="40" rx="9" fill="url(#barrel)"/>
+    <rect x="52" y="60" width="30" height="9" rx="4.5" fill="url(#cap)"/><rect x="52" y="91" width="30" height="9" rx="4.5" fill="url(#cap)"/>
+    <rect x="57" y="64" width="3.4" height="32" rx="1.7" fill="#fff" opacity=".28"/>
+    <path d="M52 69.5h30M52 90.5h30" stroke="#2a1d12" stroke-width="1.4" opacity=".55"/>
+    <rect x="49.5" y="72" width="5" height="16" rx="2" fill="#8d5a22"/>
+  </g>
+  <path class="ma" d="M16 80 L52 80"/><path class="mb" d="M67 60 L67 100"/>
+  <path class="tk" d="M30 64 L52 86 L98 32"/>
+  <path class="sp" d="M67 99 L92 86" stroke="#9ece6a" stroke-width="3" stroke-linecap="round"/><path class="sp" d="M67 99 L98 72" stroke="#e0af68" stroke-width="3" stroke-linecap="round"/><path class="sp" d="M67 99 L38 92" stroke="#73daca" stroke-width="3" stroke-linecap="round"/><path class="sp" d="M67 99 L104 98" stroke="#73daca" stroke-width="3" stroke-linecap="round"/><path class="sp" d="M67 99 L88 76" stroke="#e0af68" stroke-width="3" stroke-linecap="round"/><path class="sp" d="M67 99 L108 90" stroke="#9ece6a" stroke-width="3" stroke-linecap="round"/>
   </g>
 </svg>

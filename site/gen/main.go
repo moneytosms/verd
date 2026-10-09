@@ -208,7 +208,7 @@ func bootHTML(root string) string {
 func tailHTML() string {
 	return `<script>(function(){var t=Date.now(),b=document.getElementById("boot");
 function hide(){if(b)b.classList.add("done")}
-addEventListener("load",function(){setTimeout(hide,Math.max(0,1400-(Date.now()-t)))});setTimeout(hide,3500);
+addEventListener("load",function(){setTimeout(hide,Math.max(0,2900-(Date.now()-t)))});setTimeout(hide,5000);
 if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&"IntersectionObserver"in window){
 var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -8% 0px"});
 document.querySelectorAll(".card,.steps li,.shot,.cta,.table,.prose h2,.prose table,.prose pre,.docgrid a,.pager a").forEach(function(el,i){el.classList.add("rv");el.style.transitionDelay=Math.min(i%6,5)*45+"ms";io.observe(el)})}})()</script>`

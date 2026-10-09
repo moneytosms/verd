@@ -8,7 +8,7 @@ verd is one static binary for **Linux and macOS** (amd64 and arm64). On Windows,
 curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh
 ```
 
-It installs the latest release to `~/.local/bin` after checking its SHA-256. Make sure that directory is on your `PATH`. Set `VERD_VERSION=v0.1.4` to pin a version, or `VERD_INSTALL_DIR` to change the target.
+It installs the latest release to `~/.local/bin` after checking its SHA-256. Make sure that directory is on your `PATH`. Set `VERD_VERSION=v0.2.0` to pin a version, or `VERD_INSTALL_DIR` to change the target.
 
 ## Other ways
 

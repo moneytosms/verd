@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" width="112" alt="verd logo: a Mjölnir-style gavel strikes a sound block and the verdict turns AC">
+  <img src="./assets/logo.svg" width="112" alt="verd logo: a judge's gavel strikes the sound block and turns into an AC check mark">
 </p>
 
 <p align="center">
