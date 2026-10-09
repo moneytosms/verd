@@ -28,6 +28,10 @@ type Config struct {
 	EmbedRatio     float64 `toml:"embed_ratio"`
 	EmbedFocusKey  string  `toml:"embed_focus_key"`
 	SubmitMode     string  `toml:"submit_mode"`
+	Border         string  `toml:"border"`
+	Header         bool    `toml:"header"`
+	Footer         bool    `toml:"footer"`
+	Density        string  `toml:"density"`
 
 	Lang map[string]Lang `toml:"lang"`
 }
@@ -68,6 +72,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
+		Border: "rounded", Header: true, Footer: true, Density: "normal",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},

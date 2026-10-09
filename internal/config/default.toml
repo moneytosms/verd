@@ -54,6 +54,19 @@
 # and it falls back to browser on any failure.
 # submit_mode = "browser"
 
+# Box border glyph set: rounded | square | heavy | double | ascii | none
+# none draws no frame but keeps a title line; ascii uses + - |
+# border = "rounded"
+
+# Show the top tab/header bar
+# header = true
+
+# Show the key-hint footer bar
+# footer = true
+
+# Compact spacing between sections (when easy)
+# density = "normal"
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]

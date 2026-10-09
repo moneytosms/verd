@@ -40,6 +40,10 @@ var settable = map[string]struct {
 	"autotest":        {kBool, nil},
 	"source_cf":       {kBool, nil},
 	"source_cses":     {kBool, nil},
+	"border":          {kString, []string{"rounded", "square", "heavy", "double", "ascii", "none"}},
+	"header":          {kBool, nil},
+	"footer":          {kBool, nil},
+	"density":         {kString, []string{"normal", "compact"}},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.
