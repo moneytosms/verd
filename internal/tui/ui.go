@@ -57,7 +57,8 @@ func box(title string, body []string, note string, w, h int, focus bool, st them
 	// For "none" style, draw just the top bar with the title
 	if borderStyle == "none" {
 		out := make([]string, 0, h)
-		out = append(out, line.Render("─ "+title+" "))
+		head := "─ " + title + " "
+		out = append(out, line.Render(xansi.Truncate(head+strings.Repeat("─", max(0, w-xansi.StringWidth(head))), w, "")))
 		for i := 1; i < h; i++ {
 			l := ""
 			if i-1 < len(body) {
@@ -68,14 +69,15 @@ func box(title string, body []string, note string, w, h int, focus bool, st them
 		return out
 	}
 
-	top := bg.topLeft + strings.Repeat(bg.horizontal, 1) + " " + title + " "
+	cw := xansi.StringWidth
+	head := bg.topLeft + bg.horizontal + " " + title + " "
 	bot := ""
 	if note != "" {
 		bot = " " + note + " "
 	}
-	topFill := max(0, w-len(bg.topRight)-xansi.StringWidth(top)+len(bg.horizontal))
+	topFill := max(0, w-cw(head)-cw(bg.topRight))
 	out := make([]string, 0, h)
-	out = append(out, line.Render(xansi.Truncate(top+strings.Repeat(bg.horizontal, topFill), w-len(bg.topRight), ""))+line.Render(bg.topRight))
+	out = append(out, line.Render(xansi.Truncate(head+strings.Repeat(bg.horizontal, topFill), w-cw(bg.topRight), ""))+line.Render(bg.topRight))
 	for i := 0; i < h-2; i++ {
 		l := ""
 		if i < len(body) {
@@ -83,7 +85,7 @@ func box(title string, body []string, note string, w, h int, focus bool, st them
 		}
 		out = append(out, line.Render(bg.vertical)+" "+fit(l, w-4)+" "+line.Render(bg.vertical))
 	}
-	out = append(out, line.Render(bg.botLeft+strings.Repeat(bg.horizontal, max(0, w-len(bg.botRight)-xansi.StringWidth(bot)))+bot+bg.botRight))
+	out = append(out, line.Render(bg.botLeft+strings.Repeat(bg.horizontal, max(0, w-cw(bg.botLeft)-cw(bg.botRight)-cw(bot)))+bot+bg.botRight))
 	return out
 }
 

@@ -46,8 +46,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q` | `quit` | quit |
-| `up`, `k` | `up` | move up |
-| `down`, `j` | `down` | move down |
+| `k`, `up` | `up` | move up |
+| `j`, `down` | `down` | move down |
 | `pgup` | `page_up` | page up |
 | `pgdown` | `page_down` | page down |
 | `enter` | `open` | open Problem |
@@ -63,8 +63,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q` | `quit` | quit |
-| `up`, `k` | `up` | move up |
-| `down`, `j` | `down` | move down |
+| `k`, `up` | `up` | move up |
+| `j`, `down` | `down` | move down |
 | `pgup` | `page_up` | page up |
 | `pgdown` | `page_down` | page down |
 | `enter` | `open` | list the contest's Problems |
@@ -74,8 +74,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q`, `esc` | `close` | close |
-| `up`, `k` | `up` | move up |
-| `down`, `j` | `down` | move down |
+| `k`, `up` | `up` | move up |
+| `j`, `down` | `down` | move down |
 | `enter` | `open` | open the Problem |
 
 ## Stats
@@ -83,8 +83,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q` | `quit` | quit |
-| `down`, `j` | `down` | scroll down |
-| `up`, `k` | `up` | scroll up |
+| `j`, `down` | `down` | scroll down |
+| `k`, `up` | `up` | scroll up |
 | `pgdown` | `page_down` | page down |
 | `pgup` | `page_up` | page up |
 | `n` | `next_problem` | select next attempted Problem |
@@ -107,8 +107,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q` | `quit` | quit |
-| `down`, `j` | `down` | move down |
-| `up`, `k` | `up` | move up |
+| `j`, `down` | `down` | move down |
+| `k`, `up` | `up` | move up |
 | `home`, `g` | `top` | first setting |
 | `end`, `G` | `bottom` | last setting |
 | `right`, `l`, `space` | `next_value` | next value / toggle |
@@ -125,8 +125,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `esc` | `back` | back (also cancels a stress run) |
 | `tab` | `pane_next` | next pane: statement, tests, detail |
 | `shift+tab` | `pane_prev` | previous pane |
-| `up`, `k` | `up` | scroll up / previous test |
-| `down`, `j` | `down` | scroll down / next test |
+| `k`, `up` | `up` | scroll up / previous test |
+| `j`, `down` | `down` | scroll down / next test |
 | `pgup` | `page_up` | page up |
 | `pgdown` | `page_down` | page down |
 | `home`, `g` | `top` | jump to the top |
@@ -159,8 +159,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q`, `esc` | `close` | close |
-| `down`, `j` | `down` | move down |
-| `up`, `k` | `up` | move up |
+| `j`, `down` | `down` | move down |
+| `k`, `up` | `up` | move up |
 | `a` | `add` | add a Custom Test here |
 | `e`, `enter` | `edit` | edit the selected Custom Test |
 | `c` | `copy` | copy the selected test into a new Custom Test |
@@ -181,8 +181,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `q`, `esc` | `close` | close help |
 | `right`, `l`, `tab` | `page_next` | next page |
 | `left`, `h`, `shift+tab` | `page_prev` | previous page |
-| `down`, `j` | `scroll_down` | scroll down |
-| `up`, `k` | `scroll_up` | scroll up |
+| `j`, `down` | `scroll_down` | scroll down |
+| `k`, `up` | `scroll_up` | scroll up |
 | `1` | `page_1` | page: This screen |
 | `2` | `page_2` | page: Everywhere |
 | `3` | `page_3` | page: Mouse |

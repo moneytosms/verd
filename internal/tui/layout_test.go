@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	xansi "github.com/charmbracelet/x/ansi"
 )
 
 func TestHeaderFooterToggle(t *testing.T) {
@@ -90,5 +91,22 @@ func TestTabKeysWithHeaderOff(t *testing.T) {
 	m, _ = send(m, "5")
 	if m.tab != 4 {
 		t.Fatalf("tab key 5 with header off: tab=%d (expected 4)", m.tab)
+	}
+}
+
+func TestBoxIsExactlyWideForEveryBorder(t *testing.T) {
+	m := New(nil, "", Deps{})
+	for _, b := range []string{"rounded", "square", "heavy", "double", "ascii", "none"} {
+		for _, note := range []string{"", "a note"} {
+			lines := box("Title", []string{"one", "two"}, note, 30, 6, true, m.styles(), b)
+			if len(lines) != 6 {
+				t.Fatalf("%s: %d lines", b, len(lines))
+			}
+			for i, l := range lines {
+				if w := xansi.StringWidth(l); w != 30 {
+					t.Errorf("%s note=%q line %d is %d columns: %q", b, note, i, w, l)
+				}
+			}
+		}
 	}
 }
