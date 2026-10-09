@@ -21,8 +21,12 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
 | `embed_focus_key` | `"ctrl+\\"` | Hands keyboard focus between verd and the embedded Neovim. |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
+| `border` | `"rounded"` | Box border glyphs: `rounded`, `square`, `heavy`, `double`, `ascii`, or `none` (no frame, title line only). |
+| `header` | `true` | Show the top tab/header bar. |
+| `footer` | `true` | Show the key-hint footer bar. |
+| `density` | `"normal"` | Compact spacing: `normal` or `compact` (removes blank spacer rows where easy). |
 
-An unknown `submit_mode` is a config error.
+An unknown `submit_mode` or `border` is a config error.
 
 ## Languages
 
