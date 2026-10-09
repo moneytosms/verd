@@ -6,10 +6,23 @@ The embedded pane draws Neovim **inside** verd's window, on the right, with verd
 split = "embedded"
 embed_ratio = 0.4          # share of the width verd keeps
 embed_side = "right"        # which column Neovim takes: right | left
+embed_zoom = false          # start the editor zoomed (fullscreen) when it opens
 embed_focus_key = "ctrl+\\" # toggles keyboard focus between verd and Neovim
 ```
 
-Keys go to Neovim while it has focus. `alt+h` / `alt+l` move the keyboard to the left / right column, so you can hop between verd and Neovim the way you move between splits (the editor can be the left or the right column: Settings > Embedded side). The focus key toggles. Clicking a column also focuses it. All of these are rebindable under `[keys.editor]`. `alt+z` hides verd and gives Neovim the whole window; press it again to bring verd back (with focus on verd). If the window is too narrow for both, verd shows itself alone.
+Keys go to Neovim while it has focus. The following editor keys work while the editor is open and has the keyboard:
+
+| Key | Action |
+|-----|--------|
+| `ctrl+\` | toggle keyboard between verd and the editor |
+| `alt+h` | keyboard to the left column |
+| `alt+l` | keyboard to the right column |
+| `alt+z` | hide verd and give the editor the whole window (toggle) |
+| `alt+]` | grow the editor column by 5% |
+| `alt+[` | shrink the editor column by 5% |
+| `alt+s` | swap editor between left and right column |
+
+All of these are rebindable under `[keys.editor]`. Clicking a column also focuses it. If the window is too narrow for both, verd shows itself alone.
 
 ## Known gaps
 

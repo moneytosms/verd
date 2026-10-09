@@ -117,7 +117,7 @@ down = ["j", "down", "ctrl+n"]
 | `testmgr` | The test manager modal (`T`). |
 | `submission` | The Submission modal. |
 | `help` | The help overlay. |
-| `editor` | The embedded editor pane: `focus`, `focus_left`, `focus_right`, `zoom`. These work even while Neovim has the keyboard. |
+| `editor` | The embedded editor pane: `focus`, `focus_left`, `focus_right`, `zoom`, `wider`, `narrower`, `swap_side`. These work even while Neovim has the keyboard. |
 
 The same shortcuts can be edited in the TUI: Settings (`5`) > **Keyboard shortcuts**. `/` fuzzy-searches by description, group, id or key; `enter` rebinds, `a` adds a key, `backspace` resets one action, `R` resets all (with y/n confirmation).
 
@@ -176,10 +176,11 @@ Pick a theme live in Settings (`5`): it previews as you move through the list.
 | `split` | `auto`, `tmux`, `herdr`, `embedded`, `suspend` | Where the editor opens. See [Neovim](./neovim.md). |
 | `embed_side` | `right` (default), `left` | Which column an embedded editor takes. Applies live. |
 | `embed_ratio` | `0.1` to `0.9` | Share of the window verd keeps when the editor is embedded. |
+| `embed_zoom` | `true`, `false` (default) | Start the editor fullscreen when it opens. |
 | `autotest` | `true`, `false` | Re-run tests whenever you save the Solution. |
 | `source_cf`, `source_cses` | `true`, `false` | Which Problem sources the lists show. |
 
-Embedded editor keys (rebindable under `[keys.editor]`): `alt+h` / `alt+l` move the keyboard to the left / right column, `ctrl+\` toggles, `alt+z` hides verd so the editor fills the window. See [Embedded pane](./embedded-pane.md).
+Embedded editor keys (rebindable under `[keys.editor]`): `ctrl+\` toggles the keyboard between verd and the editor, `alt+h` / `alt+l` move the keyboard to the left / right column, `alt+z` hides verd so the editor fills the window, `alt+]` / `alt+[` grow/shrink the editor column, `alt+s` swaps the editor between left and right. See [Embedded pane](./embedded-pane.md).
 
 A Problem you opened stays open when you switch tabs; `esc` closes it.
 
