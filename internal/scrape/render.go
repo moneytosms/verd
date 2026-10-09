@@ -6,9 +6,35 @@ import (
 	"unicode"
 
 	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/ansi"
+	"charm.land/glamour/v2/styles"
 	md "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/PuerkitoBio/goquery"
 )
+
+// getStyleConfig loads a glamour style by name (if a built-in) and removes heading prefixes for cleaner output.
+// If the style name is not a built-in, returns nil to signal that a file path should be used instead.
+func getStyleConfig(name string) *ansi.StyleConfig {
+	baseCfg, ok := styles.DefaultStyles[name]
+	if !ok {
+		return nil
+	}
+	// Copy the config to avoid mutating the shared default.
+	cfg := *baseCfg
+	// Remove markdown prefixes from headings; rely on color/bold for distinction.
+	cfg.H1.Prefix = ""
+	cfg.H2.Prefix = ""
+	cfg.H3.Prefix = ""
+	cfg.H4.Prefix = ""
+	cfg.H5.Prefix = ""
+	cfg.H6.Prefix = ""
+	// Reduce document margin for compact rendering.
+	if cfg.Document.Margin != nil {
+		margin := uint(1)
+		cfg.Document.Margin = &margin
+	}
+	return &cfg
+}
 
 // Render turns a stored statement into styled terminal text wrapped to width, using a glamour style name.
 // Order matters: TeX first (html-to-markdown would escape `_` and `\`), then markdown, then glamour.
@@ -49,7 +75,17 @@ func Render(statementHTML string, width int, style string) (string, error) {
 		}
 		return r
 	}, markdown)
-	r, err := glamour.NewTermRenderer(glamour.WithStylePath(style), glamour.WithWordWrap(width))
+
+	// Try to load as a built-in style; fall back to file path if not found.
+	var rendererOpts []glamour.TermRendererOption
+	if cfg := getStyleConfig(style); cfg != nil {
+		rendererOpts = append(rendererOpts, glamour.WithStyles(*cfg))
+	} else {
+		rendererOpts = append(rendererOpts, glamour.WithStylePath(style))
+	}
+	rendererOpts = append(rendererOpts, glamour.WithWordWrap(width))
+
+	r, err := glamour.NewTermRenderer(rendererOpts...)
 	if err != nil {
 		return "", err
 	}
