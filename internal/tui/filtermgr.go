@@ -371,7 +371,7 @@ func (m Model) filterBox() []string {
 		body = append(body, "  "+line)
 	}
 	note := fmt.Sprintf("%d match  tab field  ctrl+u reset  esc close", len(m.visible))
-	return box("Filters", body, note, w, min(h, len(body)+2), true, st)
+	return box("Filters", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
 // fmGrid is the tag grid's geometry: columns, cell width, rows per column and the first tag shown.

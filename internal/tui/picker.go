@@ -128,7 +128,7 @@ func (m Model) viewPicker(b *strings.Builder) string {
 	default:
 		card = append(card, st.Dim.Render("press space to draw a Problem"))
 	}
-	for _, l := range box("Problem Picker", card, "enter open · space re-roll", w, len(card)+2, true, st) {
+	for _, l := range box("Problem Picker", card, "enter open · space re-roll", w, len(card)+2, true, st, m.borderStyle()) {
 		b.WriteString(" " + l + "\n")
 	}
 	b.WriteString("\n")

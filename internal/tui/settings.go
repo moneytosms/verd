@@ -290,7 +290,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			body = append(body, " "+l.text)
 		}
 	}
-	left := box("Settings", body, "", lw, h, true, st)
+	left := box("Settings", body, "", lw, h, true, st, m.borderStyle())
 
 	d := settingDefs[m.setSel]
 	var info []string
@@ -325,7 +325,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			info = append(info, "  "+clean(l))
 		}
 	}
-	right := box("About", info, "", rw, h, false, st)
+	right := box("About", info, "", rw, h, false, st, m.borderStyle())
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}

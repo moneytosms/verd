@@ -67,7 +67,7 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 		body = append(body, l+st.Dim.Render(" │ ")+a)
 	}
 	note := fmt.Sprintf("%d-%d/%d%s  j/k scroll  q close", min(off+1, total), end, total, extra)
-	return box("Diff: "+res.Name+"  "+strings.TrimSpace(res.Verdict), body, note, w, min(h, len(body)+2), true, st)
+	return box("Diff: "+res.Name+"  "+strings.TrimSpace(res.Verdict), body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
 // subBox is the Submission modal: where it was sent and the Verdict as it arrives.
@@ -96,5 +96,5 @@ func (m Model) subBox() []string {
 	if s.final {
 		note = "q close"
 	}
-	return box(title, body, note, w, len(body)+2, true, st)
+	return box(title, body, note, w, len(body)+2, true, st, m.borderStyle())
 }

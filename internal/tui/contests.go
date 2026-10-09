@@ -112,7 +112,7 @@ func (m Model) contestBox() []string {
 		}
 		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), m.ratingText(p)))
 	}
-	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, "enter open  j/k move  q close", w, len(body)+2, true, st)
+	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, "enter open  j/k move  q close", w, len(body)+2, true, st, m.borderStyle())
 }
 
 func (m Model) viewContests(b *strings.Builder) string {
