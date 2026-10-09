@@ -54,10 +54,19 @@ func configSub(out io.Writer, path string, args []string) (bool, error) {
 	return true, nil
 }
 
-// keysCmd handles `verd keys [list|set|reset|check] [--json]`.
+// keysCmd handles `verd keys [list|set|reset|check|presets|export|import] [--json]`.
 func keysCmd(out io.Writer, path string, args []string) error {
 	asJSON := slices.Contains(args, "--json")
 	args = slices.DeleteFunc(slices.Clone(args), func(a string) bool { return a == "--json" })
+	sub := "list"
+	if len(args) > 0 {
+		sub = args[0]
+	}
+	// Handle preset commands (may need stdin)
+	if sub == "presets" || sub == "export" || sub == "import" {
+		return presetsCmd(out, path, nil, args[1:])
+	}
+	// Rest of keys commands
 	cfg, err := loadConfig(path)
 	if err != nil {
 		return err
@@ -65,10 +74,6 @@ func keysCmd(out io.Writer, path string, args []string) error {
 	user, err := cfg.KeyBindings()
 	if err != nil {
 		return err
-	}
-	sub := "list"
-	if len(args) > 0 {
-		sub = args[0]
 	}
 	switch sub {
 	case "list":
@@ -139,7 +144,7 @@ func keysCmd(out io.Writer, path string, args []string) error {
 			fmt.Fprintf(out, "%s = %s\n", args[1], strings.Join(keys, ", "))
 		}
 	default:
-		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset)", sub)
+		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset, presets, export, import)", sub)
 	}
 	return nil
 }
