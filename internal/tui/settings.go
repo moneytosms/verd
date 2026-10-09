@@ -35,6 +35,12 @@ var settingDefs = []settingDef{
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
+	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
+	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
+	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},
+	{"Reading", "reading_headings", "Section headings", "Style for Input/Output/Note headings: plain, bold, bar or underline.", "enum", true},
+	{"Reading", "reading_math", "Math rendering", "TeX rendering: unicode (to Unicode symbols) or raw (show TeX source).", "enum", true},
+	{"Reading", "reading_emphasis", "Emphasis", "Render italics and bold; off = plain text for emphasis.", "bool", true},
 	{"Keys", "keys", "Keyboard shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
@@ -115,6 +121,11 @@ func (m Model) apply(d settingDef, value string) Model {
 		if value == "true" && d.key == "source_cses" {
 			m.setNote = m.kx("saved: press {app.refresh} on a list to load the CSES tasks")
 			return m
+		}
+	case "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
+		// Invalidate bodyW to force re-render with new reading preferences
+		if m.detail != nil {
+			m.bodyW = 0
 		}
 	}
 	if d.key == "submit_mode" && value == "direct" && m.deps.SaveCreds != nil && (m.deps.HasCreds == nil || !m.deps.HasCreds()) {

@@ -41,7 +41,7 @@ func TestParseTask(t *testing.T) {
 	if strings.Contains(d.Statement, "Example") || strings.Contains(d.Statement, "<pre>") {
 		t.Fatal("the example belongs in Samples, not the statement")
 	}
-	out, err := scrape.Render(d.Statement, 80, "dark")
+	out, err := scrape.Render(d.Statement, 80, "dark", scrape.DefaultOptions())
 	if err != nil || !strings.Contains(out, "Weird Algorithm") && !strings.Contains(out, "Consider an algorithm") || !strings.Contains(out, "10") {
 		t.Fatalf("render: %v\n%s", err, out)
 	}

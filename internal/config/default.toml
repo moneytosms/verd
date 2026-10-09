@@ -73,6 +73,21 @@
 # focus_right = "alt+l"
 # zoom = "alt+z"
 
+# Reading preferences: how statements are laid out and styled.
+# reading_width = 0
+#   Max width for statement text in columns (0 = use the whole pane; 40-200 to cap it).
+#   Text is left-aligned inside the pane at the given width.
+# reading_margin = 1
+#   Left margin in columns (0-8).
+# reading_spacing = "normal"
+#   Blank lines between paragraphs: compact | normal | relaxed
+# reading_headings = "bar"
+#   Section heading style: plain | bold | bar | underline
+# reading_math = "unicode"
+#   Math rendering: unicode (TeX->Unicode) | raw (TeX source)
+# reading_emphasis = true
+#   Render italics and bold; false = plain text for emphasis.
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]

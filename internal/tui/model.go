@@ -535,6 +535,30 @@ type detailMsg struct {
 	err   error
 }
 
+// readingOptions constructs scrape.Options from config values.
+func (m Model) readingOptions() scrape.Options {
+	o := scrape.DefaultOptions()
+	if v := m.setting("reading_width"); v != "" && v != "0" {
+		fmt.Sscanf(v, "%d", &o.Width)
+	}
+	if v := m.setting("reading_margin"); v != "" {
+		fmt.Sscanf(v, "%d", &o.Margin)
+	}
+	if v := m.setting("reading_spacing"); v != "" && v != "normal" {
+		o.Spacing = v
+	}
+	if v := m.setting("reading_headings"); v != "" && v != "bar" {
+		o.Headings = v
+	}
+	if v := m.setting("reading_math"); v != "" && v != "unicode" {
+		o.Math = v
+	}
+	if v := m.setting("reading_emphasis"); v == "false" {
+		o.Emphasis = false
+	}
+	return o
+}
+
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 	load, width, style, loadState := m.deps.Load, m.stmtWidth()+4, m.styles().Glamour, m.deps.LoadState
 	return func() tea.Msg {
@@ -545,7 +569,8 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 		if err != nil {
 			return detailMsg{p: p, err: err}
 		}
-		body, err := scrape.Render(d.Statement, width-4, style)
+		opts := m.readingOptions()
+		body, err := scrape.Render(d.Statement, width-4, style, opts)
 		var state ProblemState
 		if loadState != nil {
 			state = loadState(p)
@@ -568,7 +593,8 @@ func (m Model) rewrap() Model {
 		return m
 	}
 	w := m.stmtWidth()
-	if body, err := scrape.Render(m.detail.Statement, w, m.styles().Glamour); err == nil {
+	opts := m.readingOptions()
+	if body, err := scrape.Render(m.detail.Statement, w, m.styles().Glamour, opts); err == nil {
 		m.body, m.bodyW = strings.Split(body, "\n"), w
 		m.scroll = min(m.scroll, m.maxScroll())
 	}

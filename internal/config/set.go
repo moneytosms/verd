@@ -18,6 +18,7 @@ type keyKind int
 const (
 	kString keyKind = iota
 	kFloat
+	kInt
 	kBool
 )
 
@@ -26,22 +27,28 @@ var settable = map[string]struct {
 	kind keyKind
 	opts []string
 }{
-	"handle":          {kString, nil},
-	"workspace":       {kString, nil},
-	"default_lang":    {kString, nil},
-	"theme":           {kString, nil},
-	"background":      {kString, []string{"auto", "dark", "light"}},
-	"editor":          {kString, nil},
-	"split":           {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
-	"embed_focus_key": {kString, nil},
-	"embed_side":      {kString, []string{"left", "right"}},
-	"submit_mode":     {kString, []string{"browser", "direct"}},
-	"time_multiplier": {kFloat, nil},
-	"float_eps":       {kFloat, nil},
-	"embed_ratio":     {kFloat, nil},
-	"autotest":        {kBool, nil},
-	"source_cf":       {kBool, nil},
-	"source_cses":     {kBool, nil},
+	"handle":           {kString, nil},
+	"workspace":        {kString, nil},
+	"default_lang":     {kString, nil},
+	"theme":            {kString, nil},
+	"background":       {kString, []string{"auto", "dark", "light"}},
+	"editor":           {kString, nil},
+	"split":            {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
+	"embed_focus_key":  {kString, nil},
+	"embed_side":       {kString, []string{"left", "right"}},
+	"submit_mode":      {kString, []string{"browser", "direct"}},
+	"time_multiplier":  {kFloat, nil},
+	"float_eps":        {kFloat, nil},
+	"embed_ratio":      {kFloat, nil},
+	"autotest":         {kBool, nil},
+	"source_cf":        {kBool, nil},
+	"source_cses":      {kBool, nil},
+	"reading_width":    {kInt, nil},
+	"reading_margin":   {kInt, nil},
+	"reading_spacing":  {kString, []string{"compact", "normal", "relaxed"}},
+	"reading_headings": {kString, []string{"plain", "bold", "bar", "underline"}},
+	"reading_math":     {kString, []string{"unicode", "raw"}},
+	"reading_emphasis": {kBool, nil},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.
@@ -61,6 +68,25 @@ func Set(path, key, value string) error {
 			return fmt.Errorf("%s: %q is not a non-negative number", key, value)
 		}
 		lit = f
+	case kInt:
+		i, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+		if err != nil {
+			return fmt.Errorf("%s: %q is not a number", key, value)
+		}
+		switch key {
+		case "reading_width":
+			if i < 0 || i > 200 {
+				return fmt.Errorf("reading_width: %d is outside 0 to 200", i)
+			}
+			if i != 0 && i < 40 {
+				return fmt.Errorf("reading_width: %d is outside 40 to 200 (or 0 for unlimited)", i)
+			}
+		case "reading_margin":
+			if i < 0 || i > 8 {
+				return fmt.Errorf("reading_margin: %d is outside 0 to 8", i)
+			}
+		}
+		lit = int(i)
 	case kBool:
 		b, err := strconv.ParseBool(strings.TrimSpace(value))
 		if err != nil {

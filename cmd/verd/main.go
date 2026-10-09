@@ -445,8 +445,11 @@ func runTUI(path string) error {
 			"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
 			"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
 			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
-			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey, "embed_side": cfg.EmbedSide,
-			"submit_mode": cfg.SubmitMode,
+			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
+			"embed_side": cfg.EmbedSide, "submit_mode": cfg.SubmitMode,
+			"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
+			"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
+			"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
 		},
 		Sync: func(source string) (string, error) {
 			for _, p := range providers() {
