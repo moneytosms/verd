@@ -97,6 +97,8 @@ type Deps struct {
 	// returns the data now in the cache (valid even when err != nil, e.g. offline). A network
 	// failure (cf.ErrNetwork) skips the remaining stages.
 	Refresh []func() (Data, error)
+	// LoadConfig re-reads the config file and returns current Settings and Keys for hot reload.
+	LoadConfig func() (settings map[string]string, keys map[string][]string, err error)
 }
 
 // ProblemState is the user's per-Problem choices; empty fields mean "use the default".
@@ -250,6 +252,9 @@ func (m Model) WithData(d Data) Model {
 	m = m.WithContests(d.Contests)
 	return m.refilter()
 }
+
+// ConfigChangedMsg triggers a reload of the config file (hot reload).
+type ConfigChangedMsg struct{}
 
 type syncDoneMsg struct {
 	text string
@@ -712,6 +717,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.reload()
+	case ConfigChangedMsg:
+		return m.onConfigChanged()
 	case tea.MouseClickMsg:
 		if msg.Button == tea.MouseLeft {
 			return m.onClick(msg.X, msg.Y)
