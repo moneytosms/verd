@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -10,37 +11,52 @@ import (
 )
 
 const (
-	defaultRatio    = 0.4
-	defaultFocusKey = "ctrl+\\"
-	minPane         = 20 // narrower than this and the pane is not worth drawing
+	defaultRatio = 0.4
+	minPane      = 20 // narrower than this and the pane is not worth drawing
 )
 
-// embedPane is the embedded editor, drawn as a right-hand column.
+// embedPane is the embedded editor, drawn as a column (right by default, left with embed_side = left).
 type embedPane struct {
 	term  *embed.Term
 	focus bool // keys go to the editor
+	zoom  bool // editor fullscreen, verd hidden
 }
 
-// layout splits the window: verd on the left (ratio of the width), a 1-column divider, the pane on the right.
+// paneLeft reports whether the editor column is on the left.
+func (m Model) paneLeft() bool { return m.deps.EmbedSide == "left" }
+
+// layout splits the window into verd's width and the editor's width (verd gets the ratio), with a
+// 1-column divider between them. Which side each sits on is paneLeft.
 func (m Model) layout() (left, right int) {
+	if m.embed.zoom && m.embed.term != nil {
+		return 0, m.width
+	}
 	r := m.deps.EmbedRatio
 	if r <= 0 || r >= 1 {
 		r = defaultRatio
 	}
-	left = int(float64(m.width) * r)
-	right = m.width - left - 1
+	left = int(float64(m.width) * r) // verd's width
+	right = m.width - left - 1       // the editor's width
 	if right < minPane || left < minPane {
 		left, right = m.width, 0 // too narrow: verd only
 	}
 	return left, right
 }
 
-func (m Model) focusKey() string {
-	if m.deps.FocusKey != "" {
-		return m.deps.FocusKey
+// edKeys are the keys bound to an editor action (editor.focus, focus_left, focus_right, zoom).
+// embed_focus_key is the older spelling of editor.focus and applies when [keys.editor] doesn't.
+func (m Model) edKeys(id string) []string {
+	if u := m.km.user["editor."+id]; len(u) > 0 {
+		return u
 	}
-	return defaultFocusKey
+	if id == "focus" && m.deps.FocusKey != "" {
+		return []string{m.deps.FocusKey}
+	}
+	a, _ := findAction("editor." + id)
+	return a.def
 }
+
+func (m Model) focusKey() string { return m.edKeys("focus")[0] }
 
 // resizeEmbed makes the editor match its column.
 func (m Model) resizeEmbed() {
@@ -93,9 +109,32 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if msg.String() == m.focusKey() {
-			m.embed.focus = !m.embed.focus
+		if slices.Contains(m.edKeys("zoom"), msg.String()) {
+			m.embed.zoom = !m.embed.zoom
+			m.embed.focus = m.embed.zoom // hiding verd hands keys to the editor
 			if m.embed.focus {
+				t.Focus()
+			} else {
+				t.Blur()
+			}
+			m.resizeEmbed()
+			return m, m.relayout(), true
+		}
+		want, dir := m.embed.focus, false
+		switch key := msg.String(); {
+		case slices.Contains(m.edKeys("focus"), key):
+			want, dir = !m.embed.focus, true
+		case slices.Contains(m.edKeys("focus_left"), key):
+			want, dir = m.paneLeft(), true // the editor is in the left column
+		case slices.Contains(m.edKeys("focus_right"), key):
+			want, dir = !m.paneLeft(), true
+		}
+		if dir {
+			if m.embed.zoom {
+				return m, nil, true // verd is hidden; alt+z first
+			}
+			m.embed.focus = want
+			if want {
 				t.Focus()
 			} else {
 				t.Blur()
@@ -117,13 +156,19 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 		if right == 0 {
 			return m, nil, false
 		}
-		inPane := mouse.X > left && mouse.X < left+1+right && mouse.Y < m.height
+		x0 := left + 1 // editor column's first x
+		if m.paneLeft() {
+			x0 = 0
+		}
+		inPane := m.embed.zoom || mouse.X >= x0 && mouse.X < x0+right && mouse.Y < m.height
 		if _, click := msg.(tea.MouseClickMsg); click {
 			m.embed.focus = inPane // clicking a column gives it the keyboard
 		}
 		if inPane {
 			rel := mouse
-			rel.X -= left + 1
+			if !m.embed.zoom {
+				rel.X -= x0
+			}
 			t.SendMouse(translateMouse(msg, rel))
 			return m, nil, true
 		}
@@ -153,6 +198,14 @@ func (m Model) View() tea.View {
 		v.MouseMode = tea.MouseModeCellMotion
 		return v
 	}
+	if left == 0 { // zoomed: editor only
+		v := tea.NewView(m.embed.term.Render())
+		v.AltScreen = true
+		v.MouseMode = tea.MouseModeCellMotion
+		x, y := m.embed.term.Cursor()
+		v.Cursor = tea.NewCursor(x, y)
+		return v
+	}
 	lm := m
 	lm.width = left
 	verd := strings.Split(lm.screen(), "\n")
@@ -171,7 +224,13 @@ func (m Model) View() tea.View {
 			r = xansi.Truncate(pane[i], right, "")
 		}
 		l = xansi.Truncate(l, left, "")
-		b.WriteString(l + strings.Repeat(" ", max(0, left-xansi.StringWidth(l))) + divider + r)
+		l += strings.Repeat(" ", max(0, left-xansi.StringWidth(l)))
+		r += strings.Repeat(" ", max(0, right-xansi.StringWidth(r)))
+		if m.paneLeft() {
+			b.WriteString(r + divider + l)
+		} else {
+			b.WriteString(l + divider + r)
+		}
 		if i < max(1, m.height)-1 {
 			b.WriteByte('\n')
 		}
@@ -181,7 +240,11 @@ func (m Model) View() tea.View {
 	v.MouseMode = tea.MouseModeCellMotion
 	if m.embed.focus {
 		x, y := m.embed.term.Cursor()
-		v.Cursor = tea.NewCursor(left+1+x, y)
+		if m.paneLeft() {
+			v.Cursor = tea.NewCursor(x, y)
+		} else {
+			v.Cursor = tea.NewCursor(left+1+x, y)
+		}
 	}
 	return v
 }
@@ -192,7 +255,21 @@ func (m Model) embedBadge() string {
 		return ""
 	}
 	if m.embed.focus {
-		return fmt.Sprintf("[editor focused, %s returns here]", m.focusKey())
+		return fmt.Sprintf("[editor focused, %s returns here, %s zooms]", m.focusKey(), m.edKeys("zoom")[0])
 	}
 	return fmt.Sprintf("[%s focuses the editor]", m.focusKey())
+}
+
+// shiftMouse moves a mouse event into verd's own coordinates when the editor column is on the left.
+func (m Model) shiftMouse(msg tea.Msg) tea.Msg {
+	mm, ok := msg.(tea.MouseMsg)
+	if !ok || m.embed.term == nil || m.embed.zoom || !m.paneLeft() {
+		return msg
+	}
+	if _, right := m.layout(); right > 0 {
+		rel := mm.Mouse()
+		rel.X -= right + 1
+		return translateMouse(mm, rel)
+	}
+	return msg
 }

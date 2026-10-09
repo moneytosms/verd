@@ -197,7 +197,7 @@ func (m Model) updateTM(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		switch {
 		case len(m.cases) == 0:
 		case !cur.Custom:
-			t.note = "samples are read-only: press c to copy it into an editable Custom Test"
+			t.note = m.kx("samples are read-only: press {testmgr.copy} to copy it into an editable Custom Test")
 		default:
 			t.ed = newEditor(cur.Name, cur.Input, cur.Want)
 		}
@@ -256,7 +256,7 @@ func (m Model) tmBox() []string {
 		list = append(list, fmt.Sprintf("%s%-9s %s %s", cur, r.Name, kind, v))
 	}
 	if len(list) == 0 {
-		list = []string{st.Dim.Render("no tests: press a to add")}
+		list = []string{st.Dim.Render(m.kx("no tests: press {testmgr.add} to add"))}
 	}
 	inner := h - 2
 	start := max(0, min(t.sel-inner/2, len(list)-inner))

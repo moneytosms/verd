@@ -199,3 +199,32 @@ func TestEmbeddedMouseFocusAndForwarding(t *testing.T) {
 		t.Fatal("the view must request mouse events while a pane is shown")
 	}
 }
+
+func TestEmbeddedLeftSideAndDirectionalFocus(t *testing.T) {
+	term := startTerm(t, `printf 'EDITOR-HERE'; sleep 5`)
+	m := embedModel(t, term, 100, 12)
+	m.deps.EmbedSide = "left"
+	waitUntil(t, "editor output", func() bool { return strings.Contains(plain(m), "EDITOR-HERE") })
+	line := strings.Split(plain(m), "\n")[0]
+	if e, p := strings.Index(line, "EDITOR-HERE"), strings.Index(line, "Problems"); e < 0 || p < 0 || e > p {
+		t.Fatalf("editor should be left of verd:\n%s", line)
+	}
+	press := func(m Model, msg tea.Msg) Model {
+		nm, _ := m.Update(msg)
+		return nm.(Model)
+	}
+	m = press(m, tea.KeyPressMsg{Code: 'l', Mod: tea.ModAlt}) // right column is verd
+	if m.embed.focus {
+		t.Fatal("alt+l should focus verd when the editor is on the left")
+	}
+	m = press(m, tea.KeyPressMsg{Code: 'h', Mod: tea.ModAlt})
+	if !m.embed.focus {
+		t.Fatal("alt+h should focus the left (editor) column")
+	}
+	// a click in verd's column (shifted right of the editor) hits verd's own tab bar
+	_, right := m.layout()
+	m = press(m, tea.MouseClickMsg{X: right + 1 + 2, Y: 0, Button: tea.MouseLeft})
+	if m.embed.focus {
+		t.Fatal("click on verd's column should focus verd")
+	}
+}

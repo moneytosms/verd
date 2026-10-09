@@ -20,7 +20,7 @@ func (m Model) stmtBody() []string {
 		body = append(body, "", "loading...")
 	}
 	if m.errMsg != "" {
-		body = append(body, "", m.styles().Bad.Render(clean(m.errMsg)))
+		body = append(body, "", m.styles().Bad.Render(m.kx(clean(m.errMsg))))
 	}
 	return body
 }

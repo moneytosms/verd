@@ -365,6 +365,8 @@ func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
 	}
 	m, _ = send(m, "?")
 	// inside a Problem
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 50}) // the Problem list is long
+	m = nm.(Model)
 	m, _ = send(m, "1")
 	m, _ = send(m, "enter")
 	m, _ = send(m, "?")
@@ -1138,8 +1140,10 @@ func TestStatsScrollsAndHelp(t *testing.T) {
 	if plain(m) == first || m.statsScroll != 5 {
 		t.Fatal("j should scroll the Stats view")
 	}
+	nm, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+	m = nm.(Model)
 	m, _ = send(m, "?")
-	if out := plain(m); !strings.Contains(out, "Keys: Stats") || !strings.Contains(out, "select next/previous attempted Problem") {
+	if out := plain(m); !strings.Contains(out, "Keys: Stats") || !strings.Contains(out, "select next attempted Problem") {
 		t.Fatalf("help:\n%s", out)
 	}
 }

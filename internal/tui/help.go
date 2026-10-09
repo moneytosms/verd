@@ -9,35 +9,30 @@ import (
 
 var helpPages = []string{"This screen", "Everywhere", "Mouse", "Guide"}
 
-// keys lists the current screen's own key bindings.
-func (m Model) keys() (screen string, keys [][2]string) {
-	switch {
-	case m.open != nil:
-		return "Problem", [][2]string{{"tab, shift+tab", "move between statement, tests and detail panes"}, {"j/k, pgup/pgdn, g/G", "scroll the pane, or move the test selection"}, {"e", "edit Solution in Neovim"}, {"N", "edit the Problem's notes.md (first line shows in the Problem box)"}, {"y", "copy the focused pane (question, tests or selected test)"}, {"T", "manage tests: view, add, edit, copy, delete"}, {"a", "add a Custom Test"}, {"l", "switch language"}, {"s", "submit (copy Solution, open Codeforces, track Verdict)"}, {"t", "run tests"}, {"S", "stress test (esc cancels, w saves counterexample)"}, {"c", "cycle Comparison Mode (tokens, exact, float, none)"}, {"n/p", "select next/previous test"}, {"d", "diff selected failing test"}, {"r", "refetch statement"}, {"o", "open in browser"}, {"esc", "back"}, {"q", "close a modal; quit when none is open"}, {"?", "toggle help"}}
-	case m.input != nil:
-		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
-	case m.tab == 0:
-		return "Problems", [][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "open Problem"}, {"f", "filters: rating, status, sort, tags (modal)"}, {":", "filter expression: 800-1200 +dp -graphs unsolved"}, {"X", "clear all filters"}, {"/", "live fuzzy search (tab: all/name/tag/id; #dp matches tags)"}}
-	case m.tab == 1 && m.contestOpen != nil:
-		return "Contest", [][2]string{{"j/k", "move"}, {"enter", "open Problem"}, {"q, esc", "close"}}
-	case m.tab == 1:
-		return "Contests", [][2]string{{"j/k, pgup/pgdn", "move"}, {"enter", "list Problems"}}
-	case m.tab == 2:
-		return "Stats", [][2]string{{"j/k, pgup/pgdn", "scroll"}, {"n/N", "select next/previous attempted Problem"}, {"enter", "open it"}, {"p", "Problem Picker with the weak-topics preset"}}
-	case m.tab == 3:
-		return "Picker", [][2]string{{"space, r", "re-roll"}, {"enter", "open the Problem"}, {"f", "filters: 800-1200 +dp -graphs"}, {"w", "weak-topics preset"}}
+// actionRows lists the current keys and descriptions of the actions in the given groups.
+func (m Model) actionRows(groups ...string) (rows [][2]string) {
+	for _, g := range groups {
+		for _, a := range keyActions {
+			if a.ctx == g {
+				rows = append(rows, [2]string{strings.Join(m.km.keys(a), ", "), a.desc})
+			}
+		}
 	}
-	return "Settings", [][2]string{{"j/k", "move"}, {"←/→, space", "change the value (saved at once)"}, {"enter", "edit a text value; enter saves, esc cancels"}, {"e", "open config.toml in your editor"}}
+	return rows
 }
 
-var globalKeys = [][2]string{
-	{"1-5, tab", "switch tab: Problems, Contests, Stats, Picker, Settings"},
-	{"ctrl+r", "refresh from Codeforces"},
-	{"?", "this help"},
-	{"esc", "go back, close a modal, cancel a prompt"},
-	{"q", "close a modal; quit when none is open"},
-	{"x", "dismiss a notification"},
-	{"ctrl+c", "quit from anywhere"},
+// keys lists the current screen's own key bindings (live from the keymap, so rebinding shows here).
+func (m Model) keys() (screen string, keys [][2]string) {
+	ctx := m.screenCtx()
+	if m.input != nil {
+		return "Prompt", [][2]string{{"enter", "apply"}, {"esc", "cancel"}, {"ctrl+u", "clear"}}
+	}
+	return map[string]string{"problem": "Problem", "problems": "Problems", "contest": "Contest", "contests": "Contests", "stats": "Stats", "picker": "Picker", "settings": "Settings"}[ctx], m.actionRows(ctx)
+}
+
+// globalKeys are the shortcuts that work on every screen.
+func (m Model) globalKeys() [][2]string {
+	return append(m.actionRows("tabs", "app", "common"), [2]string{"ctrl+c", "quit from anywhere (fixed)"})
 }
 
 var mouseHelp = [][2]string{
@@ -74,7 +69,7 @@ func (m Model) helpLines(page int) []string {
 	case 0:
 		_, rows = m.keys()
 	case 1:
-		rows = globalKeys
+		rows = m.globalKeys()
 	case 2:
 		rows = mouseHelp
 	default:
@@ -116,7 +111,7 @@ func (m Model) helpBox() []string {
 	room := max(3, h-2-len(body))
 	off := min(m.helpScroll, max(0, len(lines)-room))
 	body = append(body, lines[off:min(len(lines), off+room)]...)
-	note := "←/→ page  j/k scroll  q close"
+	note := m.kx("{help.page_prev}/{help.page_next} page  {help.scroll_down}/{help.scroll_up} scroll  {help.close} close")
 	if len(lines) > room {
 		note = fmt.Sprintf("%d/%d  ", off+1, len(lines)) + note
 	}

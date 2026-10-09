@@ -144,3 +144,49 @@ func TestVersion(t *testing.T) {
 		t.Fatalf("%v %q", err, out.String())
 	}
 }
+
+func TestCustomizeCLI(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	do := func(args ...string) (string, error) {
+		var out bytes.Buffer
+		err := run(args, &out)
+		return out.String(), err
+	}
+	if _, err := do("init", "--no-setup"); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := do("config", "set", "embed_side", "left"); err != nil || !strings.Contains(out, "embed_side = left") {
+		t.Fatalf("%q %v", out, err)
+	}
+	if out, _ := do("config", "get", "embed_side"); strings.TrimSpace(out) != "left" {
+		t.Fatalf("get: %q", out)
+	}
+	if _, err := do("config", "set", "embed_side", "up"); err == nil {
+		t.Fatal("bad value must be refused")
+	}
+	if _, err := do("keys", "set", "problem.run_tests", "ctrl+t"); err != nil {
+		t.Fatal(err)
+	}
+	if out, _ := do("keys", "--json"); !strings.Contains(out, `"keys": [`+"\n"+`      "ctrl+t"`) {
+		t.Fatalf("json should show the new key:\n%s", out)
+	}
+	if _, err := do("keys", "set", "problem.submit", "ctrl+t"); err == nil || !strings.Contains(err.Error(), "bound to both") {
+		t.Fatalf("conflict must be refused: %v", err)
+	}
+	if _, err := do("keys", "set", "problem.nope", "x"); err == nil {
+		t.Fatal("unknown action must be refused")
+	}
+	if _, err := do("keys", "reset", "problem.run_tests"); err != nil {
+		t.Fatal(err)
+	}
+	if out, _ := do("keys"); strings.Contains(out, "ctrl+t") {
+		t.Fatalf("reset should restore t:\n%s", out)
+	}
+	out, err := do("themes", "show", "nord")
+	if err != nil || !strings.Contains(out, "[themes.my-nord.dark]") || !strings.Contains(out, `accent = "#88c0d0"`) {
+		t.Fatalf("%q %v", out, err)
+	}
+	if out, _ := do("themes", "show", "terminal"); !strings.Contains(out, `accent = "ansi6"`) {
+		t.Fatalf("terminal palette uses ansi indices:\n%s", out)
+	}
+}

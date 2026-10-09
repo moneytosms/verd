@@ -152,7 +152,7 @@ func (m Model) testsPanel() []string {
 	st := m.styles()
 	r := m.run
 	if r == nil {
-		return []string{st.Dim.Render(fmt.Sprintf("Tests [%s]: press t to run (samples and custom tests), c mode, l language", m.tag()))}
+		return []string{st.Dim.Render(m.kx(fmt.Sprintf("Tests [%s]: press {problem.run_tests} to run (samples and custom tests), {problem.cycle_mode} mode, {problem.language} language", m.tag())))}
 	}
 	head := fmt.Sprintf("Tests [%s]", m.tag())
 	switch {

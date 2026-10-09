@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -23,16 +24,18 @@ var settingDefs = []settingDef{
 	{"Appearance", "background", "Background", "auto follows your terminal; force dark or light if the colors look wrong.", "enum", true},
 	{"General", "handle", "Handle", "Your Codeforces handle: where solved marks, stats and Submissions come from.", "text", false},
 	{"General", "workspace", "Workspace", "Where Solutions and tests live: <workspace>/<contest>/<index>/. A relative path is resolved against where verd starts; verd --here does that for one run.", "text", false},
-	{"General", "default_lang", "Default language", "Language for new Solutions. Switch per Problem with l.", "enum", true},
+	{"General", "default_lang", "Default language", "Language for new Solutions. Switch per Problem with {problem.language}.", "enum", true},
 	{"Testing", "autotest", "Autotest", "Run the tests whenever you save the Solution.", "bool", true},
 	{"Testing", "time_multiplier", "Time multiplier", "Scales every time limit for local runs. Use 2.0 on a slow machine.", "text", false},
 	{"Testing", "float_eps", "Float tolerance", "Absolute and relative tolerance for the float Comparison Mode.", "text", false},
 	{"Sources", "source_cf", "Codeforces", "Show Codeforces Problems in the list, the picker and search.", "bool", true},
-	{"Sources", "source_cses", "CSES", "Show the CSES Problem Set (400 tasks, grouped by topic). Press ctrl+r to load it after turning it on. Mark tasks solved with m, or pull your solved list in with Y (after verd sync cses once).", "bool", true},
+	{"Sources", "source_cses", "CSES", "Show the CSES Problem Set (400 tasks, grouped by topic). Press {app.refresh} to load it after turning it on. Mark tasks solved with {problems.mark_solved}, or pull your solved list in with {problems.sync_cses} (after verd sync cses once).", "bool", true},
 	{"Editor", "editor", "Editor", "Your editor command: nvim (default), vim, hx, nano, micro, emacs, code and so on. Any command works from config.toml. Only Neovim reuses its pane on the next e.", "enum", true},
 	{"Editor", "split", "Editor split", "How the editor opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
+	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
+	{"Keys", "keys", "Keyboard shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
@@ -96,6 +99,9 @@ func (m Model) apply(d settingDef, value string) Model {
 		if value != "auto" {
 			m.dark = value == "dark"
 		}
+	case "embed_side":
+		m.deps.EmbedSide = value
+		m.resizeEmbed()
 	case "autotest":
 		m.deps.Autotest = value == "true"
 	case "default_lang":
@@ -107,7 +113,7 @@ func (m Model) apply(d settingDef, value string) Model {
 		m.cursor = 0
 		m = m.refilter()
 		if value == "true" && d.key == "source_cses" {
-			m.setNote = "saved: press ctrl+r on a list to load the CSES tasks"
+			m.setNote = m.kx("saved: press {app.refresh} on a list to load the CSES tasks")
 			return m
 		}
 	}
@@ -127,6 +133,8 @@ func (m Model) apply(d settingDef, value string) Model {
 // step moves an enum or bool setting by dir (+1/-1).
 func (m Model) step(d settingDef, dir int) Model {
 	switch d.kind {
+	case "keys":
+		return m.openKeyEditor()
 	case "bool":
 		return m.apply(d, strconv.FormatBool(m.setting(d.key) != "true"))
 	case "enum":
@@ -185,9 +193,9 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.setSel = 0
 	case "G", "end":
 		m.setSel = len(settingDefs) - 1
-	case "right", "l", " ":
+	case "right", "l", " ", "space":
 		m = m.step(d, 1)
-		if d.kind == "text" && msg.String() != " " {
+		if d.kind == "text" && msg.String() != " " && msg.String() != "space" {
 			break
 		}
 	case "left", "h":
@@ -232,6 +240,8 @@ func (m Model) settingLines(w int) []settingLine {
 		val := m.setting(d.key)
 		var shown string
 		switch d.kind {
+		case "keys":
+			shown = st.Dim.Render(fmt.Sprintf("enter to edit (%d changed)", len(m.km.user)))
 		case "enum":
 			shown = st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
 		case "bool":
@@ -295,7 +305,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	d := settingDefs[m.setSel]
 	var info []string
 	info = append(info, st.Accent.Render(d.label), "")
-	info = append(info, wrap(d.desc, rw-4)...)
+	info = append(info, wrap(m.kx(d.desc), rw-4)...)
 	info = append(info, "")
 	if d.live {
 		info = append(info, st.Good.Render("applies immediately"))
@@ -303,6 +313,8 @@ func (m Model) viewSettings(b *strings.Builder) string {
 		info = append(info, st.Warn.Render("applies the next time verd starts"))
 	}
 	switch d.kind {
+	case "keys":
+		info = append(info, st.Dim.Render("enter opens the editor"))
 	case "enum", "bool":
 		info = append(info, st.Dim.Render("←/→ or space change · saved on change"))
 	default:
@@ -329,7 +341,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}
-	return "j/k move  ←/→ change  enter edit  L paste login (submit mode)  e open config.toml  ? help  q quit"
+	return "{settings.down}/{settings.up} move  {settings.prev_value}/{settings.next_value} change  {settings.edit} edit  {settings.login} paste login (submit mode)  {settings.edit_config} open config.toml  {common.help} help  {settings.quit} quit"
 }
 
 // themeGallery lists every theme with its palette swatch, the current one marked.

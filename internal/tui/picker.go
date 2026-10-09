@@ -124,9 +124,9 @@ func (m Model) viewPicker(b *strings.Builder) string {
 		card = append(card, st.Dim.Render("rating ")+m.ratingText(p)+st.Dim.Render("    solved by ")+fmt.Sprint(p.SolvedCount))
 		card = append(card, m.tagChips(p, w-6))
 	case m.pickInit:
-		card = append(card, st.Bad.Render("No Problem matches these filters."), st.Dim.Render("Press f to change them (e.g. widen the rating range) or r to retry."))
+		card = append(card, st.Bad.Render("No Problem matches these filters."), st.Dim.Render(m.kx("Press {picker.filters} to change them (e.g. widen the rating range) or {picker.reroll} to retry.")))
 	default:
-		card = append(card, st.Dim.Render("press space to draw a Problem"))
+		card = append(card, st.Dim.Render(m.kx("press {picker.reroll} to draw a Problem")))
 	}
 	for _, l := range box("Problem Picker", card, "enter open · space re-roll", w, len(card)+2, true, st) {
 		b.WriteString(" " + l + "\n")
@@ -154,5 +154,5 @@ func (m Model) viewPicker(b *strings.Builder) string {
 		}
 		return "enter apply  esc cancel"
 	}
-	return "space re-roll  enter open  f filters  w weak topics  ? help  q quit"
+	return "{picker.reroll} re-roll  {picker.open} open  {picker.filters} filters  {picker.weak_topics} weak topics  {common.help} help  {picker.quit} quit"
 }

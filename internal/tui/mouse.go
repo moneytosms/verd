@@ -21,14 +21,14 @@ func (m Model) modalRect() (x, y, w, h int, ok bool) {
 
 // closeModal dismisses whichever modal is open.
 func (m Model) closeModal() Model {
-	m.tm, m.fm, m.help, m.subModal = nil, nil, false, false
+	m.tm, m.fm, m.ke, m.help, m.subModal = nil, nil, nil, false, false
 	if m.run != nil {
 		m.run.diff = false
 	}
 	if m.strs != nil {
 		m.strs.diff = false
 	}
-	if m.tab == 1 && m.open == nil {
+	if m.tab == 1 && !m.viewing() {
 		m.contestOpen, m.cpCursor = nil, 0
 	}
 	return m
@@ -47,14 +47,13 @@ func (m Model) onClick(x, y int) (tea.Model, tea.Cmd) {
 	if y == 0 {
 		for i, r := range tabRanges() {
 			if x >= r[0] && x < r[1] {
-				m = m.closeProblem()
 				m.tab = i
 				return m.onTab(), nil
 			}
 		}
 		return m, nil
 	}
-	if m.open != nil {
+	if m.viewing() {
 		return m.clickProblem(x, y)
 	}
 	switch m.tab {
@@ -250,7 +249,7 @@ func (m Model) clickInModal(rx, ry int) (tea.Model, tea.Cmd) {
 				return m.cycleTag(shown[i].name).applyFilter(), nil
 			}
 		}
-	case m.tab == 1 && m.contestOpen != nil && m.open == nil:
+	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
 		ps := m.contestProblems(*m.contestOpen)
 		if i := ry - 1; i >= 0 && i < len(ps) {
 			if i == m.cpCursor {
@@ -288,12 +287,12 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 		return m, nil
 	case m.subModal:
 		return m, nil
-	case m.tab == 1 && m.contestOpen != nil && m.open == nil:
+	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
 		ps := m.contestProblems(*m.contestOpen)
 		m.cpCursor = max(0, min(m.cpCursor+d/3, len(ps)-1))
 		return m, nil
 	}
-	if m.open != nil {
+	if m.viewing() {
 		if g, ok := m.splitGeom(); ok && x >= g.lw {
 			ty := contentTop + g.infoH
 			switch {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/moneytosms/verd/internal/theme"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -27,7 +28,14 @@ type Config struct {
 	Split          string  `toml:"split"`
 	EmbedRatio     float64 `toml:"embed_ratio"`
 	EmbedFocusKey  string  `toml:"embed_focus_key"`
+	EmbedSide      string  `toml:"embed_side"`
 	SubmitMode     string  `toml:"submit_mode"`
+
+	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
+	Keys map[string]map[string]any `toml:"keys"`
+
+	// Themes defines named color themes: [themes.<name>] base/glamour_*/[dark]/[light]. See theme.Spec.
+	Themes map[string]theme.Spec `toml:"themes"`
 
 	Lang map[string]Lang `toml:"lang"`
 }
@@ -67,7 +75,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -118,6 +126,14 @@ func Load(path string) (Config, error) {
 	if c.Background != "auto" && c.Background != "dark" && c.Background != "light" {
 		return c, fmt.Errorf("background %q: want auto, dark or light", c.Background)
 	}
+	for name, spec := range c.Themes {
+		if err := theme.Register(name, spec); err != nil {
+			return c, fmt.Errorf("themes.%s: %w", name, err)
+		}
+	}
+	if c.EmbedSide != "left" && c.EmbedSide != "right" {
+		return c, fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
+	}
 	if c.SubmitMode != "browser" && c.SubmitMode != "direct" {
 		return c, fmt.Errorf("submit_mode %q: want browser or direct", c.SubmitMode)
 	}
@@ -140,4 +156,17 @@ func Load(path string) (Config, error) {
 		c.Lang[k] = l
 	}
 	return c, nil
+}
+
+// Get returns a top-level settable key's value as text.
+func (c Config) Get(key string) (string, bool) {
+	vals := map[string]any{
+		"handle": c.Handle, "workspace": c.Workspace, "default_lang": c.DefaultLang, "theme": c.Theme,
+		"background": c.Background, "editor": c.Editor, "split": c.Split, "embed_focus_key": c.EmbedFocusKey,
+		"embed_side": c.EmbedSide, "submit_mode": c.SubmitMode, "time_multiplier": c.TimeMultiplier,
+		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest,
+		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
+	}
+	v, ok := vals[key]
+	return fmt.Sprint(v), ok
 }

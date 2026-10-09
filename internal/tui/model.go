@@ -79,6 +79,11 @@ type Deps struct {
 	// FocusKey toggles keyboard focus between verd and the editor (default ctrl+\\).
 	EmbedRatio float64
 	FocusKey   string
+	// Keys are the user's shortcut overrides ("context.action" -> keys); SaveKeys persists one (nil keys = reset).
+	Keys     map[string][]string
+	SaveKeys func(ctx, action string, keys []string) error
+	// EmbedSide is the editor's column: right (default) or left.
+	EmbedSide string
 	// Watch reports saved files in the Problem's directory (debounced) until ctx is done.
 	Watch func(ctx context.Context, p cf.Problem) (<-chan string, error)
 	// SolutionPath is where the Problem's Solution in lang lives.
@@ -187,6 +192,9 @@ type Model struct {
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
+	km          *keymap    // shortcut bindings
+	ke          *keyEditor // the shortcut editor modal, when open
+	openTab     int        // the tab the open Problem lives on; other tabs hide it until you come back
 	setEdit     *settingEdit
 	setNote     string
 	bgMode      string // background setting: auto, dark or light
@@ -203,7 +211,12 @@ func New(ps []cf.Problem, note string, deps Deps) Model {
 	for k, v := range deps.Settings {
 		vals[k] = v
 	}
-	return Model{cfgVals: vals, Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0, dark: true, theme: mustTheme("terminal")}
+	km, err := newKeymap(deps.Keys)
+	if err != nil {
+		km, _ = newKeymap(nil)
+		note = err.Error()
+	}
+	return Model{km: km, cfgVals: vals, Problems: ps, visible: ps, Notice: note, deps: deps, width: 80, height: 24, syncing: len(deps.Refresh) > 0, dark: true, theme: mustTheme("terminal")}
 }
 
 func mustTheme(name string) theme.Theme { t, _ := theme.Get(name); return t }
@@ -571,6 +584,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return nm, cmd
 	}
 	m = nm // a click on verd's side moves focus even though the click is also handled below
+	msg = m.shiftMouse(msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -647,12 +661,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case errors.Is(msg.err, cf.ErrNetwork):
 			m.offline = true
 			if m.detail == nil {
-				m.errMsg = "offline: statement not cached. Press o to open in browser."
+				m.errMsg = "offline: statement not cached. Press {problem.open_browser} to open in browser."
 			} else {
 				m.errMsg = "offline: could not refetch"
 			}
 		case errors.Is(msg.err, cf.ErrChallenge):
-			m.errMsg = "Codeforces blocked the request (Cloudflare). Press o to open in browser."
+			m.errMsg = "Codeforces blocked the request (Cloudflare). Press {problem.open_browser} to open in browser."
 		case msg.err != nil:
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
@@ -703,6 +717,13 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.KeyPressMsg:
+		if m.ke != nil {
+			return m.updateKeyEditor(msg)
+		}
+		var keep bool
+		if msg, keep = m.remapKey(msg); !keep {
+			return m, nil
+		}
 		if m.tm != nil {
 			return m.updateTM(msg)
 		}
@@ -729,7 +750,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help, m.helpPage, m.helpScroll = true, 0, 0
 			return m, nil
 		}
-		if m.open != nil {
+		if m.viewing() {
 			return m.updateProblem(msg)
 		}
 		if m.input != nil {
@@ -820,7 +841,7 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
 	m = m.closeProblem()
-	m.open, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, nil, nil, "", 0, true
+	m.open, m.openTab, m.detail, m.body, m.errMsg, m.scroll, m.loading = &p, m.tab, nil, nil, "", 0, true
 	cmds := []tea.Cmd{m.load(p, false)}
 	if m.deps.Watch != nil {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -835,6 +856,9 @@ func (m Model) openProblem(p cf.Problem) (tea.Model, tea.Cmd) {
 }
 
 // closeProblem leaves the Problem view: stops its run and watcher.
+// viewing reports whether the Problem view is on screen: a Problem is open and its tab is current.
+func (m Model) viewing() bool { return m.open != nil && m.tab == m.openTab }
+
 func (m Model) closeProblem() Model {
 	m = m.stopTests().stopStress()
 	if m.watchCancel != nil {
@@ -890,8 +914,7 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "esc":
 		m = m.closeProblem()
-	case "1", "2", "3", "4", "5":
-		m = m.closeProblem()
+	case "1", "2", "3", "4", "5": // the Problem stays open; esc closes it
 		m.tab = int(msg.String()[0] - '1')
 		return m.onTab(), nil
 	case "v":
@@ -1124,7 +1147,7 @@ func (m Model) screen() string {
 	b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
 	footer := ""
 	switch {
-	case m.open != nil:
+	case m.viewing():
 		footer = m.viewProblem(&b)
 	case m.tab == 0:
 		footer = m.viewList(&b)
@@ -1140,7 +1163,7 @@ func (m Model) screen() string {
 	if m.confirm {
 		footer = paintRow(" "+st.Warn.Render(m.confirmText()), m.width, st.Bar)
 	} else {
-		footer = m.hintBar(footer, m.width)
+		footer = m.hintBar(m.kx(footer), m.width)
 	}
 	// Status badges get their own line so the key hints can never push them off the pane.
 	var badges []string
@@ -1193,13 +1216,13 @@ func (m Model) viewProblem(b *strings.Builder) string {
 		lines = append(lines, "", "loading...")
 	}
 	if m.errMsg != "" {
-		lines = append(lines, "", m.styles().Bad.Render(clean(m.errMsg)))
+		lines = append(lines, "", m.styles().Bad.Render(m.kx(clean(m.errMsg))))
 	}
 	end := min(len(lines), m.scroll+m.page())
 	for _, l := range lines[min(m.scroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "esc back  e edit  N note  s submit  a add test  l lang  t test  S stress  c mode  j/k scroll  r refetch  o browser  ? help  q quit"
+	return "{problem.back} back  {problem.edit} edit  {problem.notes} note  {problem.submit} submit  {problem.add_test} add test  {problem.language} lang  {problem.run_tests} test  {problem.stress} stress  {problem.cycle_mode} mode  {problem.down}/{problem.up} scroll  {problem.refetch} refetch  {problem.open_browser} browser  {common.help} help  {problem.quit} quit"
 }
 
 func ago(d time.Duration) string {

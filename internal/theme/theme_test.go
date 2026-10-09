@@ -49,3 +49,30 @@ func TestUnknownFallsBack(t *testing.T) {
 		t.Fatal("empty name is the default, not an error")
 	}
 }
+
+func TestRegisterCustomTheme(t *testing.T) {
+	err := Register("mine-test", Spec{Base: "nord", Dark: map[string]string{"accent": "#f00", "good": "ansi2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	th, ok := Get("mine-test")
+	if !ok {
+		t.Fatal("registered theme missing")
+	}
+	if got := th.Styles(true).Accent.Render("x"); !strings.Contains(got, "255;0;0") {
+		t.Errorf("accent should be red: %q", got)
+	}
+	nord, _ := Get("nord")
+	if th.Dark.Bad != nord.Dark.Bad {
+		t.Error("unset colors inherit from base")
+	}
+	for name, s := range map[string]Spec{
+		"bad base":  {Base: "nope"},
+		"bad key":   {Dark: map[string]string{"accnt": "#fff"}},
+		"bad color": {Light: map[string]string{"accent": "red"}},
+	} {
+		if Register("x", s) == nil {
+			t.Errorf("%s: want error", name)
+		}
+	}
+}

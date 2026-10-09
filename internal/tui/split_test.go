@@ -45,8 +45,16 @@ func TestSplitDigitLeavesProblemAndResizes(t *testing.T) {
 		t.Fatalf("right width %d, want %d", rw, rw0+4)
 	}
 	m, _ = send(m, "3")
-	if m.open != nil || m.tab != 2 {
-		t.Fatalf("digit 3: open=%v tab=%d", m.open, m.tab)
+	if m.open == nil || m.tab != 2 || m.viewing() {
+		t.Fatalf("digit 3 hides the Problem but keeps it: open=%v tab=%d", m.open, m.tab)
+	}
+	m, _ = send(m, "1")
+	if !m.viewing() {
+		t.Fatal("coming back to the Problem's tab shows it again")
+	}
+	m, _ = send(m, "esc")
+	if m.open != nil {
+		t.Fatal("esc closes the Problem")
 	}
 }
 

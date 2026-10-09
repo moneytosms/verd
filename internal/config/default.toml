@@ -44,6 +44,11 @@
 # Share of the window verd keeps when Neovim is embedded.
 # embed_ratio = 0.4
 
+# Which side the embedded Neovim is on: right | left
+# embed_side = "right"
+# Keys: alt+h / alt+l move the keyboard to the left / right column, embed_focus_key toggles,
+# alt+z hides verd (Neovim fullscreen) and brings it back.
+
 # Toggles keyboard focus between verd and the embedded Neovim.
 # embed_focus_key = "ctrl+\\"
 
@@ -53,6 +58,20 @@
 # it replays your Codeforces cookies, which Codeforces may treat as automation (account risk),
 # and it falls back to browser on any failure.
 # submit_mode = "browser"
+
+# Keyboard shortcuts. Every shortcut is rebindable: Settings (5) > Keyboard shortcuts edits these
+# for you, or write them by hand as [keys.<context>] action = "key" (or a list of keys).
+# Contexts: common, tabs, app, problems, contests, contest, stats, picker, settings, problem,
+# testmgr, submission, help, editor. Key names: x, X, enter, esc, tab, space, up, down, pgup,
+# pgdown, home, end, backspace, ctrl+x, alt+x, shift+tab. ctrl+c always quits.
+# A rebound action stops answering to its old key; two actions on one key is an error.
+# [keys.problem]
+# run_tests = "ctrl+t"
+# submit = ["s", "ctrl+s"]
+# [keys.editor]
+# focus_left = "alt+h"
+# focus_right = "alt+l"
+# zoom = "alt+z"
 
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.

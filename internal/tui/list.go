@@ -109,7 +109,7 @@ func (m Model) viewList(b *strings.Builder) string {
 		}
 		return "enter apply  esc cancel"
 	}
-	return "j/k move  enter open  f filters  / search  : expression  X clear  ? help  q quit"
+	return "{problems.down}/{problems.up} move  {problems.open} open  {problems.filters} filters  {problems.search} search  {problems.filter_expr} expression  {problems.clear_filters} clear  {common.help} help  {problems.quit} quit"
 }
 
 // listRows is how many Problem rows fit; listStart is the first one shown.

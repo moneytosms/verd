@@ -168,7 +168,7 @@ func (m Model) stressPanel() []string {
 	st := m.styles()
 	head := fmt.Sprintf("Stress [%s]", m.tag())
 	if s.running {
-		return []string{st.Accent.Render(head + "  running..."), fmt.Sprintf("  iteration %d   esc cancel", s.iter)}
+		return []string{st.Accent.Render(head + "  running..."), m.kx(fmt.Sprintf("  iteration %d   {problem.back} cancel", s.iter))}
 	}
 	r := s.res
 	if r == nil {
@@ -201,5 +201,5 @@ func (s *stressRun) saveHint() string {
 	if s.saved != "" {
 		return "  saved as " + s.saved
 	}
-	return "  w save as Custom Test"
+	return "  {problem.stress_save} save as Custom Test"
 }

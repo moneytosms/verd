@@ -15,7 +15,7 @@ const statsTopics = 12 // topic rows shown before "+N more"
 func (m Model) statsLines() []string {
 	st, ds := m.stats, m.styles()
 	if st.Submissions == 0 && len(st.RatingHistory) == 0 {
-		return []string{"", "  No Submissions cached yet.", ds.Dim.Render("  Press ctrl+r to sync your history from Codeforces.")}
+		return []string{"", "  No Submissions cached yet.", ds.Dim.Render(m.kx("  Press {app.refresh} to sync your history from Codeforces."))}
 	}
 	w := max(20, min(m.width-6, 64))
 	var out []string
@@ -157,7 +157,7 @@ func (m Model) viewStats(b *strings.Builder) string {
 	for _, l := range lines[min(m.statsScroll, end):end] {
 		b.WriteString(" " + l + "\n")
 	}
-	return "j/k scroll  n/N select  enter open  p weak-topics Picker  ? help  q quit"
+	return "{stats.down}/{stats.up} scroll  {stats.next_problem}/{stats.prev_problem} select  {stats.open} open  {stats.picker} weak-topics Picker  {common.help} help  {stats.quit} quit"
 }
 
 func (m Model) updateStats(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {

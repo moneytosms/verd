@@ -221,7 +221,14 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return dailyCmd(out, d, time.Now())
+	case "keys":
+		return keysCmd(out, path, args[1:])
+	case "themes":
+		return themesCmd(out, args[1:])
 	case "config":
+		if handled, err := configSub(out, path, args[1:]); handled {
+			return err
+		}
 		cfg, err := loadConfig(path)
 		if err != nil {
 			return err
@@ -244,6 +251,12 @@ usage: verd [--here] [command]
   init [--force] [--no-setup]     write config and Templates, offer setup
   setup                           guided setup
   config                          print effective config
+  config path | keys              config file path | settable keys
+  config get <key> | set <key> <value>
+                                  read or change one key (comments kept)
+  keys [--json]                   list every shortcut, default and current
+  keys set <ctx.action> <key>...  rebind (several keys allowed); keys reset <ctx.action>
+  themes [show <name>]            list themes | print an editable [themes.*] block
   test <file>                     run Sample and Custom Tests
   stress [--iter N] [--time S] <file>
                                   search for a counterexample
@@ -309,7 +322,16 @@ func runTUI(path string) error {
 	ctrl.Mux = pickMux(cfg.Split)
 	ctrl.SetEditor(cfg.Editor)
 	sub := newSubmitter(cfg, client, s)
+	keys, err := cfg.KeyBindings()
+	if err == nil {
+		err = tui.CheckKeys(keys)
+	}
+	if err != nil {
+		return fmt.Errorf("config %s: %w", path, err)
+	}
 	deps := tui.Deps{
+		Keys:     keys,
+		SaveKeys: func(ctx, action string, ks []string) error { return config.SetKeys(path, ctx, action, ks) },
 		Submit: func(ctx context.Context, p cf.Problem, lang string) (tui.SubmitStart, error) {
 			st, err := sub.begin(ctx, p, lang)
 			if err != nil {
@@ -357,6 +379,7 @@ func runTUI(path string) error {
 		},
 		EmbedRatio:  cfg.EmbedRatio,
 		FocusKey:    cfg.EmbedFocusKey,
+		EmbedSide:   cfg.EmbedSide,
 		Langs:       langKeys(cfg),
 		DefaultLang: cfg.DefaultLang,
 		EditorAlive: ctrl.Alive,
@@ -376,7 +399,7 @@ func runTUI(path string) error {
 			}
 			spec, err := buildSpec(cfg, config.CacheDir(), ref, d, o.Mode)
 			if err != nil {
-				return nil, fmt.Errorf("%w (press e to create one)", err)
+				return nil, fmt.Errorf("%w (press {problem.edit} to create one)", err)
 			}
 			return runner.Run(ctx, spec), nil
 		},
@@ -386,7 +409,7 @@ func runTUI(path string) error {
 				return nil, err
 			}
 			if _, err := os.Stat(ref.Path); err != nil {
-				return nil, fmt.Errorf("no Solution yet (press e to create one)")
+				return nil, fmt.Errorf("no Solution yet (press {problem.edit} to create one)")
 			}
 			gen, brute, missing := stressHelpers(cfg, ref)
 			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0)
@@ -395,9 +418,9 @@ func runTUI(path string) error {
 			}
 			if missing { // first time: open the fresh helpers so the user can fill them in
 				if cmd, err := ctrl.OpenPair(gen, brute); err != nil || cmd != nil {
-					return nil, fmt.Errorf("created %s and %s: fill them in, then press S again", gen, brute)
+					return nil, fmt.Errorf("created %s and %s: fill them in, then press {problem.stress} again", gen, brute)
 				}
-				return nil, errors.New("created gen and brute: fill them in, then press S again")
+				return nil, errors.New("created gen and brute: fill them in, then press {problem.stress} again")
 			}
 			return stress.Run(ctx, spec), nil
 		},
@@ -405,7 +428,7 @@ func runTUI(path string) error {
 			"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
 			"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
 			"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
-			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
+			"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey, "embed_side": cfg.EmbedSide,
 			"submit_mode": cfg.SubmitMode,
 		},
 		Sync: func(source string) (string, error) {

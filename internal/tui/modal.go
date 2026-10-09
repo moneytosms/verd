@@ -11,13 +11,15 @@ import (
 // Modals close with q or esc and sit on top of the screen they were opened from.
 func (m Model) modalBox() []string {
 	switch {
+	case m.ke != nil:
+		return m.keyEditorBox()
 	case m.tm != nil:
 		return m.tmBox()
 	case m.fm != nil:
 		return m.filterBox()
 	case m.help:
 		return m.helpBox()
-	case m.tab == 1 && m.contestOpen != nil && m.open == nil:
+	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
 		return m.contestBox()
 	case m.strs != nil && m.strs.diff:
 		s := m.strs
@@ -66,7 +68,7 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 		}
 		body = append(body, l+st.Dim.Render(" │ ")+a)
 	}
-	note := fmt.Sprintf("%d-%d/%d%s  j/k scroll  q close", min(off+1, total), end, total, extra)
+	note := m.kx(fmt.Sprintf("%d-%d/%d%s  {problem.down}/{problem.up} scroll  {problem.back} close", min(off+1, total), end, total, extra))
 	return box("Diff: "+res.Name+"  "+strings.TrimSpace(res.Verdict), body, note, w, min(h, len(body)+2), true, st)
 }
 
@@ -92,9 +94,9 @@ func (m Model) subBox() []string {
 	if s.final && s.detail != "" {
 		body = append(body, "", s.detail)
 	}
-	note := "q close (tracking continues)"
+	note := m.kx("{submission.close} close (tracking continues)")
 	if s.final {
-		note = "q close"
+		note = m.kx("{submission.close} close")
 	}
 	return box(title, body, note, w, len(body)+2, true, st)
 }

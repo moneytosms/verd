@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,7 @@ var settable = map[string]struct {
 	"editor":          {kString, nil},
 	"split":           {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
 	"embed_focus_key": {kString, nil},
+	"embed_side":      {kString, []string{"left", "right"}},
 	"submit_mode":     {kString, []string{"browser", "direct"}},
 	"time_multiplier": {kFloat, nil},
 	"float_eps":       {kFloat, nil},
@@ -129,3 +131,13 @@ func Set(path, key, value string) error {
 
 // Options returns the allowed values of an enum key, or nil.
 func Options(key string) []string { return settable[key].opts }
+
+// SettableKeys lists the keys Set accepts, sorted.
+func SettableKeys() []string {
+	out := make([]string, 0, len(settable))
+	for k := range settable {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
