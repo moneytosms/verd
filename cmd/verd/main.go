@@ -232,6 +232,17 @@ func run(args []string, out io.Writer) error {
 		}
 		fmt.Fprintf(out, "# %s\n%s", path, b)
 		return nil
+	case "doctor":
+		return doctorCmd(out, path, DefaultChecks())
+	case "__complete":
+		if len(args) != 2 {
+			return &exitError{2, "usage: verd __complete config-keys|key-actions|themes"}
+		}
+		return completeCmd(out, args[1])
+	case "completions":
+		return completionsCmd(out, args[1:])
+	case "schema":
+		return schemaCmd(out)
 	}
 	return fmt.Errorf("unknown command %q (see verd --help)", args[0])
 }
@@ -252,6 +263,9 @@ usage: verd [--here] [command]
   daily                           today's unsolved pick, weak topics first
   sync [cses]                     pull solved CSES tasks into marks
   login | logout [cses]           manage direct-submit sessions
+  doctor                          diagnostics: config, compilers, editor, terminal
+  completions bash|zsh|fish       print shell completion script
+  schema                          print JSON Schema for config.toml
   version, --version              print version
 
 flags:
