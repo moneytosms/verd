@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 
@@ -54,10 +55,38 @@ func configSub(out io.Writer, path string, args []string) (bool, error) {
 	return true, nil
 }
 
-// keysCmd handles `verd keys [list|set|reset|check|presets|export|import] [--json]`.
+// keysCmd handles `verd keys [list|set|reset|check|presets|export|import|markdown] [--json] [--write <file>]`.
 func keysCmd(out io.Writer, path string, args []string) error {
 	asJSON := slices.Contains(args, "--json")
-	args = slices.DeleteFunc(slices.Clone(args), func(a string) bool { return a == "--json" })
+	writeFile := ""
+	skipNext := false
+	for idx, a := range args {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		if a == "--write" && idx+1 < len(args) {
+			writeFile = args[idx+1]
+			skipNext = true
+		}
+	}
+	// Remove --json, --write, and --write targets from args
+	var cleaned []string
+	skipNext = false
+	for _, a := range args {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		if a == "--json" || a == "--write" {
+			if a == "--write" {
+				skipNext = true
+			}
+			continue
+		}
+		cleaned = append(cleaned, a)
+	}
+	args = cleaned
 	sub := "list"
 	if len(args) > 0 {
 		sub = args[0]
@@ -65,6 +94,19 @@ func keysCmd(out io.Writer, path string, args []string) error {
 	// Handle preset commands (may need stdin)
 	if sub == "presets" || sub == "export" || sub == "import" {
 		return presetsCmd(out, path, nil, args[1:])
+	}
+	// Handle markdown
+	if sub == "markdown" {
+		md := tui.KeyTableMarkdown()
+		if writeFile != "" {
+			if err := updateKeysMarkdown(writeFile, md); err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "Updated %s\n", writeFile)
+		} else {
+			fmt.Fprint(out, md)
+		}
+		return nil
 	}
 	// Rest of keys commands
 	cfg, err := loadConfig(path)
@@ -144,7 +186,7 @@ func keysCmd(out io.Writer, path string, args []string) error {
 			fmt.Fprintf(out, "%s = %s\n", args[1], strings.Join(keys, ", "))
 		}
 	default:
-		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset, presets, export, import)", sub)
+		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset, presets, export, import, markdown)", sub)
 	}
 	return nil
 }
@@ -183,4 +225,21 @@ func themesCmd(out io.Writer, args []string) error {
 		return fmt.Errorf("unknown themes command %q (list, show)", sub)
 	}
 	return nil
+}
+
+// updateKeysMarkdown replaces the section between <!-- keys:begin --> and <!-- keys:end --> in a file.
+func updateKeysMarkdown(path, content string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	text := string(b)
+	const begin, end = "<!-- keys:begin -->", "<!-- keys:end -->"
+	beginIdx := strings.Index(text, begin)
+	endIdx := strings.Index(text, end)
+	if beginIdx == -1 || endIdx == -1 || beginIdx >= endIdx {
+		return fmt.Errorf("markers not found in %s (need <!-- keys:begin --> and <!-- keys:end -->)", path)
+	}
+	newText := text[:beginIdx+len(begin)] + "\n" + content + "\n" + text[endIdx:]
+	return os.WriteFile(path, []byte(newText), 0o644)
 }
