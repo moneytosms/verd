@@ -152,7 +152,9 @@ func (m Model) settingsStart(lines []settingLine, inner int) int {
 }
 
 func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
-	m = m.startSelect(x, y)
+	if m.deps.MouseSelect {
+		m = m.startSelect(x, y)
+	}
 	g, ok := m.splitGeom()
 	if !ok {
 		return m, nil
@@ -262,9 +264,9 @@ func (m Model) clickInModal(rx, ry int) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
-	d := 3
+	d := m.deps.WheelLines
 	if up {
-		d = -3
+		d = -d
 	}
 	switch {
 	case m.tm != nil && m.tm.ed == nil:

@@ -49,6 +49,9 @@ var settable = map[string]struct {
 	"reading_headings": {kString, []string{"plain", "bold", "bar", "underline"}},
 	"reading_math":     {kString, []string{"unicode", "raw"}},
 	"reading_emphasis": {kBool, nil},
+	"mouse":            {kBool, nil},
+	"wheel_lines":      {kInt, nil},
+	"mouse_select":     {kBool, nil},
 }
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.
@@ -84,6 +87,10 @@ func Set(path, key, value string) error {
 		case "reading_margin":
 			if i < 0 || i > 8 {
 				return fmt.Errorf("reading_margin: %d is outside 0 to 8", i)
+			}
+		case "wheel_lines":
+			if i < 1 || i > 20 {
+				return fmt.Errorf("wheel_lines: %d is outside 1 to 20", i)
 			}
 		}
 		lit = int(i)

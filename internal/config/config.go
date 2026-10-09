@@ -36,6 +36,9 @@ type Config struct {
 	ReadingHeadings string  `toml:"reading_headings"`
 	ReadingMath     string  `toml:"reading_math"`
 	ReadingEmphasis bool    `toml:"reading_emphasis"`
+	Mouse           bool    `toml:"mouse"`
+	WheelLines      int     `toml:"wheel_lines"`
+	MouseSelect     bool    `toml:"mouse_select"`
 
 	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
 	Keys map[string]map[string]any `toml:"keys"`
@@ -49,10 +52,14 @@ type Config struct {
 // Lang describes how to build and run one language. Placeholders: {src}, {bin}, {dir}.
 // An empty Compile means interpreted: Run is used directly on {src}.
 type Lang struct {
-	Ext          string   `toml:"ext"`
-	Compile      []string `toml:"compile"`
-	Run          []string `toml:"run"`
-	CFCompilerID int      `toml:"cf_compiler_id"`
+	Ext              string   `toml:"ext"`
+	Compile          []string `toml:"compile"`
+	Run              []string `toml:"run"`
+	CFCompilerID     int      `toml:"cf_compiler_id"`
+	TimeMultiplier   float64  `toml:"time_multiplier"`
+	FloatEps         float64  `toml:"float_eps"`
+	MemoryMultiplier float64  `toml:"memory_multiplier"`
+	Template         string   `toml:"template"`
 }
 
 //go:embed default.toml
@@ -83,6 +90,7 @@ func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
 		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true,
+		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -127,6 +135,17 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return c, err
 	}
+	// Track which Lang entries were in the TOML before unmarshaling.
+	var userLangs map[string]bool
+	var raw map[string]interface{}
+	if err := toml.Unmarshal(b, &raw); err == nil {
+		if langMap, ok := raw["lang"].(map[string]interface{}); ok {
+			userLangs = make(map[string]bool)
+			for k := range langMap {
+				userLangs[k] = true
+			}
+		}
+	}
 	if err := toml.Unmarshal(b, &c); err != nil {
 		return c, err
 	}
@@ -162,9 +181,17 @@ func Load(path string) (Config, error) {
 	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "raw" {
 		return c, fmt.Errorf("reading_math %q: want unicode or raw", c.ReadingMath)
 	}
+	if c.WheelLines < 1 || c.WheelLines > 20 {
+		return c, fmt.Errorf("wheel_lines: %d is outside 1 to 20", c.WheelLines)
+	}
 	// A user's [lang.x] table replaces the default wholesale: re-inherit what they left out.
+	// Only apply this logic to Lang entries explicitly set by the user in the TOML.
 	def := Default().Lang
 	for k, l := range c.Lang {
+		// Skip inheritance if userLangs wasn't detected (parse error) or if this key isn't in it.
+		if userLangs == nil || !userLangs[k] {
+			continue
+		}
 		d, ok := def[k]
 		if !ok {
 			continue
@@ -177,6 +204,16 @@ func Load(path string) (Config, error) {
 		}
 		if len(l.Compile) == 0 && len(l.Run) == 0 {
 			l.Compile, l.Run = d.Compile, d.Run
+		}
+		// Inherit testing multipliers (0 means inherit global config)
+		if l.TimeMultiplier == 0 {
+			l.TimeMultiplier = c.TimeMultiplier
+		}
+		if l.FloatEps == 0 {
+			l.FloatEps = c.FloatEps
+		}
+		if l.MemoryMultiplier == 0 {
+			l.MemoryMultiplier = 1 // default: no scaling
 		}
 		c.Lang[k] = l
 	}
@@ -193,6 +230,7 @@ func (c Config) Get(key string) (string, bool) {
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
 		"reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
+		"mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,
 	}
 	v, ok := vals[key]
 	return fmt.Sprint(v), ok

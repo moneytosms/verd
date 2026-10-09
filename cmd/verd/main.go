@@ -378,7 +378,10 @@ func runTUI(path string) error {
 			_, _, err := ensureSolution(cfg, p, lang)
 			return err
 		},
-		Autotest: cfg.Autotest,
+		Autotest:    cfg.Autotest,
+		Mouse:       cfg.Mouse,
+		WheelLines:  cfg.WheelLines,
+		MouseSelect: cfg.MouseSelect,
 		Watch: func(ctx context.Context, p cf.Problem) (<-chan string, error) {
 			dir := workspace.New(cfg.Workspace).Dir(p.ContestID, p.Index)
 			if err := os.MkdirAll(dir, 0o755); err != nil { // so a Solution created later is still watched
@@ -450,6 +453,7 @@ func runTUI(path string) error {
 			"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
 			"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
 			"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
+			"mouse": fmt.Sprint(cfg.Mouse), "wheel_lines": fmt.Sprint(cfg.WheelLines), "mouse_select": fmt.Sprint(cfg.MouseSelect),
 		},
 		Sync: func(source string) (string, error) {
 			for _, p := range providers() {

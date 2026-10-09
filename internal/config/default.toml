@@ -88,6 +88,14 @@
 # reading_emphasis = true
 #   Render italics and bold; false = plain text for emphasis.
 
+# Mouse and wheel options.
+# mouse = true
+#   Enable mouse reporting. false disables it for terminal-native selection everywhere.
+# wheel_lines = 3
+#   Lines scrolled per mouse wheel notch (1-20).
+# mouse_select = true
+#   Enable drag-to-select-lines and copy in the Problem view.
+
 # Languages mirror the Codeforces compilers. Placeholders: {src} {bin} {dir}.
 # Omit `compile` for interpreted languages. Override only the keys you change.
 # [lang.cpp]
@@ -95,3 +103,9 @@
 # compile = ["g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"]
 # run = ["{bin}"]
 # cf_compiler_id = 89
+# Per-language testing overrides: time_multiplier, float_eps, memory_multiplier, template.
+# These override the global config when set (use 0 to inherit).
+# [lang.python]
+# time_multiplier = 3.0
+# memory_multiplier = 2.0
+# template = "~/.config/verd/my_py_template.py"
