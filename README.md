@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" width="96" alt="verd logo: a green-to-blue check mark that is also a v, with a terminal cursor">
+  <img src="./assets/logo.svg" width="112" alt="verd logo: a Mjölnir-style gavel strikes a sound block and the verdict turns AC">
 </p>
 
 <p align="center">

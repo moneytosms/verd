@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="verd">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="verd: a gavel strikes, the verdict is AC">
   <defs>
-    <linearGradient id="g" x1="8" y1="50" x2="56" y2="12" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#9ece6a"/><stop offset=".55" stop-color="#73daca"/><stop offset="1" stop-color="#7aa2f7"/>
-    </linearGradient>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1f2335"/><stop offset="1" stop-color="#16161e"/>
-    </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
-    
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1f2335"/><stop offset="1" stop-color="#14141b"/></linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c0caf5"/><stop offset=".55" stop-color="#8f9cd8"/><stop offset="1" stop-color="#5a6aa8"/></linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c58a3a"/><stop offset=".5" stop-color="#e0af68"/><stop offset="1" stop-color="#b57a2e"/></linearGradient>
+    <linearGradient id="ok" x1="14" y1="100" x2="112" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ece6a"/><stop offset=".6" stop-color="#73daca"/><stop offset="1" stop-color="#7aa2f7"/></linearGradient>
+    <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
   </defs>
-  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#bg)"/>
-  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" fill="none" stroke="#2f3550" stroke-width="1.5"/>
-  <path opacity=".4" d="M14 33 L27 46 L51 17" fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
-  <path  d="M14 33 L27 46 L51 17" fill="none" stroke="url(#g)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect  x="13" y="50" width="14" height="4.5" rx="2.25" fill="#9ece6a"/>
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#bg)"/>
+  <rect x="3.75" y="3.75" width="120.5" height="120.5" rx="27.25" fill="none" stroke="#2f3550" stroke-width="1.5"/>
+  <g class="block"><path d="M24 101h80a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5z" fill="#252a42" stroke="#414868" stroke-width="1.5"/><rect x="24" y="102.5" width="80" height="2" rx="1" fill="#5a6aa8" opacity=".55"/></g>
+  <g class="gavel"><rect x="59.5" y="20" width="9" height="58" rx="4.5" fill="url(#wood)"/><rect x="59.5" y="26" width="9" height="3" fill="#7a4f1c" opacity=".55"/><rect x="59.5" y="33" width="9" height="3" fill="#7a4f1c" opacity=".55"/>
+    <rect x="37" y="72" width="54" height="29" rx="7" fill="url(#steel)" stroke="#e8ecff" stroke-opacity=".35" stroke-width="1"/>
+    <rect x="37" y="72" width="11" height="29" rx="5" fill="#7aa2f7" opacity=".55"/><rect x="80" y="72" width="11" height="29" rx="5" fill="#7aa2f7" opacity=".55"/>
+    <path d="M58 81h12m-12 6h12m-12 6h12" stroke="#3b4261" stroke-width="2.2" stroke-linecap="round" opacity=".7"/></g>
+  <g class="badge"><circle cx="99" cy="33" r="17" fill="url(#ok)"/><path d="M90 33.5l6.5 6.5L109 26" fill="none" stroke="#14141b" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g>
 </svg>

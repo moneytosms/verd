@@ -201,7 +201,7 @@ func headX(root string) string {
 
 // bootHTML is the loading screen: the animated logo, shown on the first page of a visit.
 func bootHTML(root string) string {
-	return `<div id="boot" aria-hidden="true"><img src="` + root + `assets/logo.svg" alt="" width="112" height="112"><span class="bt">verd<i>_</i></span></div>`
+	return `<div id="boot" aria-hidden="true"><img src="` + root + `assets/logo-anim.svg" alt="" width="132" height="132"><span class="bt">verd<i>_</i></span></div>`
 }
 
 // tailHTML hides the loading screen once the page has loaded and reveals sections as they scroll in.
