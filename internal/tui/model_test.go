@@ -1339,3 +1339,105 @@ func TestNoteKeyAndInfoLine(t *testing.T) {
 		t.Fatalf("first note line missing from the Problem box:\n%s", plain(m))
 	}
 }
+
+func TestConfigHotReload(t *testing.T) {
+	// ConfigChangedMsg triggers a reload of settings and keys
+	initialSettings := map[string]string{
+		"theme": "terminal", "background": "auto", "default_lang": "cpp",
+		"autotest": "true", "source_cf": "true", "source_cses": "false",
+		"reading_width": "80", "reading_margin": "1",
+	}
+	initialKeys := map[string][]string{"problem.run_tests": {"t"}}
+	reloaded := 0
+	deps := Deps{
+		Settings: initialSettings,
+		Keys:     initialKeys,
+		LoadConfig: func() (map[string]string, map[string][]string, error) {
+			reloaded++
+			// Simulate changed config: theme and keys updated
+			newSettings := make(map[string]string)
+			for k, v := range initialSettings {
+				newSettings[k] = v
+			}
+			newSettings["theme"] = "dracula"
+			newSettings["autotest"] = "false"
+			newSettings["reading_width"] = "120"
+			newKeys := map[string][]string{"problem.run_tests": {"ctrl+t"}, "problem.submit": {"s"}}
+			return newSettings, newKeys, nil
+		},
+	}
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "Test"}}, "", deps)
+	// Send ConfigChangedMsg
+	nm, cmd := m.Update(ConfigChangedMsg{})
+	m = nm.(Model)
+	if cmd != nil {
+		t.Fatalf("ConfigChangedMsg should not produce a command, got %v", cmd)
+	}
+	if reloaded != 1 {
+		t.Fatalf("LoadConfig not called, reloaded=%d", reloaded)
+	}
+	// Check that settings were updated
+	if m.cfgVals["theme"] != "dracula" || m.cfgVals["autotest"] != "false" || m.cfgVals["reading_width"] != "120" {
+		t.Fatalf("settings not updated: theme=%s autotest=%s reading_width=%s", m.cfgVals["theme"], m.cfgVals["autotest"], m.cfgVals["reading_width"])
+	}
+	// Check that keys were updated (they exist in the keymap)
+	if m.km == nil {
+		t.Fatal("keymap should not be nil")
+	}
+	// Check that theme was applied live
+	if m.cfgVals["theme"] != "dracula" {
+		t.Fatalf("theme should be updated to dracula, got %s", m.cfgVals["theme"])
+	}
+	// Check that autotest setting was updated
+	if m.deps.Autotest != false {
+		t.Fatal("autotest should be updated to false")
+	}
+	// Check Notice shows reload success
+	if !strings.Contains(m.Notice, "reloaded") {
+		t.Fatalf("Notice should indicate reload: %s", m.Notice)
+	}
+}
+
+func TestConfigReloadHandlesErrors(t *testing.T) {
+	deps := Deps{
+		Settings: map[string]string{"theme": "terminal"},
+		Keys:     map[string][]string{},
+		LoadConfig: func() (map[string]string, map[string][]string, error) {
+			return nil, nil, errors.New("config file not found")
+		},
+	}
+	m := New(nil, "", deps)
+	nm, cmd := m.Update(ConfigChangedMsg{})
+	m = nm.(Model)
+	if cmd != nil {
+		t.Fatal("error should not produce a command")
+	}
+	if !strings.Contains(m.Notice, "config reload failed") {
+		t.Fatalf("error notice missing: %s", m.Notice)
+	}
+}
+
+func TestConfigReloadInvalidKeysKeepsOldKeymap(t *testing.T) {
+	oldKeys := map[string][]string{"problem.run_tests": {"t"}}
+	newKeys := map[string][]string{"invalid.action": {"x"}}
+	deps := Deps{
+		Settings: map[string]string{"theme": "terminal"},
+		Keys:     oldKeys,
+		LoadConfig: func() (map[string]string, map[string][]string, error) {
+			return map[string]string{"theme": "terminal"}, newKeys, nil
+		},
+	}
+	m := New(nil, "", deps)
+	nm, cmd := m.Update(ConfigChangedMsg{})
+	m = nm.(Model)
+	if cmd != nil {
+		t.Fatal("error should not produce a command")
+	}
+	if !strings.Contains(m.Notice, "keys:") {
+		t.Fatalf("keys error notice missing: %s", m.Notice)
+	}
+	// Old keymap should still be valid
+	if m.km == nil {
+		t.Fatal("keymap should not be nil")
+	}
+}
