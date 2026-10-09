@@ -15,32 +15,35 @@ import (
 )
 
 type Config struct {
-	Handle          string  `toml:"handle"`
-	Workspace       string  `toml:"workspace"`
-	DefaultLang     string  `toml:"default_lang"`
-	TimeMultiplier  float64 `toml:"time_multiplier"`
-	FloatEps        float64 `toml:"float_eps"`
-	Autotest        bool    `toml:"autotest"`
-	Theme           string  `toml:"theme"`
-	Background      string  `toml:"background"`
-	SourceCF        bool    `toml:"source_cf"`
-	SourceCSES      bool    `toml:"source_cses"`
-	Editor          string  `toml:"editor"`
-	Split           string  `toml:"split"`
-	EmbedRatio      float64 `toml:"embed_ratio"`
-	EmbedFocusKey   string  `toml:"embed_focus_key"`
-	EmbedSide       string  `toml:"embed_side"`
-	SubmitMode      string  `toml:"submit_mode"`
-	ReadingWidth    int     `toml:"reading_width"`
-	ReadingMargin   int     `toml:"reading_margin"`
-	ReadingSpacing  string  `toml:"reading_spacing"`
-	ReadingHeadings string  `toml:"reading_headings"`
-	ReadingMath     string  `toml:"reading_math"`
-	ReadingEmphasis bool    `toml:"reading_emphasis"`
-	Border          string  `toml:"border"`
-	Mouse           bool    `toml:"mouse"`
-	WheelLines      int     `toml:"wheel_lines"`
-	MouseSelect     bool    `toml:"mouse_select"`
+	Handle          string   `toml:"handle"`
+	Workspace       string   `toml:"workspace"`
+	DefaultLang     string   `toml:"default_lang"`
+	TimeMultiplier  float64  `toml:"time_multiplier"`
+	FloatEps        float64  `toml:"float_eps"`
+	Autotest        bool     `toml:"autotest"`
+	Theme           string   `toml:"theme"`
+	Background      string   `toml:"background"`
+	SourceCF        bool     `toml:"source_cf"`
+	SourceCSES      bool     `toml:"source_cses"`
+	Editor          string   `toml:"editor"`
+	Split           string   `toml:"split"`
+	EmbedRatio      float64  `toml:"embed_ratio"`
+	EmbedFocusKey   string   `toml:"embed_focus_key"`
+	EmbedSide       string   `toml:"embed_side"`
+	SubmitMode      string   `toml:"submit_mode"`
+	ReadingWidth    int      `toml:"reading_width"`
+	ReadingMargin   int      `toml:"reading_margin"`
+	ReadingSpacing  string   `toml:"reading_spacing"`
+	ReadingHeadings string   `toml:"reading_headings"`
+	ReadingMath     string   `toml:"reading_math"`
+	ReadingEmphasis bool     `toml:"reading_emphasis"`
+	Border          string   `toml:"border"`
+	Mouse           bool     `toml:"mouse"`
+	WheelLines      int      `toml:"wheel_lines"`
+	MouseSelect     bool     `toml:"mouse_select"`
+	Header          bool     `toml:"header"`
+	Footer          bool     `toml:"footer"`
+	Tabs            []string `toml:"tabs"`
 
 	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
 	Keys map[string]map[string]any `toml:"keys"`
@@ -93,6 +96,7 @@ func Default() Config {
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
 		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
+		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},

@@ -808,10 +808,21 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncing = true
 			return m, m.refresh(0)
 		case "1", "2", "3", "4", "5":
-			m.tab = int(k[0] - '1')
-			return m.onTab(), nil
+			pos := int(k[0] - '1')
+			visible := m.visibleTabs()
+			if pos < len(visible) {
+				m.tab = m.tabIDFromPos(pos)
+				return m.onTab(), nil
+			}
 		case "tab":
-			m.tab = (m.tab + 1) % len(tabs)
+			visible := m.visibleTabs()
+			currentPos := m.tabPosFromID(m.tab)
+			if currentPos >= 0 {
+				nextPos := (currentPos + 1) % len(visible)
+				m.tab = m.tabIDFromPos(nextPos)
+			} else {
+				m.tab = m.tabIDFromPos(0)
+			}
 			return m.onTab(), nil
 		}
 		switch m.tab {
@@ -959,8 +970,12 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m = m.closeProblem()
 	case "1", "2", "3", "4", "5": // the Problem stays open; esc closes it
-		m.tab = int(msg.String()[0] - '1')
-		return m.onTab(), nil
+		pos := int(msg.String()[0] - '1')
+		visible := m.visibleTabs()
+		if pos < len(visible) {
+			m.tab = m.tabIDFromPos(pos)
+			return m.onTab(), nil
+		}
 	case "v":
 		m.showTags = !m.showTags
 	case "y":
@@ -1182,13 +1197,85 @@ func cleanLines(s string) []string {
 	return ls
 }
 
-func (m Model) page() int { return max(1, m.height-4) }
+func (m Model) contentTop() int {
+	if v, ok := m.cfgVals["header"]; ok && v == "false" {
+		return 0
+	}
+	return 2 // header + rule
+}
+
+func (m Model) footerSize() int {
+	if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+		return 0
+	}
+	return 2 // badges + hint bar
+}
+
+func (m Model) page() int {
+	overhead := m.contentTop() + m.footerSize()
+	return max(1, m.height-overhead)
+}
+
+// visibleTabs returns the list of tab names that should be shown, respecting config order.
+func (m Model) visibleTabs() []string {
+	if v, ok := m.cfgVals["tabs"]; ok && v != "" {
+		// tabs value is stored as comma-separated in config
+		parts := strings.Split(v, ",")
+		var result []string
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			// validate it's a real tab
+			for _, tab := range tabs {
+				if strings.EqualFold(p, tab) {
+					result = append(result, tab)
+					break
+				}
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+	}
+	// default: all tabs
+	return tabs
+}
+
+// tabIDFromPos maps a tab position (0-based visible tab index) to its absolute ID (0-4).
+func (m Model) tabIDFromPos(pos int) int {
+	visible := m.visibleTabs()
+	if pos < 0 || pos >= len(visible) {
+		return 0
+	}
+	for i, tab := range tabs {
+		if tab == visible[pos] {
+			return i
+		}
+	}
+	return 0
+}
+
+// tabPosFromID maps an absolute tab ID (0-4) to its visible position, or -1 if hidden.
+func (m Model) tabPosFromID(id int) int {
+	if id < 0 || id >= len(tabs) {
+		return 0
+	}
+	target := tabs[id]
+	visible := m.visibleTabs()
+	for i, tab := range visible {
+		if tab == target {
+			return i
+		}
+	}
+	return -1
+}
 
 // screen is verd's own screen (everything except an embedded editor pane), truncated to m.width.
 func (m Model) screen() string {
 	st := m.styles()
 	var b strings.Builder
-	b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
+	if v, ok := m.cfgVals["header"]; !ok || v != "false" {
+		b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
+	}
 	footer := ""
 	switch {
 	case m.viewing():
@@ -1227,13 +1314,18 @@ func (m Model) screen() string {
 	case m.offline:
 		badges = append(badges, badge(st.Bad, fmt.Sprintf("offline, synced %s ago", ago(m.clock().Sub(m.syncedAt)))))
 	}
+	footerContent := footer
 	if len(badges) > 0 {
-		footer += "\n" + strings.Join(badges, " ")
+		footerContent += "\n" + strings.Join(badges, " ")
 	}
-	if t := m.viewToast(); t != "" {
-		b.WriteString("\n" + t)
+	if v, ok := m.cfgVals["footer"]; !ok || v != "false" {
+		// Footer is shown
+		if t := m.viewToast(); t != "" {
+			b.WriteString("\n" + t)
+		}
+		b.WriteString("\n" + footerContent)
 	}
-	b.WriteString("\n" + footer)
+	// If footer is false, we don't append anything (footerContent is not needed)
 	// Never let a line overflow the pane (styles are preserved by the ANSI-aware truncation).
 	lines := strings.Split(b.String(), "\n")
 	for i, l := range lines {
@@ -1243,7 +1335,11 @@ func (m Model) screen() string {
 		for i, l := range lines { // scrim: mute what is behind the modal so it stands out
 			lines[i] = st.Dim.Render(xansi.Strip(l))
 		}
-		lines = overlay(lines, bx, m.width, m.height-3) // keep the footer and toast visible
+		modalY := m.height - 3
+		if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+			modalY = m.height // no footer means more space for the modal
+		}
+		lines = overlay(lines, bx, m.width, modalY)
 		for i, l := range lines {
 			lines[i] = xansi.Truncate(l, m.width, "")
 		}

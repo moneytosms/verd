@@ -32,7 +32,7 @@ func listModel() Model {
 
 func TestMouseTabsListAndWheel(t *testing.T) {
 	m := listModel()
-	r := tabRanges()
+	r := m.tabRanges()
 	m, _ = click(m, r[2][0]+2, 0)
 	if m.tab != 2 {
 		t.Fatalf("clicking the Stats pill switches tab: %d", m.tab)
@@ -94,11 +94,12 @@ func TestMouseSettingsCyclesThemeAndSaves(t *testing.T) {
 	m = nm.(Model)
 	m, _ = send(m, "5")
 	// first settings row (Theme) is at content row 3 (border 2, heading 3, row 4)
-	m, _ = click(m, 6, contentTop+1+1)
+	ct := m.contentTop()
+	m, _ = click(m, 6, ct+1+1)
 	if settingDefs[m.setSel].key != "theme" {
 		t.Fatalf("click selects the row: %s", settingDefs[m.setSel].key)
 	}
-	m, _ = click(m, 30, contentTop+1+1)
+	m, _ = click(m, 30, ct+1+1)
 	if len(saved) != 1 || !strings.HasPrefix(saved[0], "theme=") || m.setting("theme") == "terminal" {
 		t.Fatalf("clicking the value cycles the theme: %v", saved)
 	}
@@ -116,11 +117,12 @@ func TestMouseSplitViewSelectsTest(t *testing.T) {
 		t.Fatal("split expected")
 	}
 	// second test row: tests box starts after the info box; border row then the rows
-	m, _ = click(m, g.lw+4, contentTop+g.infoH+1+1)
+	ct := m.contentTop()
+	m, _ = click(m, g.lw+4, ct+g.infoH+1+1)
 	if m.pane != paneTests || m.tsel != 1 {
 		t.Fatalf("click selects the test: pane=%d tsel=%d", m.pane, m.tsel)
 	}
-	m, _ = click(m, 3, contentTop+3)
+	m, _ = click(m, 3, ct+3)
 	if m.pane != paneStatement {
 		t.Fatal("click on the statement focuses it")
 	}

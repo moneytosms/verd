@@ -22,6 +22,10 @@ type settingDef struct {
 var settingDefs = []settingDef{
 	{"Appearance", "theme", "Theme", "Colors for the whole interface. Changes apply as you move through the list.", "enum", true},
 	{"Appearance", "background", "Background", "auto follows your terminal; force dark or light if the colors look wrong.", "enum", true},
+	{"Appearance", "border", "Borders", "Box frame style: rounded, square, heavy, double, ascii, or none.", "enum", true},
+	{"Layout", "header", "Show header", "Toggle the tab bar and rule beneath it. Tab keys (1-5, tab) still work.", "bool", true},
+	{"Layout", "footer", "Show footer", "Toggle the footer with key hints and status badges.", "bool", true},
+	{"Layout", "tabs", "Tab order", "Visible tabs in order (comma-separated): problems,contests,stats,picker,settings. Settings cannot be hidden.", "text", true},
 	{"General", "handle", "Handle", "Your Codeforces handle: where solved marks, stats and Submissions come from.", "text", false},
 	{"General", "workspace", "Workspace", "Where Solutions and tests live: <workspace>/<contest>/<index>/. A relative path is resolved against where verd starts; verd --here does that for one run.", "text", false},
 	{"General", "default_lang", "Default language", "Language for new Solutions. Switch per Problem with {problem.language}.", "enum", true},
@@ -35,7 +39,6 @@ var settingDefs = []settingDef{
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
-	{"Appearance", "border", "Borders", "Box frame style: rounded, square, heavy, double, ascii, or none.", "enum", true},
 	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
 	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
 	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},

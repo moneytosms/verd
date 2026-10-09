@@ -5,8 +5,6 @@ import (
 	xansi "github.com/charmbracelet/x/ansi"
 )
 
-const contentTop = 2 // header and rule
-
 // modalRect is where the open modal is drawn (same placement as overlay).
 func (m Model) modalRect() (x, y, w, h int, ok bool) {
 	bx := m.modalBox()
@@ -16,7 +14,11 @@ func (m Model) modalRect() (x, y, w, h int, ok bool) {
 	for _, l := range bx {
 		w = max(w, xansi.StringWidth(l))
 	}
-	return max(0, (m.width-w)/2), max(0, (m.height-3-len(bx))/2), w, len(bx), true
+	modalCenter := m.height - 3
+	if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+		modalCenter = m.height
+	}
+	return max(0, (m.width-w)/2), max(0, (modalCenter-len(bx))/2), w, len(bx), true
 }
 
 // closeModal dismisses whichever modal is open.
@@ -45,9 +47,9 @@ func (m Model) onClick(x, y int) (tea.Model, tea.Cmd) {
 		return m.clickInModal(x-mx, y-my)
 	}
 	if y == 0 {
-		for i, r := range tabRanges() {
+		for i, r := range m.tabRanges() {
 			if x >= r[0] && x < r[1] {
-				m.tab = i
+				m.tab = m.tabIDFromPos(i)
 				return m.onTab(), nil
 			}
 		}
@@ -68,11 +70,12 @@ func (m Model) onClick(x, y int) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) clickList(x, y int) (tea.Model, tea.Cmd) {
-	if y == contentTop { // the chips bar opens the filters
+	top := m.contentTop()
+	if y == top { // the chips bar opens the filters
 		return m.openFilters(), nil
 	}
-	i := m.listStart() + (y - (contentTop + 2))
-	if y < contentTop+2 || i >= len(m.visible) {
+	i := m.listStart() + (y - (top + 2))
+	if y < top+2 || i >= len(m.visible) {
 		return m, nil
 	}
 	if i == m.cursor { // a second click on the selected row opens it
@@ -104,7 +107,8 @@ func (m Model) contestLines() []int {
 
 func (m Model) clickContests(y int) (tea.Model, tea.Cmd) {
 	lines := m.contestLines()
-	r := y - contentTop
+	top := m.contentTop()
+	r := y - top
 	if r < 0 || r >= len(lines) || lines[r] < 0 {
 		return m, nil
 	}
@@ -125,7 +129,8 @@ func (m Model) clickSettings(x, y int) (tea.Model, tea.Cmd) {
 	}
 	lines := m.settingLines(lw - 4)
 	start := m.settingsStart(lines, h-2)
-	r := start + (y - contentTop - 1)
+	top := m.contentTop()
+	r := start + (y - top - 1)
 	if r < 0 || r >= len(lines) || lines[r].idx < 0 {
 		return m, nil
 	}
@@ -167,7 +172,8 @@ func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
 		m.pane = paneStatement
 		return m, nil
 	}
-	ty := contentTop + g.infoH
+	top := m.contentTop()
+	ty := top + g.infoH
 	switch {
 	case y < ty:
 		m.showTags = !m.showTags
@@ -296,7 +302,8 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 	}
 	if m.viewing() {
 		if g, ok := m.splitGeom(); ok && x >= g.lw {
-			ty := contentTop + g.infoH
+			top := m.contentTop()
+			ty := top + g.infoH
 			switch {
 			case y >= ty && y < ty+g.testsH:
 				m.tsel = max(0, min(m.tsel+d/3, len(m.rows())-1))

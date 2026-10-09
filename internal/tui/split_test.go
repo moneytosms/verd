@@ -304,16 +304,17 @@ func TestSplitYCopiesFocusedPane(t *testing.T) {
 
 func TestSplitMouseDragCopiesLines(t *testing.T) {
 	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
-	m, _ = click(m, 5, contentTop+1)
+	ct := m.contentTop()
+	m, _ = click(m, 5, ct+1)
 	if m.sel.moved {
 		t.Fatal("a click alone is not a selection")
 	}
-	nm, _ := m.Update(tea.MouseMotionMsg{X: 5, Y: contentTop + 2, Button: tea.MouseLeft})
+	nm, _ := m.Update(tea.MouseMotionMsg{X: 5, Y: ct + 2, Button: tea.MouseLeft})
 	m = nm.(Model)
 	if !m.sel.moved || !strings.Contains(m.View().Content, "\x1b[7m") {
 		t.Fatalf("drag highlights lines: %+v", m.sel)
 	}
-	nm, cmd := m.Update(tea.MouseReleaseMsg{X: 5, Y: contentTop + 2, Button: tea.MouseLeft})
+	nm, cmd := m.Update(tea.MouseReleaseMsg{X: 5, Y: ct + 2, Button: tea.MouseLeft})
 	m = nm.(Model)
 	if cmd == nil || m.Notice != "copied selection" {
 		t.Fatalf("release copies: cmd=%v notice=%q", cmd, m.Notice)

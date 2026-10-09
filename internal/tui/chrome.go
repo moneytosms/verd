@@ -44,14 +44,15 @@ func ratingStyle(r int) lipgloss.Style {
 
 const logo = " verd "
 
-func tabLabel(i int) string { return fmt.Sprintf(" %d %s ", i+1, tabs[i]) }
-
 // tabRanges are the [start, end) columns of each tab pill in the header, for mouse clicks.
-func tabRanges() [][2]int {
+// It only includes visible tabs.
+func (m Model) tabRanges() [][2]int {
+	visible := m.visibleTabs()
 	x := xansi.StringWidth(logo) + 1
-	out := make([][2]int, len(tabs))
-	for i := range tabs {
-		w := xansi.StringWidth(tabLabel(i))
+	out := make([][2]int, len(visible))
+	for i, tabName := range visible {
+		label := fmt.Sprintf(" %d %s ", i+1, tabName)
+		w := xansi.StringWidth(label)
 		out[i] = [2]int{x, x + w}
 		x += w + 1
 	}
@@ -63,13 +64,16 @@ func (m Model) header(w int) string {
 	st := m.styles()
 	var b strings.Builder
 	b.WriteString(st.PillOn.Render(logo) + " ")
-	for i := range tabs {
-		if i == m.tab {
-			b.WriteString(st.PillOn.Render(tabLabel(i)))
+	visible := m.visibleTabs()
+	for i, tabName := range visible {
+		tabID := m.tabIDFromPos(i)
+		label := fmt.Sprintf(" %d %s ", i+1, tabName)
+		if tabID == m.tab {
+			b.WriteString(st.PillOn.Render(label))
 		} else {
-			b.WriteString(st.Dim.Render(" ") + st.Key.Render(fmt.Sprint(i+1)) + st.PillOff.Render(" "+tabs[i]+" "))
+			b.WriteString(st.Dim.Render(" ") + st.Key.Render(fmt.Sprint(i+1)) + st.PillOff.Render(" "+tabName+" "))
 		}
-		if i < len(tabs)-1 {
+		if i < len(visible)-1 {
 			b.WriteString(" ")
 		}
 	}
