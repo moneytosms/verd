@@ -19,10 +19,13 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `source_cses` | `false` | Show the CSES Problem Set next to them. See [Sources](./sources.md). |
 | `split` | `"auto"` | How the editor opens: `auto`, `tmux`, `herdr`, `embedded`, `suspend`. See [Neovim](./neovim.md). |
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
-| `embed_focus_key` | `"ctrl+\\"` | Hands keyboard focus between verd and the embedded Neovim. |
+| `embed_side` | `"right"` | Which column the embedded Neovim takes: `right` or `left`. |
+| `embed_focus_key` | `"ctrl+\\"` | Toggles keyboard focus between verd and the embedded Neovim. Same as `[keys.editor] focus`. |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
 
-An unknown `submit_mode` is a config error.
+An unknown `submit_mode` or `embed_side` is a config error.
+
+Tables: `[lang.*]` (below), `[keys.<context>]` for shortcuts and `[themes.<name>]` for color themes. Both are covered in [Customizing](./customizing.md), along with the CLI that edits them (`verd config set`, `verd keys`, `verd themes`). `theme` accepts any theme you define there.
 
 ## Languages
 

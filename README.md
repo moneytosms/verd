@@ -108,7 +108,9 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd init [--force] [--no-setup]` | Write the default config and Templates, then offer the guided setup (skipped when not in a terminal). |
 | `verd setup` | Guided setup: handle, Workspace, language, theme, editor split and submit mode, written into `config.toml`. Safe to re-run. |
 | `verd --help` | List the commands. |
-| `verd config` | Print the effective, merged config. |
+| `verd config [path\|keys\|get <key>\|set <key> <value>]` | Print the effective config, or read and change one key. |
+| `verd keys [--json]`, `verd keys set <ctx.action> <key>...` | List and rebind every shortcut. See [Customizing](./docs/customizing.md). |
+| `verd themes [show <name>]` | List themes, or print an editable `[themes.*]` block. |
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
 | `verd stress [--iter N] [--time S] <file>` | Search for a counterexample. Exit `0` only if none was found. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
@@ -124,6 +126,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 
 | Page | Covers |
 | --- | --- |
+| [Customizing](./docs/customizing.md) | Set up and restyle verd from the CLI: shortcuts, themes, layout. Written for people and agents. |
 | [Configuration](./docs/config.md) | Every config key, languages, Templates, file locations. |
 | [Keys](./docs/keys.md) | Key bindings for each screen. |
 | [Testing and stress](./docs/testing.md) | Test Runs, Comparison Modes, Custom Tests, stress workflow. |

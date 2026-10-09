@@ -2,6 +2,20 @@
 
 Press `?` on any screen to see its keys. Keys are the same everywhere the same action exists.
 
+## Rebinding
+
+Every shortcut can be changed: Settings (`5`) > **Keyboard shortcuts**. `enter` rebinds the selected action (press the new key), `a` adds a second key, `backspace` resets it, and changes apply at once. They are saved to `config.toml`:
+
+```toml
+[keys.problem]
+run_tests = "ctrl+t"
+submit = ["s", "ctrl+s"]   # a list gives several keys
+```
+
+Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `stats`, `picker`, `settings`, `problem`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
+
+Other changes in this release: opening a Problem and switching tabs no longer closes it (it is hidden until you return to its tab; `esc` closes it).
+
 ## Global
 
 | Key | Action |
