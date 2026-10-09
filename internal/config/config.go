@@ -13,21 +13,31 @@ import (
 )
 
 type Config struct {
-	Handle         string  `toml:"handle"`
-	Workspace      string  `toml:"workspace"`
-	DefaultLang    string  `toml:"default_lang"`
-	TimeMultiplier float64 `toml:"time_multiplier"`
-	FloatEps       float64 `toml:"float_eps"`
-	Autotest       bool    `toml:"autotest"`
-	Theme          string  `toml:"theme"`
-	Background     string  `toml:"background"`
-	SourceCF       bool    `toml:"source_cf"`
-	SourceCSES     bool    `toml:"source_cses"`
-	Editor         string  `toml:"editor"`
-	Split          string  `toml:"split"`
-	EmbedRatio     float64 `toml:"embed_ratio"`
-	EmbedFocusKey  string  `toml:"embed_focus_key"`
-	SubmitMode     string  `toml:"submit_mode"`
+	Handle          string  `toml:"handle"`
+	Workspace       string  `toml:"workspace"`
+	DefaultLang     string  `toml:"default_lang"`
+	TimeMultiplier  float64 `toml:"time_multiplier"`
+	FloatEps        float64 `toml:"float_eps"`
+	Autotest        bool    `toml:"autotest"`
+	Theme           string  `toml:"theme"`
+	Background      string  `toml:"background"`
+	SourceCF        bool    `toml:"source_cf"`
+	SourceCSES      bool    `toml:"source_cses"`
+	Editor          string  `toml:"editor"`
+	Split           string  `toml:"split"`
+	EmbedRatio      float64 `toml:"embed_ratio"`
+	EmbedFocusKey   string  `toml:"embed_focus_key"`
+	EmbedSide       string  `toml:"embed_side"`
+	SubmitMode      string  `toml:"submit_mode"`
+	ReadingWidth    int     `toml:"reading_width"`
+	ReadingMargin   int     `toml:"reading_margin"`
+	ReadingSpacing  string  `toml:"reading_spacing"`
+	ReadingHeadings string  `toml:"reading_headings"`
+	ReadingMath     string  `toml:"reading_math"`
+	ReadingEmphasis bool    `toml:"reading_emphasis"`
+
+	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...].
+	Keys map[string]map[string]any `toml:"keys"`
 
 	Lang map[string]Lang `toml:"lang"`
 }
@@ -67,7 +77,8 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", SubmitMode: "browser",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
+		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true,
 		Lang: map[string]Lang{
 			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
 			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
@@ -121,6 +132,24 @@ func Load(path string) (Config, error) {
 	if c.SubmitMode != "browser" && c.SubmitMode != "direct" {
 		return c, fmt.Errorf("submit_mode %q: want browser or direct", c.SubmitMode)
 	}
+	if c.EmbedSide != "" && c.EmbedSide != "left" && c.EmbedSide != "right" {
+		return c, fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
+	}
+	if c.ReadingWidth != 0 && (c.ReadingWidth < 40 || c.ReadingWidth > 200) {
+		return c, fmt.Errorf("reading_width: %d is outside 40 to 200", c.ReadingWidth)
+	}
+	if c.ReadingMargin < 0 || c.ReadingMargin > 8 {
+		return c, fmt.Errorf("reading_margin: %d is outside 0 to 8", c.ReadingMargin)
+	}
+	if c.ReadingSpacing != "" && c.ReadingSpacing != "compact" && c.ReadingSpacing != "normal" && c.ReadingSpacing != "relaxed" {
+		return c, fmt.Errorf("reading_spacing %q: want compact, normal or relaxed", c.ReadingSpacing)
+	}
+	if c.ReadingHeadings != "" && c.ReadingHeadings != "plain" && c.ReadingHeadings != "bold" && c.ReadingHeadings != "bar" && c.ReadingHeadings != "underline" {
+		return c, fmt.Errorf("reading_headings %q: want plain, bold, bar or underline", c.ReadingHeadings)
+	}
+	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "raw" {
+		return c, fmt.Errorf("reading_math %q: want unicode or raw", c.ReadingMath)
+	}
 	// A user's [lang.x] table replaces the default wholesale: re-inherit what they left out.
 	def := Default().Lang
 	for k, l := range c.Lang {
@@ -140,4 +169,19 @@ func Load(path string) (Config, error) {
 		c.Lang[k] = l
 	}
 	return c, nil
+}
+
+// Get returns a top-level settable key's value as text.
+func (c Config) Get(key string) (string, bool) {
+	vals := map[string]any{
+		"handle": c.Handle, "workspace": c.Workspace, "default_lang": c.DefaultLang, "theme": c.Theme,
+		"background": c.Background, "editor": c.Editor, "split": c.Split, "embed_focus_key": c.EmbedFocusKey,
+		"embed_side": c.EmbedSide, "submit_mode": c.SubmitMode, "time_multiplier": c.TimeMultiplier,
+		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest,
+		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
+		"reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
+		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
+	}
+	v, ok := vals[key]
+	return fmt.Sprint(v), ok
 }
