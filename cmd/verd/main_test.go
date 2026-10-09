@@ -189,4 +189,28 @@ func TestCustomizeCLI(t *testing.T) {
 	if out, _ := do("themes", "show", "terminal"); !strings.Contains(out, `accent = "ansi6"`) {
 		t.Fatalf("terminal palette uses ansi indices:\n%s", out)
 	}
+	// Test presets
+	if out, err := do("keys", "presets", "list"); err != nil || !strings.Contains(out, "default") || !strings.Contains(out, "vim") {
+		t.Fatalf("presets list failed: %q %v", out, err)
+	}
+	if out, err := do("keys", "presets", "preset", "vim"); err != nil || !strings.Contains(out, "applied") {
+		t.Fatalf("apply vim preset failed: %q %v", out, err)
+	}
+	if out, _ := do("keys"); !strings.Contains(out, "ctrl+d") {
+		t.Fatalf("vim preset should have ctrl+d:\n%s", out)
+	}
+	// Test export
+	if out, err := do("keys", "presets", "export"); err != nil || !strings.Contains(out, "[keys.") {
+		t.Fatalf("export failed: %q %v", out, err)
+	}
+	// Test round-trip: export and import
+	if _, err := do("keys", "presets", "export"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := do("keys", "presets", "preset", "default"); err != nil {
+		t.Fatalf("reset to default failed: %v", err)
+	}
+	if o2, _ := do("keys"); strings.Contains(o2, "ctrl+d") {
+		t.Fatalf("default preset should not have ctrl+d:\n%s", o2)
+	}
 }
