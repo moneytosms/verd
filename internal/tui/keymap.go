@@ -425,3 +425,24 @@ func KeyContexts() [][2]string {
 	}
 	return out
 }
+
+// KeyTableMarkdown returns Markdown tables of all editable key bindings grouped by context.
+// Each context gets its own section with columns: Key(s) | Action id | What it does.
+func KeyTableMarkdown() string {
+	var buf strings.Builder
+	actions := editableActions() // use editableActions to match KeyActions
+	for _, g := range keyGroupOrder {
+		buf.WriteString("## " + keyGroupTitle[g] + "\n\n")
+		buf.WriteString("| Key(s) | Action | What it does |\n")
+		buf.WriteString("| --- | --- | --- |\n")
+		for _, a := range actions {
+			if a.ctx == g {
+				keys := strings.Join(a.def, ", ")
+				keys = "`" + strings.ReplaceAll(keys, ", ", "`, `") + "`"
+				buf.WriteString("| " + keys + " | `" + a.id + "` | " + a.desc + " |\n")
+			}
+		}
+		buf.WriteString("\n")
+	}
+	return buf.String()
+}
