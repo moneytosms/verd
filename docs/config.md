@@ -21,6 +21,7 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
 | `embed_side` | `"right"` | Which column the embedded Neovim takes: `right` or `left`. |
 | `embed_focus_key` | `"ctrl+\\"` | Toggles keyboard focus between verd and the embedded Neovim. Same as `[keys.editor] focus`. |
+| `reading_width`, `reading_margin`, `reading_spacing`, `reading_headings`, `reading_math`, `reading_emphasis` | `0`, `1`, `normal`, `bar`, `unicode`, `true` | How statements are laid out. See [Reading and fonts](./customizing.md#reading-and-fonts). |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
 
 An unknown `submit_mode` or `embed_side` is a config error.

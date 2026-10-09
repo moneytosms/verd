@@ -40,6 +40,10 @@ func getStyleConfig(name string, o Options) *ansi.StyleConfig {
 	}
 	// Apply heading styles
 	applyHeadingStyle(&cfg, o.Headings)
+	if !o.Emphasis { // plain text for *italic* and **bold** (some fonts render them badly)
+		off := false
+		cfg.Emph.Italic, cfg.Strong.Bold = &off, &off
+	}
 	return &cfg
 }
 

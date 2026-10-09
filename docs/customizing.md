@@ -197,3 +197,18 @@ verd themes show <name>     # does your theme resolve to the colors you meant?
 ```
 
 If `config.toml` cannot be loaded, verd names the file and the problem (`themes.midnight: dark: accent: "red": want #rrggbb, #rgb or ansiN`) and does not start the TUI, so a bad edit never silently falls back to defaults. Footers, help and messages are built from the live bindings, so after changing a shortcut open the TUI and press `?` to confirm.
+
+## Reading and fonts
+
+Font family and size belong to your terminal emulator; verd cannot change them. Change them in the terminal's own settings (for example `font` in kitty/alacritty/ghostty/foot, Preferences > Profiles > Text in iTerm2 and GNOME Terminal, `font.size` in Windows Terminal). What verd controls is how a statement is laid out and styled, live from Settings (`5`) > **Reading** or with `verd config set`:
+
+| Key | Values | Effect |
+| --- | --- | --- |
+| `reading_width` | `0` or `40`-`200` | Cap the statement's line length (0 = the whole pane). Narrow columns read faster. |
+| `reading_margin` | `0`-`8` | Left margin in columns. |
+| `reading_spacing` | `compact`, `normal`, `relaxed` | Blank lines between paragraphs. |
+| `reading_headings` | `plain`, `bold`, `bar`, `underline` | Input / Output / Note headings: text, bold, `▌ Input`, or with a rule under them. |
+| `reading_math` | `unicode`, `raw` | TeX shown as symbols (`1 ≤ w ≤ 10⁹`) or as its source. |
+| `reading_emphasis` | `true`, `false` | `false` turns italics and bold into plain text, for fonts that render them badly. |
+
+Colors of headings and text come from the theme (see [Themes](#themes-and-styling)); `glamour_dark` / `glamour_light` in a theme pick the statement style.

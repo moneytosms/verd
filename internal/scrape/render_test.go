@@ -167,7 +167,7 @@ func TestRenderWidth(t *testing.T) {
 }
 
 func TestRenderEmphasisOff(t *testing.T) {
-	html := `<div class="problem-statement"><p>**bold** and *italic* text</p></div>`
+	html := `<div class="problem-statement"><p><b>bold</b> and <i>italic</i> text</p></div>`
 	o := DefaultOptions()
 	o.Emphasis = false
 	out, err := Render(html, 80, "notty", o)
