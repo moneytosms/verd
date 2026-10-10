@@ -1441,3 +1441,49 @@ func TestConfigReloadInvalidKeysKeepsOldKeymap(t *testing.T) {
 		t.Fatal("keymap should not be nil")
 	}
 }
+
+func TestContestFetchesMissingProblems(t *testing.T) {
+	var asked []int
+	deps := Deps{
+		Now:          func() time.Time { return time.Unix(1_000_000, 0) },
+		FetchContest: func(id int) error { asked = append(asked, id); return nil },
+	}
+	cs := []cf.Contest{{ID: 7, Name: "Live", Phase: "CODING", Start: 999_000}, {ID: 8, Name: "Soon", Phase: "BEFORE", Start: 2_000_000}}
+	m := New(nil, "", deps).WithContests(cs)
+	m, _ = send(m, "2")
+	m, cmd := send(m, "enter") // running contest, nothing cached: fetch
+	if cmd == nil || !m.contestBusy || !strings.Contains(plain(m), "fetching") {
+		t.Fatalf("want fetch in flight:\n%s", plain(m))
+	}
+	msg := cmd()
+	if len(asked) != 1 || asked[0] != 7 {
+		t.Fatalf("asked %v", asked)
+	}
+	m2, _ := m.Update(msg)
+	m = m2.(Model)
+	if m.contestBusy {
+		t.Fatal("busy should clear")
+	}
+	m, _ = send(m, "esc")
+	m, _ = send(m, "j")
+	m, cmd = send(m, "enter") // not started: no request, says why
+	if cmd != nil || len(asked) != 1 || !strings.Contains(plain(m), "not started") {
+		t.Fatalf("upcoming contest must not fetch:\n%s", plain(m))
+	}
+}
+
+func TestSnippetsSettingOpensTemplate(t *testing.T) {
+	var got string
+	deps := Deps{Langs: []string{"cpp", "python"}, DefaultLang: "cpp",
+		EditTemplate: func(l string) (*exec.Cmd, error) { got = l; return nil, nil }}
+	m := New(nil, "", deps)
+	m, _ = send(m, "5")
+	for settingDefs[m.setSel].key != "snippets" {
+		m, _ = send(m, "j")
+	}
+	m, _ = send(m, "right") // cpp -> python
+	m, _ = send(m, "enter")
+	if got != "python" {
+		t.Fatalf("opened %q", got)
+	}
+}

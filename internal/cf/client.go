@@ -141,6 +141,18 @@ func (c *Client) Problemset(ctx context.Context) ([]Problem, error) {
 	return r.Problems, nil
 }
 
+// ContestProblems fetches one contest's Problems from contest.standings. Unlike problemset.problems
+// it also covers running contests; a contest that has not started is an APIError. Ratings are unknown.
+func (c *Client) ContestProblems(ctx context.Context, contest int) ([]Problem, error) {
+	var r struct {
+		Problems []Problem `json:"problems"`
+	}
+	if err := c.api(ctx, "contest.standings", url.Values{"contestId": {strconv.Itoa(contest)}}, &r); err != nil {
+		return nil, err
+	}
+	return r.Problems, nil
+}
+
 // Page fetches a problem page. A Cloudflare challenge (header, 403, or interstitial body) is ErrChallenge.
 func (c *Client) Page(ctx context.Context, contest int, index string) ([]byte, error) {
 	res, err := c.Get(ctx, fmt.Sprintf("/problemset/problem/%d/%s", contest, index), nil)

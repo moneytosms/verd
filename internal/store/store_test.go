@@ -121,3 +121,25 @@ func TestOtherSourcesSurviveCFSyncAndMarksShowAsSolved(t *testing.T) {
 		t.Fatalf("cleared: %v", st)
 	}
 }
+
+func TestAddProblemsKeepsKnownRating(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "verd.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveProblemset([]cf.Problem{{ContestID: 1, Index: "A", Name: "Old", Rating: 800, Tags: []string{"dp"}}}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddProblems([]cf.Problem{{ContestID: 1, Index: "A", Name: "New"}, {ContestID: 2, Index: "A", Name: "Live"}}); err != nil {
+		t.Fatal(err)
+	}
+	ps, _ := s.Problems()
+	if len(ps) != 2 {
+		t.Fatalf("%+v", ps)
+	}
+	for _, p := range ps {
+		if p.ContestID == 1 && (p.Rating != 800 || p.Name != "New" || len(p.Tags) != 1) {
+			t.Fatalf("%+v", p)
+		}
+	}
+}

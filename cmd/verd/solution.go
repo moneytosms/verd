@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -66,6 +68,36 @@ func ensureSolution(cfg config.Config, p cf.Problem, lang string) (path string, 
 	vars := workspace.NewVars(p.ContestID, p.Index, p.Name, cfg.Handle, time.Now())
 	path, line, _, err = workspace.New(cfg.Workspace).Ensure(p.ContestID, p.Index, lang, l, tmpl, vars)
 	return path, line, err
+}
+
+// editTemplate opens a language's Solution Template in the editor, writing the current (default)
+// text first when the file does not exist yet so there is something to edit.
+func editTemplate(cfg config.Config, ctrl *editor.Controller, lang string) (*exec.Cmd, error) {
+	if err := requireEditor(ctrl); err != nil {
+		return nil, err
+	}
+	l, err := langOf(cfg, lang)
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(config.Dir(), "templates")
+	path := l.Template
+	if path == "" {
+		path = filepath.Join(dir, lang+"."+l.Ext)
+	}
+	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+		text, err := workspace.LoadTemplate(dir, lang, l)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			return nil, err
+		}
+	}
+	return ctrl.Open(path, 1)
 }
 
 func requireEditor(ctrl *editor.Controller) error {

@@ -22,8 +22,13 @@ var defaultTemplates embed.FS
 // TemplateVars are the values available to a Template.
 type TemplateVars struct {
 	Problem struct{ ID, Name, URL string }
+	Contest int
+	Index   string
 	Handle  string
-	Date    string
+	Date    string // 2006-01-02
+	Time    string // 15:04
+	// DateTime is "2006-01-02 15:04".
+	DateTime string
 }
 
 func NewVars(contest int, index, name, handle string, now time.Time) TemplateVars {
@@ -32,7 +37,8 @@ func NewVars(contest int, index, name, handle string, now time.Time) TemplateVar
 	v.Problem.ID = p.Code()
 	v.Problem.Name = name
 	v.Problem.URL = p.URL()
-	v.Handle, v.Date = handle, now.Format("2006-01-02")
+	v.Contest, v.Index, v.Handle = contest, index, handle
+	v.Date, v.Time, v.DateTime = now.Format("2006-01-02"), now.Format("15:04"), now.Format("2006-01-02 15:04")
 	return v
 }
 

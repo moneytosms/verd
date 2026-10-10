@@ -104,3 +104,11 @@ func TestWarning(t *testing.T) {
 		t.Error("only WSL under /mnt warns")
 	}
 }
+
+func TestTimeVars(t *testing.T) {
+	v := NewVars(1900, "A", "x", "h", time.Date(2026, 10, 5, 9, 7, 0, 0, time.UTC))
+	text, _, err := RenderTemplate("{{.Date}} {{.Time}} | {{.DateTime}} | {{.Contest}}{{.Index}}", v)
+	if err != nil || text != "2026-10-05 09:07 | 2026-10-05 09:07 | 1900A" {
+		t.Fatalf("%q %v", text, err)
+	}
+}

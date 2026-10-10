@@ -133,6 +133,27 @@ func (s *Store) SaveProblemset(ps []cf.Problem, at time.Time) error {
 	return tx.Commit()
 }
 
+// AddProblems inserts Codeforces Problems, keeping the rating and solved count of ones already cached
+// when the new value is unknown (zero).
+func (s *Store) AddProblems(ps []cf.Problem) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, p := range ps {
+		tags, _ := json.Marshal(p.Tags)
+		if _, err := tx.Exec(`INSERT INTO problems(contest_id, idx, name, rating, tags, solved_count) VALUES(?,?,?,?,?,?)
+			ON CONFLICT(contest_id, idx) DO UPDATE SET name = excluded.name,
+			rating = CASE WHEN excluded.rating > 0 THEN excluded.rating ELSE rating END,
+			tags = CASE WHEN excluded.tags NOT IN ('[]', 'null') THEN excluded.tags ELSE tags END`,
+			p.ContestID, p.Index, p.Name, p.Rating, string(tags), p.SolvedCount); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // SaveSource replaces one non-Codeforces source's problems and stamps its sync time, atomically.
 func (s *Store) SaveSource(source string, ps []cf.Problem, at time.Time) error {
 	tx, err := s.db.Begin()

@@ -79,7 +79,7 @@ Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Pro
 | `gen.<lang>.<ext>` | The stress test input generator; `argv[1]` is the seed. |
 | `brute.<lang>.<ext>` | The slow, obviously correct Solution stress compares against. |
 
-Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `{{.Problem.Name}}`, `{{.Problem.URL}}`, `{{.Handle}}`, `{{.Date}}`. `{{cursor}}` marks where Neovim places the cursor and is removed from the output.
+Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `{{.Problem.Name}}`, `{{.Problem.URL}}`, `{{.Handle}}`, `{{.Contest}}`, `{{.Index}}`, `{{.Date}}` (2026-10-10), `{{.Time}}` (20:50), `{{.DateTime}}`. Edit one per language in Settings, **Snippets**. `{{cursor}}` marks where Neovim places the cursor and is removed from the output.
 
 ## Files verd writes
 

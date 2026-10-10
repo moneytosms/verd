@@ -122,6 +122,16 @@ func Submissions(ctx context.Context, s *store.Store, c *cf.Client, handle strin
 	}
 }
 
+// ContestProblems fetches one contest's Problems and adds them to the cache. The problemset omits
+// running contests, so this is how their Problems show up.
+func ContestProblems(ctx context.Context, s *store.Store, c *cf.Client, contest int) (int, error) {
+	ps, err := c.ContestProblems(ctx, contest)
+	if err != nil {
+		return 0, err
+	}
+	return len(ps), s.AddProblems(ps)
+}
+
 // Contests fetches and stores the contest list when the cache is older than ContestsTTL.
 func Contests(ctx context.Context, s *store.Store, c *cf.Client, now time.Time) (bool, error) {
 	at, err := s.ContestsSyncedAt()

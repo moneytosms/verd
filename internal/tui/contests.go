@@ -46,6 +46,24 @@ func (m Model) contestProblems(c cf.Contest) []cf.Problem {
 	return out
 }
 
+type contestFetchedMsg struct{ err error }
+
+// fetchContest downloads the open contest's Problems. Not offered before the contest starts: CF
+// publishes nothing until then.
+func (m Model) fetchContest() (tea.Model, tea.Cmd) {
+	c := m.contestOpen
+	if c == nil || m.deps.FetchContest == nil || m.contestBusy {
+		return m, nil
+	}
+	if c.Phase == "BEFORE" {
+		m.contestNote = "not started: Codeforces publishes Problems when the contest begins"
+		return m, nil
+	}
+	m.contestBusy, m.contestNote = true, ""
+	fetch, id := m.deps.FetchContest, c.ID
+	return m, func() tea.Msg { return contestFetchedMsg{fetch(id)} }
+}
+
 func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.contestOpen != nil {
 		ps := m.contestProblems(*m.contestOpen)
@@ -53,7 +71,9 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "esc", "q":
-			m.contestOpen, m.cpCursor = nil, 0
+			m.contestOpen, m.cpCursor, m.contestNote = nil, 0, ""
+		case "r", "ctrl+r":
+			return m.fetchContest()
 		case "up", "k":
 			m.cpCursor = max(0, m.cpCursor-1)
 		case "down", "j":
@@ -79,7 +99,10 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if len(m.contests) > 0 {
 			c := m.contests[m.contestCursor]
-			m.contestOpen, m.cpCursor = &c, 0
+			m.contestOpen, m.cpCursor, m.contestNote = &c, 0, ""
+			if len(m.contestProblems(c)) == 0 && c.Phase != "BEFORE" {
+				return m.fetchContest()
+			}
 		}
 	}
 	return m, nil
@@ -103,7 +126,17 @@ func (m Model) contestBox() []string {
 	ps := m.contestProblems(*c)
 	var body []string
 	if len(ps) == 0 {
-		body = append(body, st.Dim.Render("no Problems cached for this contest"))
+		switch {
+		case m.contestBusy:
+			body = append(body, st.Dim.Render("fetching Problems..."))
+		case c.Phase == "BEFORE":
+			body = append(body, st.Dim.Render("not started: Problems appear when the contest begins"))
+		default:
+			body = append(body, st.Dim.Render("no Problems cached for this contest"))
+		}
+	}
+	if m.contestNote != "" {
+		body = append(body, st.Bad.Render(fit(m.contestNote, w-6)))
 	}
 	for i, p := range ps {
 		cur := " "
@@ -112,7 +145,7 @@ func (m Model) contestBox() []string {
 		}
 		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), m.ratingText(p)))
 	}
-	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, m.kx("{contest.open} open  {contest.down}/{contest.up} move  {contest.close} close"), w, len(body)+2, true, st, m.borderStyle())
+	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, m.kx("{contest.open} open  {contest.down}/{contest.up} move  r refetch  {contest.close} close"), w, len(body)+2, true, st, m.borderStyle())
 }
 
 func (m Model) viewContests(b *strings.Builder) string {

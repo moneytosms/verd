@@ -71,6 +71,10 @@ type Deps struct {
 	// EditConfig opens config.toml in the editor; LangSummary describes each configured language.
 	EditConfig  func() (*exec.Cmd, error)
 	LangSummary []string
+	// FetchContest downloads one contest's Problems into the cache (the problemset omits running contests).
+	FetchContest func(contest int) error
+	// EditTemplate opens the language's Solution Template in the editor, creating it if absent (like Edit).
+	EditTemplate func(lang string) (*exec.Cmd, error)
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
@@ -162,6 +166,9 @@ type Model struct {
 	upcoming      int // contests[:upcoming] are not finished
 	contestCursor int
 	contestOpen   *cf.Contest
+	contestBusy   bool   // a contest's Problems are being fetched
+	contestNote   string // result of the last fetch, shown in the contest box
+	snipLang      string // language the Snippets setting edits ("" = default language)
 	cpCursor      int
 
 	// list filtering
@@ -730,6 +737,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.reload()
+	case contestFetchedMsg:
+		m.contestBusy = false
+		if msg.err != nil {
+			m.contestNote = clean(msg.err.Error())
+			return m, nil
+		}
+		m.contestNote = ""
+		return m, m.reload()
 	case ConfigChangedMsg:
 		return m.onConfigChanged()
 	case tea.MouseClickMsg:
@@ -804,6 +819,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch k := msg.String(); k {
 		case "ctrl+r":
+			if m.tab == 1 && m.contestOpen != nil {
+				return m.fetchContest()
+			}
 			if len(m.deps.Refresh) == 0 || m.syncing {
 				return m, nil
 			}

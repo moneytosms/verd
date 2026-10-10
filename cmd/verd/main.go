@@ -492,6 +492,11 @@ func runTUI(path string) error {
 			}
 			return nil
 		},
+		FetchContest: func(id int) error {
+			_, err := refresh.ContestProblems(ctx, s, client, id)
+			return err
+		},
+		EditTemplate: func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) },
 		EditConfig: func() (*exec.Cmd, error) {
 			if _, err := os.Stat(path); err != nil {
 				if err := config.Init(path, false); err != nil {

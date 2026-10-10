@@ -50,6 +50,7 @@ var settingDefs = []settingDef{
 	{"Mouse", "wheel_lines", "Wheel lines", "Lines scrolled per wheel notch (1-20).", "text", true},
 	{"Mouse", "mouse_select", "Drag to select", "Enable drag-to-select-lines in the Problem view.", "bool", true},
 	{"Keys", "keys", "Shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
+	{"Snippets", "snippets", "Template", "The starting text of a new Solution, one per language. ←/→ picks the language, enter edits its Template file. Available variables are listed below; saving the file applies to the next new Solution.", "snippets", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
@@ -59,6 +60,27 @@ type settingEdit struct {
 	text   string
 	cred   int
 	cookie string
+}
+
+// snippetVars are the variables a Template can use (see workspace.TemplateVars).
+var snippetVars = [][2]string{
+	{"{{.Problem.ID}}", "CF 1900A / CSES1068"},
+	{"{{.Problem.Name}}", "problem name"},
+	{"{{.Problem.URL}}", "problem page"},
+	{"{{.Contest}} {{.Index}}", "contest id and problem index"},
+	{"{{.Handle}}", "your handle"},
+	{"{{.Date}}", "2026-10-10"},
+	{"{{.Time}}", "20:50"},
+	{"{{.DateTime}}", "2026-10-10 20:50"},
+	{"{{cursor}}", "where the editor cursor starts"},
+}
+
+// snippetLang is the language the Snippets setting is showing.
+func (m Model) snippetLang() string {
+	if m.snipLang != "" {
+		return m.snipLang
+	}
+	return m.deps.DefaultLang
 }
 
 // options are the allowed values of an enum setting.
@@ -163,6 +185,15 @@ func (m Model) step(d settingDef, dir int) Model {
 	switch d.kind {
 	case "keys":
 		return m.openKeyEditor()
+	case "snippets":
+		langs := m.deps.Langs
+		if len(langs) == 0 {
+			return m
+		}
+		cur := m.snippetLang()
+		i := slices.Index(langs, cur)
+		m.snipLang = langs[((i+dir)%len(langs)+len(langs))%len(langs)]
+		return m
 	case "bool":
 		return m.apply(d, strconv.FormatBool(m.setting(d.key) != "true"))
 	case "enum":
@@ -229,6 +260,10 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "left", "h":
 		m = m.step(d, -1)
 	case "enter":
+		if d.kind == "snippets" && m.deps.EditTemplate != nil {
+			cmd, err := m.deps.EditTemplate(m.snippetLang())
+			return m.afterOpen(cmd, err, "template")
+		}
 		if d.kind == "text" {
 			m.setEdit = &settingEdit{text: m.setting(d.key)}
 		} else {
@@ -319,6 +354,8 @@ func (m Model) settingLines(w int) []settingLine {
 		switch d.kind {
 		case "keys":
 			shown = st.Dim.Render(fmt.Sprintf("enter to edit (%d changed)", len(m.km.user)))
+		case "snippets":
+			shown = st.Dim.Render("‹ ") + st.Accent.Render(m.snippetLang()) + st.Dim.Render(" ›  enter to edit")
 		case "enum":
 			shown = st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
 		case "bool":
@@ -392,6 +429,12 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	switch d.kind {
 	case "keys":
 		info = append(info, st.Dim.Render("enter opens the editor"))
+	case "snippets":
+		info = append(info, st.Dim.Render("←/→ language · enter edits its Template"), "", st.Accent2.Render("VARIABLES"))
+		for _, v := range snippetVars {
+			info = append(info, "  "+st.Accent.Render(v[0]), "    "+st.Dim.Render(v[1]))
+		}
+		info = append(info, "", st.Dim.Render("Go text/template: {{if eq .Handle \"x\"}}…{{end}} works too"))
 	case "enum", "bool":
 		info = append(info, st.Dim.Render("←/→ or space change · saved on change"))
 	default:
