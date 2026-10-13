@@ -107,6 +107,9 @@ func (m Model) fullBox() []string {
 		case res.Note != "":
 			head = append(head, st.Warn.Render(clean(res.Note)))
 		}
+		if d := res.Detail(); d != "" {
+			head = append(head, st.Bad.Render(clean(d)))
+		}
 	}
 	if m.run != nil && m.run.running {
 		title += "  running..."
