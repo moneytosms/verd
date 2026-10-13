@@ -68,6 +68,20 @@ func TestCrashingBruteIsError(t *testing.T) {
 	}
 }
 
+// Higher failing seeds finish first; the lowest one must still be reported.
+func TestParallelReportsLowestFailingSeed(t *testing.T) {
+	s := setup(t, "import time\nn=int(input())\ntime.sleep((13-n)*0.03 if n<13 else 0)\nprint(n*2+(1 if n in (5,9,12) else 0))\n", good)
+	s.Gen.Path = filepath.Join(filepath.Dir(s.Gen.Path), "seed.py")
+	os.WriteFile(s.Gen.Path, []byte("import sys\nprint(sys.argv[1])\n"), 0o644)
+	s.Jobs = 8
+	for range 3 {
+		r, _ := final(Run(context.Background(), s))
+		if r.Kind != Mismatch || r.Seed != 5 || r.Iterations != 5 {
+			t.Fatalf("%+v", r)
+		}
+	}
+}
+
 func TestSolutionRETLEAndCancel(t *testing.T) {
 	r, _ := final(Run(context.Background(), setup(t, "raise SystemExit(2)\n", good)))
 	if r.Kind != SolutionRE {

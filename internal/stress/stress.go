@@ -5,8 +5,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os/exec"
+	"runtime"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/moneytosms/verd/internal/config"
@@ -26,6 +30,7 @@ type Spec struct {
 	TimeLimitMS          int           // per Solution run; 0 = 10 s
 	MaxIter              int           // default 1000
 	Timeout              time.Duration // default 30 s
+	Jobs                 int           // parallel iterations; 0 = NumCPU (max 16)
 }
 
 // Outcome kinds.
@@ -117,37 +122,98 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		}
 		argv[i] = a
 	}
-	deadline := time.Now().Add(spec.Timeout)
-	for i := 1; ; i++ {
-		if ctx.Err() != nil {
-			return Result{Kind: Cancelled, Iterations: i - 1}
-		}
-		if i > spec.MaxIter || time.Now().After(deadline) {
-			return Result{Kind: Limit, Iterations: i - 1}
-		}
-		progress(i, i)
-		in, ge, gc, gtle := exec1(ctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit)
-		if ctx.Err() != nil {
-			return Result{Kind: Cancelled, Iterations: i - 1}
+	jobs := spec.Jobs
+	if jobs <= 0 {
+		jobs = min(runtime.NumCPU(), 16)
+	}
+	jobs = min(jobs, spec.MaxIter)
+	// iterate runs one seed; nil means it passed. ok is false if ctx was cancelled mid-run.
+	iterate := func(wctx context.Context, i int) (r *Result, ok bool) {
+		in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit)
+		if wctx.Err() != nil {
+			return nil, false
 		}
 		if gc != 0 || gtle {
-			return Result{Kind: Error, Iterations: i, Seed: i, Err: "gen failed: " + ge}
+			return &Result{Kind: Error, Iterations: i, Seed: i, Err: "gen failed: " + ge}, true
 		}
-		got, se, sc, stle := exec1(ctx, argv[1], in, limit)
+		got, se, sc, stle := exec1(wctx, argv[1], in, limit)
 		switch {
-		case ctx.Err() != nil:
-			return Result{Kind: Cancelled, Iterations: i - 1}
+		case wctx.Err() != nil:
+			return nil, false
 		case stle:
-			return Result{Kind: SolutionTLE, Iterations: i, Seed: i, Input: in}
+			return &Result{Kind: SolutionTLE, Iterations: i, Seed: i, Input: in}, true
 		case sc != 0:
-			return Result{Kind: SolutionRE, Iterations: i, Seed: i, Input: in, Err: se}
+			return &Result{Kind: SolutionRE, Iterations: i, Seed: i, Input: in, Err: se}, true
 		}
-		want, be, bc, btle := exec1(ctx, argv[2], in, 10*limit)
+		want, be, bc, btle := exec1(wctx, argv[2], in, 10*limit)
+		if wctx.Err() != nil {
+			return nil, false
+		}
 		if bc != 0 || btle {
-			return Result{Kind: Error, Iterations: i, Seed: i, Input: in, Err: "brute failed: " + be}
+			return &Result{Kind: Error, Iterations: i, Seed: i, Input: in, Err: "brute failed: " + be}, true
 		}
 		if ok, mm := runner.Compare(mode, want, got, eps); !ok {
-			return Result{Kind: Mismatch, Iterations: i, Seed: i, Input: in, Want: want, Got: got, Mismatch: mm}
+			return &Result{Kind: Mismatch, Iterations: i, Seed: i, Input: in, Want: want, Got: got, Mismatch: mm}, true
+		}
+		return nil, true
+	}
+
+	// Workers claim seeds in increasing order; results are consumed in seed order so the
+	// lowest failing seed wins and stop conditions match the sequential loop.
+	type done struct {
+		seed int
+		r    *Result
+	}
+	wctx, stop := context.WithCancel(ctx)
+	defer stop()
+	deadline := time.Now().Add(spec.Timeout)
+	var next atomic.Int64
+	var minFail atomic.Int64 // lowest failing seed seen so far; higher seeds need not start
+	minFail.Store(math.MaxInt64)
+	results := make(chan done)
+	var wg sync.WaitGroup
+	for range jobs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				i := int(next.Add(1))
+				if i > spec.MaxIter || int64(i) > minFail.Load() || time.Now().After(deadline) || wctx.Err() != nil {
+					return
+				}
+				r, ok := iterate(wctx, i)
+				if !ok {
+					return
+				}
+				if r != nil {
+					for m := minFail.Load(); int64(i) < m && !minFail.CompareAndSwap(m, int64(i)); m = minFail.Load() {
+					}
+				}
+				select {
+				case results <- done{i, r}:
+				case <-wctx.Done():
+					return
+				}
+			}
+		}()
+	}
+	go func() { wg.Wait(); close(results) }()
+
+	pending := map[int]*done{}
+	emit := 1 // next seed to report
+	for d := range results {
+		pending[d.seed] = &d
+		for p := pending[emit]; p != nil; p = pending[emit] {
+			if p.r != nil {
+				return *p.r
+			}
+			progress(emit, emit)
+			delete(pending, emit)
+			emit++
 		}
 	}
+	if ctx.Err() != nil {
+		return Result{Kind: Cancelled, Iterations: emit - 1}
+	}
+	return Result{Kind: Limit, Iterations: emit - 1}
 }
