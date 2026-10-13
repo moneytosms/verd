@@ -56,6 +56,17 @@ func writeCase(b *strings.Builder, r caseRow) {
 	}
 }
 
+// copyHint names what y copies for the focused pane, for the footer.
+func (m Model) copyHint() string {
+	switch m.pane {
+	case paneTests:
+		return "all tests"
+	case paneDetail:
+		return "this test"
+	}
+	return "statement"
+}
+
 // copyPane puts the focused pane on the clipboard (OSC 52, works over ssh/tmux).
 func (m Model) copyPane() (Model, tea.Cmd) {
 	what, text := m.copyText()
@@ -75,8 +86,15 @@ func (m Model) copyCase(field string) (Model, tea.Cmd) {
 		return m, nil
 	}
 	text := row.Input
-	if field == "expected" {
+	switch field {
+	case "expected":
 		text = row.Want
+	case "output":
+		if row.Res == nil {
+			m.Notice = "no output yet: run tests first"
+			return m, nil
+		}
+		text = row.Res.Output
 	}
 	m.Notice = "copied " + row.Name + " " + field
 	return m, tea.SetClipboard(strings.TrimRight(text, "\n") + "\n")

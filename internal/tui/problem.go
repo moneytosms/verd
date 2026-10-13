@@ -182,7 +182,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	for _, l := range joinCols(left, lw, right, " ") {
 		b.WriteString(l + "\n")
 	}
-	return "{problem.pane_next} pane  {problem.down}/{problem.up} move  {problem.edit} edit  {problem.notes} note  {problem.manage_tests} tests  {problem.run_tests} run  {problem.submit} submit  {problem.stress} stress  {problem.cycle_mode} mode  {problem.language} lang  {problem.open_browser} browser  {problem.back} back  {common.help} help  {problem.quit} quit"
+	return "{problem.pane_next} pane  {problem.down}/{problem.up} move  {problem.edit} edit  {problem.notes} note  {problem.copy} copy " + m.copyHint() + "  {problem.manage_tests} tests  {problem.run_tests} run  {problem.submit} submit  {problem.stress} stress  {problem.cycle_mode} mode  {problem.language} lang  {problem.open_browser} browser  {problem.back} back  {common.help} help  {problem.quit} quit"
 }
 
 // infoLines is the Problem box: rating, limits, tags, language and Submission status.

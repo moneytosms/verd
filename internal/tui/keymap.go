@@ -96,6 +96,7 @@ var keyActions = []keyAction{
 	{"problem", "copy", "copy the focused pane", ks("y")},
 	{"problem", "copy_input", "copy the selected test's input only (tests/detail pane)", ks("I")},
 	{"problem", "copy_expected", "copy the selected test's expected output only (tests/detail pane)", ks("E")},
+	{"problem", "copy_output", "copy the selected test's actual output only (tests/detail pane)", ks("O")},
 	{"problem", "manage_tests", "manage tests: view, add, edit, copy, delete", ks("T")},
 	{"problem", "add_test", "add a Custom Test", ks("a")},
 	{"problem", "language", "switch language", ks("l")},

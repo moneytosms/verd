@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 )
 
@@ -321,6 +322,27 @@ func TestSplitCopyInputExpectedOnly(t *testing.T) {
 		m, cmd = send(m, "E")
 		if cmd == nil || m.Notice != "copied "+row.Name+" expected" {
 			t.Fatalf("E pane %d: cmd=%v notice=%q", pane, cmd, m.Notice)
+		}
+	}
+}
+
+func TestSplitCopyOutputOnly(t *testing.T) {
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
+	row, _ := m.selected()
+	m.pane = paneTests
+	m, cmd := send(m, "O")
+	if cmd != nil || !strings.Contains(m.Notice, "run tests first") {
+		t.Fatalf("no result: cmd=%v notice=%q", cmd, m.Notice)
+	}
+	m.run = &testRun{results: []runner.Result{{Name: row.Name, Verdict: runner.WA, Output: "7\n"}}}
+	m, cmd = send(m, "O")
+	if cmd == nil || m.Notice != "copied "+row.Name+" output" {
+		t.Fatalf("O: cmd=%v notice=%q", cmd, m.Notice)
+	}
+	for pane, want := range map[int]string{paneStatement: "statement", paneTests: "all tests", paneDetail: "this test"} {
+		m.pane = pane
+		if got := m.copyHint(); got != want {
+			t.Errorf("pane %d hint %q want %q", pane, got, want)
 		}
 	}
 }

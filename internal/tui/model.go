@@ -1004,6 +1004,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.copyCase("input")
 	case "E":
 		return m.copyCase("expected")
+	case "O":
+		return m.copyCase("output")
 	case ">", ".":
 		m.wAdj += 4
 	case "<", ",":
