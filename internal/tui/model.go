@@ -199,6 +199,8 @@ type Model struct {
 	detScroll   int
 	full        bool // full-screen test view open
 	fullOff     int
+	fullX       int  // horizontal pan of the full-screen view
+	fullWrap    bool // wrap long lines instead of panning
 	wAdj, hAdj  int  // user resize of the split view: right column width, Tests pane height
 	dragging    bool // dragging the column divider
 	sel         selection
