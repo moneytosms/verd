@@ -18,6 +18,9 @@ func TestConvertTeX(t *testing.T) {
 		`$$$a \ne b$$$, $$$\left( x \right)$$$ <b>keep</b>`: "a ≠ b, ( x ) <b>keep</b>",
 		`no math here_ \ `:                                  `no math here_ \ `,
 		`$$$ 2^{n} $$$`:                                     " 2ⁿ ",
+		`$$$\color{red}6$$$`:                                "6",
+		`$$$\textcolor{red}{6}$$$`:                          "6",
+		`$$$a{\color{red} 6}$$$`:                            "a6",
 	} {
 		if got := ConvertTeX(in); got != want {
 			t.Errorf("%s\n got  %q\n want %q", in, got, want)
