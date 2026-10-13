@@ -20,6 +20,8 @@ func (m Model) modalBox() []string {
 		return m.filterBox()
 	case m.help:
 		return m.helpBox()
+	case m.full && m.viewing():
+		return m.fullBox()
 	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
 		return m.contestBox()
 	case m.strs != nil && m.strs.diff:
