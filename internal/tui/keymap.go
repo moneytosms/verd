@@ -104,6 +104,7 @@ var keyActions = []keyAction{
 	{"problem", "cycle_mode", "cycle Comparison Mode", ks("c")},
 	{"problem", "next_test", "select next test", ks("n")},
 	{"problem", "prev_test", "select previous test", ks("p")},
+	{"problem", "fullview", "full-screen view of the selected test: input, expected, stdout, stderr", ks("f")},
 	{"problem", "diff", "diff the selected failing test", ks("d")},
 	{"problem", "refetch", "refetch statement", ks("r")},
 	{"problem", "open_browser", "open in the browser", ks("o")},

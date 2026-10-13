@@ -23,7 +23,7 @@ func (m Model) modalRect() (x, y, w, h int, ok bool) {
 
 // closeModal dismisses whichever modal is open.
 func (m Model) closeModal() Model {
-	m.tm, m.fm, m.ke, m.help, m.subModal = nil, nil, nil, false, false
+	m.tm, m.fm, m.ke, m.help, m.subModal, m.full = nil, nil, nil, false, false, false
 	if m.run != nil {
 		m.run.diff = false
 	}
@@ -283,6 +283,9 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 		if m.fm.field == ffTags {
 			m.fm.tsel = max(0, min(m.fm.tsel+d, len(m.fm.shownTags())-1))
 		}
+		return m, nil
+	case m.full:
+		m.fullOff = max(0, m.fullOff+d)
 		return m, nil
 	case m.run != nil && m.run.diff:
 		m.run.diffOff = max(0, m.run.diffOff+d)

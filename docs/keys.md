@@ -144,6 +144,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `c` | `cycle_mode` | cycle Comparison Mode |
 | `n` | `next_test` | select next test |
 | `p` | `prev_test` | select previous test |
+| `f` | `fullview` | full-screen view of the selected test: input, expected, stdout, stderr |
 | `d` | `diff` | diff the selected failing test |
 | `r` | `refetch` | refetch statement |
 | `o` | `open_browser` | open in the browser |

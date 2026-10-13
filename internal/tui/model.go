@@ -197,6 +197,8 @@ type Model struct {
 	tsel        int    // selected row of the Tests pane
 	pane        int    // focused pane of the split Problem view
 	detScroll   int
+	full        bool // full-screen test view open
+	fullOff     int
 	wAdj, hAdj  int  // user resize of the split view: right column width, Tests pane height
 	dragging    bool // dragging the column divider
 	sel         selection
@@ -958,6 +960,9 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.full {
+		return m.updateFull(msg)
+	}
 	if r := m.run; r != nil && r.diff {
 		switch msg.String() {
 		case "esc", "d", "q":
@@ -996,6 +1001,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.tab = m.tabIDFromPos(pos)
 			return m.onTab(), nil
 		}
+	case "f":
+		m.full, m.fullOff = true, 0
 	case "v":
 		m.showTags = !m.showTags
 	case "y":
