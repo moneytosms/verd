@@ -1000,6 +1000,12 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.showTags = !m.showTags
 	case "y":
 		return m.copyPane()
+	case "I":
+		return m.copyCase("input")
+	case "E":
+		return m.copyCase("expected")
+	case "O":
+		return m.copyCase("output")
 	case ">", ".":
 		m.wAdj += 4
 	case "<", ",":

@@ -134,6 +134,9 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `e` | `edit` | edit the Solution in your editor |
 | `N` | `notes` | edit the Problem's notes.md |
 | `y` | `copy` | copy the focused pane |
+| `I` | `copy_input` | copy the selected test's input only (tests/detail pane) |
+| `E` | `copy_expected` | copy the selected test's expected output only (tests/detail pane) |
+| `O` | `copy_output` | copy the selected test's actual output only (tests/detail pane) |
 | `T` | `manage_tests` | manage tests: view, add, edit, copy, delete |
 | `a` | `add_test` | add a Custom Test |
 | `l` | `language` | switch language |
