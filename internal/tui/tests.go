@@ -115,7 +115,7 @@ func (m Model) onTestEvent(msg testEventMsg) (Model, tea.Cmd) {
 	case runner.CompileFinished:
 		switch {
 		case ev.Err != "":
-			r.compile = ev.Err
+			r.compile = shortPaths(ev.Err)
 		case ev.Interpreted:
 			r.compile = "ok (interpreted)"
 		case ev.Cached:
@@ -146,6 +146,12 @@ func (m Model) onTestEvent(msg testEventMsg) (Model, tea.Cmd) {
 	}
 	return m, listen(msg.id, msg.ch)
 }
+
+// absDir matches an absolute directory prefix in compiler output, so long workspace paths do not
+// push the error text out of view.
+var absDir = regexp.MustCompile(`(?m)(^|[\s(])(?:/[^\s/:]+)+/`)
+
+func shortPaths(out string) string { return absDir.ReplaceAllString(out, "$1") }
 
 // locRe matches a compiler "file:line[:col]:" location.
 var locRe = regexp.MustCompile(`([^\s:"]+):(\d+)(?::\d+)?:`)

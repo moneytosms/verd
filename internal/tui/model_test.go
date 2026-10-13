@@ -1514,3 +1514,11 @@ func TestSnippetsSettingOpensTemplate(t *testing.T) {
 		t.Fatalf("opened %q", got)
 	}
 }
+
+func TestShortPaths(t *testing.T) {
+	in := "/home/u/verd/1900/A/main.cpp:1:21: error: expected primary-expression\n/usr/include/c++/13/bits/x.h:5:2: note: here\n    1 | int x = ;"
+	want := "main.cpp:1:21: error: expected primary-expression\nx.h:5:2: note: here\n    1 | int x = ;"
+	if got := shortPaths(in); got != want {
+		t.Fatalf("got %q", got)
+	}
+}
