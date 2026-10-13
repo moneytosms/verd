@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +23,9 @@ import (
 const (
 	defaultOutputCap = 64 << 20
 	stderrCap        = 64 << 10
+	inputCap         = 16 << 10 // bytes of the test input kept in a Result
+	liveCap          = 64 << 10 // bytes of stdout tail in a live Output event
+	liveEvery        = 100 * time.Millisecond
 )
 
 // Local Verdicts.
@@ -47,6 +51,9 @@ type Spec struct {
 	Mode        Mode
 	FloatEps    float64 // default 1e-6
 	OutputCap   int     // bytes of stdout kept; default 64 MB
+
+	Only string // run just the test with this name (the compile cache is reused); "" = all
+	Live bool   // emit Output events with the partial stdout/stderr while a test runs
 }
 
 type Result struct {
@@ -57,6 +64,7 @@ type Result struct {
 	ExitCode int
 	Mismatch *Mismatch
 	Expected string
+	Input    string // the test's input, cut at 16 KiB
 	Output   string
 	Stderr   string
 	Note     string // e.g. "output limit exceeded", "killed by signal"
@@ -95,6 +103,7 @@ const (
 	CompileFinished
 	TestFinished
 	Done
+	Output // Live runs: Result holds Name, TimeMS so far and the partial Output (tail) and Stderr
 )
 
 type Event struct {
@@ -102,7 +111,7 @@ type Event struct {
 	Cached      bool   // CompileFinished: binary reused
 	Interpreted bool   // CompileFinished: nothing to compile
 	Err         string // CompileFinished: compiler output when it failed
-	Result      Result // TestFinished
+	Result      Result // TestFinished, Output
 	Verdict     string // Done: overall (first failing verdict, else AC; CE if compilation failed)
 }
 
@@ -112,6 +121,14 @@ func Run(ctx context.Context, spec Spec) <-chan Event {
 	go func() {
 		defer close(ch)
 		r := &run{spec: spec, ctx: ctx}
+		if spec.Live {
+			r.live = func(res Result) {
+				select {
+				case ch <- Event{Kind: Output, Result: res}:
+				default: // a snapshot: the next one supersedes it, and the child must never wait on the UI
+				}
+			}
+		}
 		ch <- Event{Kind: CompileStarted}
 		cached, err := r.compile()
 		if err != nil {
@@ -124,6 +141,9 @@ func Run(ctx context.Context, spec Spec) <-chan Event {
 		for _, t := range spec.Tests {
 			if ctx.Err() != nil {
 				break
+			}
+			if spec.Only != "" && t.Name != spec.Only {
+				continue
 			}
 			res := r.runTest(t)
 			ch <- Event{Kind: TestFinished, Result: res}
@@ -140,6 +160,7 @@ type run struct {
 	spec Spec
 	ctx  context.Context
 	bin  string
+	live func(Result) // nil unless Spec.Live
 }
 
 func expand(argv []string, vars map[string]string) []string {
@@ -225,6 +246,14 @@ func (c *capBuffer) Write(p []byte) (int, error) {
 	return len(p), nil // never error: the child must not die of EPIPE instead of being killed by us
 }
 
+// tail is a copy of the last n bytes written.
+func (c *capBuffer) tail(n int) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	b := c.buf.Bytes()
+	return string(b[max(0, len(b)-n):])
+}
+
 func (r *run) runTest(t workspace.Test) Result {
 	res := Result{Name: t.Name, LimitMB: r.spec.MemoryMB}
 	want, err := os.ReadFile(t.Ans)
@@ -237,6 +266,13 @@ func (r *run) runTest(t workspace.Test) Result {
 		return Result{Name: t.Name, Verdict: RE, Note: err.Error()}
 	}
 	defer in.Close()
+	if head, _ := io.ReadAll(io.LimitReader(in, inputCap+1)); len(head) > 0 {
+		res.Input = string(head[:min(len(head), inputCap)])
+		if len(head) > inputCap {
+			res.Input += "\n... (input truncated at 16 KiB)\n"
+		}
+		in.Seek(0, io.SeekStart)
+	}
 
 	argv := expand(r.spec.Lang.Run, r.vars())
 	cmd := exec.Command(argv[0], argv[1:]...)
@@ -275,6 +311,23 @@ func (r *run) runTest(t workspace.Test) Result {
 		case <-done:
 		}
 	}()
+	if r.live != nil {
+		stop, fin := make(chan struct{}), make(chan struct{})
+		defer func() { close(stop); <-fin }() // no snapshot may outlive the test (the channel closes after Done)
+		go func() {
+			defer close(fin)
+			tk := time.NewTicker(liveEvery)
+			defer tk.Stop()
+			for {
+				select {
+				case <-tk.C:
+					r.live(Result{Name: t.Name, TimeMS: int(time.Since(start) / time.Millisecond), Output: stdout.tail(liveCap), Stderr: stderr.tail(liveCap)})
+				case <-stop:
+					return
+				}
+			}
+		}()
+	}
 	killedByUs := false
 	var mu sync.Mutex
 	if r.spec.TimeLimitMS > 0 {

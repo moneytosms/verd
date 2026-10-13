@@ -158,6 +158,27 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `+`, `=` | `grow_tests` | grow the test list |
 | `-` | `shrink_tests` | shrink the test list |
 
+## Full-screen test view
+
+| Key(s) | Action | What it does |
+| --- | --- | --- |
+| `esc`, `f`, `q` | `close` | close the full-screen test view |
+| `j`, `down` | `down` | scroll down |
+| `k`, `up` | `up` | scroll up |
+| `pgdown` | `page_down` | page down |
+| `pgup` | `page_up` | page up |
+| `home`, `g` | `top` | jump to the top |
+| `end`, `G` | `bottom` | jump to the bottom |
+| `l`, `right` | `pan_right` | pan right (no wrap) |
+| `h`, `left` | `pan_left` | pan left (no wrap) |
+| `w` | `wrap` | toggle wrap and pan |
+| `1` | `section_1` | jump to Input |
+| `2` | `section_2` | jump to Expected |
+| `3` | `section_3` | jump to Output |
+| `4` | `section_4` | jump to Stderr |
+| `y` | `copy` | copy the section at the top |
+| `r` | `rerun` | rerun just this test |
+
 ## Test manager
 
 | Key(s) | Action | What it does |

@@ -34,6 +34,8 @@ type Deps struct {
 	// Edit creates the Problem's Solution if needed and opens it in the editor.
 	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
 	Edit func(p cf.Problem, lang string) (*exec.Cmd, error)
+	// EditAt opens the Solution at a 1-based line (like Edit; the Solution already exists).
+	EditAt func(p cf.Problem, lang string, line int) (*exec.Cmd, error)
 	// Note returns the Problem's note text ("" if none); EditNote opens it in the editor (like Edit).
 	Note     func(p cf.Problem) string
 	EditNote func(p cf.Problem) (*exec.Cmd, error)
@@ -118,6 +120,7 @@ type ProblemState struct{ Lang, Mode string }
 type RunOpts struct {
 	Lang string
 	Mode runner.Mode
+	Only string // Tests: run just the test with this name
 }
 
 // Data is everything the UI renders from the cache.
@@ -969,6 +972,10 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc", "d", "q":
 			r.diff = false
+		case "e":
+			if r.overall == runner.CE {
+				return m.editAtError()
+			}
 		case "j", "down":
 			r.diffOff++
 		case "k", "up":

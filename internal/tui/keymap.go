@@ -118,6 +118,23 @@ var keyActions = []keyAction{
 	{"problem", "grow_tests", "grow the test list", ks("+", "=")},
 	{"problem", "shrink_tests", "shrink the test list", ks("-")},
 
+	{"full", "close", "close the full-screen test view", ks("esc", "f", "q")},
+	{"full", "down", "scroll down", ks("j", "down")},
+	{"full", "up", "scroll up", ks("k", "up")},
+	{"full", "page_down", "page down", ks("pgdown")},
+	{"full", "page_up", "page up", ks("pgup")},
+	{"full", "top", "jump to the top", ks("home", "g")},
+	{"full", "bottom", "jump to the bottom", ks("end", "G")},
+	{"full", "pan_right", "pan right (no wrap)", ks("l", "right")},
+	{"full", "pan_left", "pan left (no wrap)", ks("h", "left")},
+	{"full", "wrap", "toggle wrap and pan", ks("w")},
+	{"full", "section_1", "jump to Input", ks("1")},
+	{"full", "section_2", "jump to Expected", ks("2")},
+	{"full", "section_3", "jump to Output", ks("3")},
+	{"full", "section_4", "jump to Stderr", ks("4")},
+	{"full", "copy", "copy the section at the top", ks("y")},
+	{"full", "rerun", "rerun just this test", ks("r")},
+
 	{"testmgr", "close", "close", ks("q", "esc")},
 	{"testmgr", "down", "move down", ks("j", "down")},
 	{"testmgr", "up", "move up", ks("k", "up")},
@@ -159,6 +176,7 @@ var keyGroups = map[string][]string{
 	"picker":     {"picker", "app", "tabs", "common"},
 	"settings":   {"settings", "app", "tabs", "common"},
 	"problem":    {"problem", "tabs", "common"},
+	"full":       {"full", "common"},
 	"testmgr":    {"testmgr"},
 	"submission": {"submission"},
 	"help":       {"help", "common"},
@@ -166,11 +184,11 @@ var keyGroups = map[string][]string{
 }
 
 // keyGroupOrder is how the shortcut editor lists the groups.
-var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "testmgr", "submission", "help", "editor"}
+var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "full", "testmgr", "submission", "help", "editor"}
 
 var keyGroupTitle = map[string]string{
 	"common": "Everywhere", "tabs": "Tabs", "app": "Tab screens", "problems": "Problems", "contests": "Contests",
-	"contest": "Contest modal", "stats": "Stats", "picker": "Picker", "settings": "Settings", "problem": "Problem view",
+	"contest": "Contest modal", "stats": "Stats", "picker": "Picker", "settings": "Settings", "problem": "Problem view", "full": "Full-screen test view",
 	"testmgr": "Test manager", "submission": "Submission modal", "help": "Help", "editor": "Embedded editor",
 }
 
@@ -287,8 +305,11 @@ func (m Model) keyCtx() string {
 	case m.help:
 		return "help"
 	case m.viewing():
-		if m.confirm {
+		switch {
+		case m.confirm:
 			return ""
+		case m.full:
+			return "full"
 		}
 		return "problem"
 	case m.input != nil:

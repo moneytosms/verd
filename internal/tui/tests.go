@@ -3,6 +3,10 @@ package tui
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,6 +24,8 @@ type testRun struct {
 	diff     bool
 	diffOff  int
 	diffInit bool
+	only     bool           // a single-test rerun: results of the other tests are kept
+	live     *runner.Result // partial output of the running test (Live runs)
 }
 
 type testEventMsg struct {
@@ -37,7 +43,10 @@ func listen(id int, ch <-chan runner.Event) tea.Cmd {
 }
 
 // startTests begins a Test Run (cancelling any previous one) and returns the cmd that streams its events.
-func (m Model) startTests() (Model, tea.Cmd) {
+func (m Model) startTests() (Model, tea.Cmd) { return m.runTests("") }
+
+// runTests is startTests, or with only set a rerun of that test alone: the other results stay.
+func (m Model) runTests(only string) (Model, tea.Cmd) {
 	switch {
 	case m.deps.Tests == nil || m.detail == nil:
 		return m, nil
@@ -49,7 +58,7 @@ func (m Model) startTests() (Model, tea.Cmd) {
 		m.run.cancel()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	ch, err := m.deps.Tests(ctx, *m.open, m.detail, RunOpts{Lang: m.lang(), Mode: runner.Mode(m.mode())})
+	ch, err := m.deps.Tests(ctx, *m.open, m.detail, RunOpts{Lang: m.lang(), Mode: runner.Mode(m.mode()), Only: only})
 	if err != nil {
 		cancel()
 		m.errMsg = "tests: " + err.Error()
@@ -60,7 +69,11 @@ func (m Model) startTests() (Model, tea.Cmd) {
 		id = m.run.id + 1
 	}
 	m.errMsg = ""
-	m.run = &testRun{id: id, cancel: cancel, running: true}
+	var kept []runner.Result
+	if only != "" && m.run != nil {
+		kept = m.run.results
+	}
+	m.run = &testRun{id: id, cancel: cancel, running: true, only: only != "", results: kept}
 	m = m.loadCases()
 	return m, listen(id, ch)
 }
@@ -110,12 +123,65 @@ func (m Model) onTestEvent(msg testEventMsg) (Model, tea.Cmd) {
 		default:
 			r.compile = "ok"
 		}
+	case runner.Output:
+		r.live = &ev.Result
 	case runner.TestFinished:
-		r.results = append(r.results, ev.Result)
+		r.live = nil
+		if i := slices.IndexFunc(r.results, func(x runner.Result) bool { return x.Name == ev.Result.Name }); i >= 0 {
+			r.results[i] = ev.Result
+		} else {
+			r.results = append(r.results, ev.Result)
+		}
 	case runner.Done:
 		r.overall = ev.Verdict
+		if r.only && ev.Verdict != runner.CE { // the verdict of the whole list, not of the one rerun
+			r.overall = runner.AC
+			for _, x := range r.results {
+				if x.Verdict != runner.AC {
+					r.overall = x.Verdict
+					break
+				}
+			}
+		}
 	}
 	return m, listen(msg.id, msg.ch)
+}
+
+// locRe matches a compiler "file:line[:col]:" location.
+var locRe = regexp.MustCompile(`([^\s:"]+):(\d+)(?::\d+)?:`)
+
+// compileLoc is the first error location in compiler output (else the first location); line 0 if none.
+func compileLoc(out string) (file string, line int) {
+	for _, l := range strings.Split(out, "\n") {
+		if mm := locRe.FindStringSubmatch(l); mm != nil {
+			n, _ := strconv.Atoi(mm[2])
+			if strings.Contains(l, "error") {
+				return mm[1], n
+			}
+			if line == 0 {
+				file, line = mm[1], n
+			}
+		}
+	}
+	return
+}
+
+// editAtError opens the Solution at the first compile error's line and closes the CE modal.
+func (m Model) editAtError() (tea.Model, tea.Cmd) {
+	file, line := compileLoc(m.run.compile)
+	switch {
+	case m.deps.EditAt == nil:
+		return m, nil
+	case line == 0:
+		m.Notice = "no file:line in the compiler output"
+		return m, nil
+	case m.deps.SolutionPath != nil && filepath.Base(file) != filepath.Base(m.deps.SolutionPath(*m.open, m.lang())):
+		m.Notice = "first error is in " + file + ", not the Solution"
+		return m, nil
+	}
+	m.run.diff = false
+	cmd, err := m.deps.EditAt(*m.open, m.lang(), line)
+	return m.afterOpen(cmd, err, "edit")
 }
 
 func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {

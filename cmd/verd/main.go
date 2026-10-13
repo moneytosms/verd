@@ -378,7 +378,17 @@ func runTUI(path string) error {
 		},
 		OpenURL: openURL,
 		Edit:    func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
-		Note:    func(p cf.Problem) string { return workspace.New(cfg.Workspace).Note(p.ContestID, p.Index) },
+		EditAt: func(p cf.Problem, lang string, line int) (*exec.Cmd, error) {
+			if err := requireEditor(ctrl); err != nil {
+				return nil, err
+			}
+			ref, err := solutionRef(cfg, p, lang)
+			if err != nil {
+				return nil, err
+			}
+			return ctrl.Open(ref.Path, line)
+		},
+		Note: func(p cf.Problem) string { return workspace.New(cfg.Workspace).Note(p.ContestID, p.Index) },
 		EditNote: func(p cf.Problem) (*exec.Cmd, error) {
 			if err := requireEditor(ctrl); err != nil {
 				return nil, err
@@ -438,6 +448,7 @@ func runTUI(path string) error {
 			if err != nil {
 				return nil, fmt.Errorf("%w (press {problem.edit} to create one)", err)
 			}
+			spec.Only, spec.Live = o.Only, true
 			return runner.Run(ctx, spec), nil
 		},
 		Stress: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan stress.Event, error) {

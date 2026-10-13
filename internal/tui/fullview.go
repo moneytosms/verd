@@ -40,14 +40,22 @@ func diffLines(mode runner.Mode, want, got []string) (badWant, badGot []bool) {
 	return
 }
 
+// result is the row's result, or while a Live run has the row's test going, its partial output.
+func (m Model) result(row caseRow) *runner.Result {
+	if r := m.run; r != nil && r.running && r.live != nil && r.live.Name == row.Name {
+		return r.live
+	}
+	return row.Res
+}
+
 // fullRows lays out the four sections for a content width cw (wrapped, or left as is when
 // wrap is off) and returns the first row of each section.
 func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts [4]int) {
 	texts := [4]string{row.Input, row.Want, "", ""}
 	var bw, bg []bool
-	if res := row.Res; res != nil {
+	if res := m.result(row); res != nil {
 		texts[2], texts[3] = res.Output, res.Stderr
-		if res.Verdict != runner.AC {
+		if res.Verdict != "" && res.Verdict != runner.AC { // "" is a test still running
 			bw, bg = diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
 		}
 	}
@@ -56,7 +64,7 @@ func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts 
 		rows = append(rows, fullRow{text: name, head: true})
 		if strings.TrimSpace(texts[s]) == "" {
 			note := "(empty)"
-			if s == 2 && row.Res == nil {
+			if s == 2 && m.result(row) == nil {
 				note = "(not run)"
 			}
 			rows = append(rows, fullRow{text: note})
@@ -98,7 +106,7 @@ func (m Model) fullBox() []string {
 	rows, _ := m.fullRows(row, cw, m.fullWrap)
 	title := row.Name
 	var head []string
-	if res := row.Res; res != nil {
+	if res := m.result(row); res != nil {
 		title += "  " + strings.TrimSpace(res.Verdict) + fmt.Sprintf("  %d ms  %.1f MB", res.TimeMS, res.MemoryMB)
 		switch {
 		case res.Mismatch != nil:
@@ -144,7 +152,7 @@ func (m Model) fullBox() []string {
 	if m.fullWrap {
 		wrap = "pan"
 	}
-	note := m.kx(fmt.Sprintf("%d-%d/%d  {problem.down}/{problem.up} scroll  h/l pan  w %s  1-4 section  y copy  r rerun  {problem.back} close", min(off+1, len(rows)), end, len(rows), wrap))
+	note := m.kx(fmt.Sprintf("%d-%d/%d  {full.down}/{full.up} scroll  {full.pan_left}/{full.pan_right} pan  {full.wrap} %s  {full.section_1}-{full.section_4} section  {full.copy} copy  {full.rerun} rerun  {full.close} close", min(off+1, len(rows)), end, len(rows), wrap))
 	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
@@ -206,8 +214,10 @@ func (m Model) updateFull(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.Notice = "copied " + strings.ToLower(strings.Fields(fullSecs[s])[0])
 		return m, tea.SetClipboard(strings.TrimRight(text, "\n") + "\n")
-	case "r": // the runner runs the whole list; the view updates as results arrive
-		return m.startTests()
+	case "r": // just this test; the other results stay
+		if row, ok := m.selected(); ok {
+			return m.runTests(row.Name)
+		}
 	case "ctrl+c":
 		return m.stopTests(), tea.Quit
 	}

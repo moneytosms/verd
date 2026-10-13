@@ -114,6 +114,9 @@ func (r *reporter) event(ev runner.Event) {
 		if e := strings.TrimRight(res.Stderr, "\n"); e != "" && res.Verdict != runner.AC {
 			fmt.Fprintf(r.out, "  stderr:\n    %s\n", strings.ReplaceAll(e, "\n", "\n    "))
 		}
+		if in := strings.TrimRight(res.Input, "\n"); in != "" && (res.Verdict == runner.RE || res.Verdict == runner.TLE || res.Verdict == runner.MLE) {
+			fmt.Fprintf(r.out, "  input:\n    %s\n", strings.ReplaceAll(in, "\n", "\n    "))
+		}
 	case runner.Done:
 		r.overall = ev.Verdict
 	}

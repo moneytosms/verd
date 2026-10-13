@@ -55,6 +55,10 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 			body = append(body, "stderr:")
 			body = append(body, cleanLines(res.Stderr)...)
 		}
+		if strings.TrimSpace(res.Input) != "" {
+			body = append(body, "", "input:")
+			body = append(body, cleanLines(res.Input)...)
+		}
 		return m.textBox(res.Name+"  "+strings.TrimSpace(res.Verdict), body, diffOff, false)
 	}
 	st := m.styles()
@@ -104,7 +108,11 @@ func (m Model) textBox(title string, lines []string, off *int, hl bool) []string
 		}
 		body = append(body, l)
 	}
-	note := m.kx(fmt.Sprintf("%d-%d/%d  {problem.down}/{problem.up} scroll  {problem.back} close", min(o+1, len(lines)), end, len(lines)))
+	hint := ""
+	if hl && m.deps.EditAt != nil {
+		hint = "  {problem.edit} open at first error"
+	}
+	note := m.kx(fmt.Sprintf("%d-%d/%d  {problem.down}/{problem.up} scroll%s  {problem.back} close", min(o+1, len(lines)), end, len(lines), hint))
 	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 

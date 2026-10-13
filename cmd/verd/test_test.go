@@ -22,8 +22,8 @@ import (
 func TestReporterShowsStderrAndSignal(t *testing.T) {
 	var b bytes.Buffer
 	r := &reporter{out: &b}
-	r.event(runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "s1", Verdict: runner.RE, ExitCode: -1, Signal: "SIGABRT", Stderr: "boom\nline2\n"}})
-	for _, w := range []string{"killed by SIGABRT", "stderr:", "    boom", "    line2"} {
+	r.event(runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "s1", Verdict: runner.RE, ExitCode: -1, Signal: "SIGABRT", Stderr: "boom\nline2\n", Input: "5 7\n"}})
+	for _, w := range []string{"killed by SIGABRT", "stderr:", "    boom", "    line2", "input:", "    5 7"} {
 		if !strings.Contains(b.String(), w) {
 			t.Errorf("missing %q in %q", w, b.String())
 		}

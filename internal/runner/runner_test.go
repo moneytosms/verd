@@ -256,3 +256,36 @@ func TestMemoryNotInheritedFromParent(t *testing.T) {
 	}
 	_ = ballast[len(ballast)-1]
 }
+
+func TestOnlyAndInput(t *testing.T) {
+	need(t, "python3")
+	f := newFixture(t)
+	src := f.write("main.py", "a,b=map(int,input().split())\nprint(a+b)\n")
+	tests := []workspace.Test{f.test("a", "1 2\n", "3\n"), f.test("b", "2 2\n", "5\n")}
+	res, _ := f.run(src, "python", tests, func(s *Spec) { s.Only = "b" })
+	if len(res) != 1 || res[0].Name != "b" || res[0].Verdict != WA {
+		t.Fatalf("only b: %+v", res)
+	}
+	if res[0].Input != "2 2\n" {
+		t.Fatalf("input %q", res[0].Input)
+	}
+}
+
+func TestLiveOutput(t *testing.T) {
+	need(t, "python3")
+	f := newFixture(t)
+	src := f.write("main.py", "import time\nprint('partial',flush=True)\ntime.sleep(0.5)\nprint('end')\n")
+	_, evs := f.run(src, "python", []workspace.Test{f.test("a", "", "partial\nend\n")}, func(s *Spec) { s.Live = true })
+	live := 0
+	for _, ev := range evs {
+		if ev.Kind == Output && ev.Result.Name == "a" && strings.HasPrefix(ev.Result.Output, "partial") {
+			live++
+		}
+	}
+	if live == 0 {
+		t.Fatalf("no live output event: %+v", evs)
+	}
+	if last := evs[len(evs)-1]; last.Kind != Done || last.Verdict != AC {
+		t.Fatalf("last %+v", last)
+	}
+}
