@@ -134,6 +134,9 @@ func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 		if row, ok := m.selected(); ok && r != nil && row.Res != nil && row.Res.Verdict != runner.AC {
 			r.diff, r.diffInit = true, false
 		}
+		if r != nil && r.overall == runner.CE {
+			r.diff = true // full compiler output
+		}
 		return m, nil, r != nil
 	}
 	return m, nil, false
@@ -185,6 +188,8 @@ func (m Model) testsPanel() []string {
 		line := fmt.Sprintf("%s%-10s %s %6d ms %7.1f MB", cur, res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
 		if res.Mismatch != nil {
 			line += fmt.Sprintf("  line %d col %d: want %q got %q", res.Mismatch.Line, res.Mismatch.Col, clean(clip(res.Mismatch.Want, 20)), clean(clip(res.Mismatch.Got, 20)))
+		} else if d := res.Detail(); d != "" {
+			line += "  " + clean(d)
 		} else if res.Note != "" {
 			line += "  " + clean(res.Note)
 		}

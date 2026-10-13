@@ -111,6 +111,9 @@ func (r *reporter) event(ev runner.Event) {
 		}
 		r.ms, r.mb = max(r.ms, res.TimeMS), max(r.mb, res.MemoryMB)
 		fmt.Fprintf(r.out, "%-10s %-3s %6d ms %7.1f MB%s\n", res.Name, res.Verdict, res.TimeMS, res.MemoryMB, detailOf(res))
+		if e := strings.TrimRight(res.Stderr, "\n"); e != "" && res.Verdict != runner.AC {
+			fmt.Fprintf(r.out, "  stderr:\n    %s\n", strings.ReplaceAll(e, "\n", "\n    "))
+		}
 	case runner.Done:
 		r.overall = ev.Verdict
 	}
@@ -136,20 +139,12 @@ func detailOf(r runner.Result) string {
 	case r.Mismatch != nil:
 		m := r.Mismatch
 		return fmt.Sprintf("   line %d col %d: want %q got %q", m.Line, m.Col, m.Want, m.Got)
+	case r.Detail() != "":
+		return "   " + r.Detail()
 	case r.Note != "":
 		return "   " + r.Note
-	case r.Verdict == runner.RE:
-		return fmt.Sprintf("   exit %d %s", r.ExitCode, firstLine(r.Stderr))
 	}
 	return ""
-}
-
-func firstLine(s string) string {
-	s = strings.TrimSpace(s)
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		s = s[:i] + " ..."
-	}
-	return s
 }
 
 // buildSpec materializes Sample Tests next to the Solution and assembles the Runner spec.

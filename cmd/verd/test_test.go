@@ -13,10 +13,22 @@ import (
 
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/ipc"
+	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/tui"
 	"github.com/moneytosms/verd/internal/workspace"
 )
+
+func TestReporterShowsStderrAndSignal(t *testing.T) {
+	var b bytes.Buffer
+	r := &reporter{out: &b}
+	r.event(runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "s1", Verdict: runner.RE, ExitCode: -1, Signal: "SIGABRT", Stderr: "boom\nline2\n"}})
+	for _, w := range []string{"killed by SIGABRT", "stderr:", "    boom", "    line2"} {
+		if !strings.Contains(b.String(), w) {
+			t.Errorf("missing %q in %q", w, b.String())
+		}
+	}
+}
 
 func exitCode(err error) int {
 	var ee *exitError

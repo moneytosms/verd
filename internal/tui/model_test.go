@@ -556,6 +556,33 @@ func TestDiffTruncatesLargeOutput(t *testing.T) {
 	}
 }
 
+func TestCompileErrorAndRuntimeErrorViews(t *testing.T) {
+	m, _ := openWithTests(t, []runner.Event{
+		{Kind: runner.CompileFinished, Err: "main.cpp:3:5: error: bad\nmain.cpp:9:1: error: worse"},
+		{Kind: runner.Done, Verdict: runner.CE},
+	})
+	m, cmd := send(m, "t")
+	for i := 0; i < 2; i++ {
+		m, cmd = step(t, m, cmd)
+	}
+	m, _ = send(m, "d")
+	if out := plain(m); !strings.Contains(out, "Compile error") || !strings.Contains(out, "main.cpp:9:1") {
+		t.Fatalf("full compile output missing:\n%s", out)
+	}
+
+	res := runner.Result{Name: "sample-1", Verdict: runner.RE, ExitCode: -1, Signal: "SIGSEGV", Stderr: "segfault here\n"}
+	m, _ = openWithTests(t, []runner.Event{{Kind: runner.TestFinished, Result: res}})
+	m, cmd = send(m, "t")
+	m, _ = step(t, m, cmd)
+	if out := plain(m); !strings.Contains(out, "killed by SIGSEGV") {
+		t.Fatalf("signal missing from panel:\n%s", out)
+	}
+	m, _ = send(m, "d")
+	if out := plain(m); !strings.Contains(out, "stderr:") || !strings.Contains(out, "segfault here") {
+		t.Fatalf("stderr missing:\n%s", out)
+	}
+}
+
 func TestStaleRunEventsIgnored(t *testing.T) {
 	m, _ := openWithTests(t, nil)
 	m, _ = send(m, "t")

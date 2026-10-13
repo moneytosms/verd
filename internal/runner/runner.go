@@ -60,6 +60,32 @@ type Result struct {
 	Output   string
 	Stderr   string
 	Note     string // e.g. "output limit exceeded", "killed by signal"
+	Signal   string // fatal signal name, e.g. "SIGSEGV"; "" if none
+	LimitMS  int    // effective time limit (with multiplier); 0 = unlimited
+	LimitMB  int    // memory limit; 0 = unchecked
+}
+
+// Detail is a one-line, human-readable reason for a non-AC verdict ("" for others).
+func (r Result) Detail() string {
+	switch r.Verdict {
+	case RE:
+		s := fmt.Sprintf("exit %d", r.ExitCode)
+		if r.Signal != "" {
+			s = "killed by " + r.Signal
+		}
+		if r.Note != "" && r.Note != "killed by signal" {
+			s += ": " + r.Note
+		}
+		return s
+	case TLE:
+		if r.LimitMS > 0 {
+			return fmt.Sprintf("time limit %d ms, ran %d ms", r.LimitMS, r.TimeMS)
+		}
+		return fmt.Sprintf("ran %d ms", r.TimeMS)
+	case MLE:
+		return fmt.Sprintf("memory limit %d MB, used %.1f MB", r.LimitMB, r.MemoryMB)
+	}
+	return ""
 }
 
 type EventKind int
@@ -200,7 +226,7 @@ func (c *capBuffer) Write(p []byte) (int, error) {
 }
 
 func (r *run) runTest(t workspace.Test) Result {
-	res := Result{Name: t.Name}
+	res := Result{Name: t.Name, LimitMB: r.spec.MemoryMB}
 	want, err := os.ReadFile(t.Ans)
 	if err != nil {
 		return Result{Name: t.Name, Verdict: RE, Note: err.Error()}
@@ -232,6 +258,7 @@ func (r *run) runTest(t workspace.Test) Result {
 	}
 	limit := time.Duration(float64(r.spec.TimeLimitMS)*mult) * time.Millisecond
 	hard := max(2*limit, limit+time.Second)
+	res.LimitMS = int(limit / time.Millisecond)
 
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
@@ -261,6 +288,7 @@ func (r *run) runTest(t workspace.Test) Result {
 
 	res.TimeMS = int(elapsed / time.Millisecond)
 	res.ExitCode = cmd.ProcessState.ExitCode()
+	res.Signal = signalName(cmd.ProcessState)
 	res.MemoryMB = probe.result(cmd.ProcessState)
 	res.Output, res.Stderr = stdout.buf.String(), stderr.buf.String()
 	mu.Lock()
@@ -274,7 +302,7 @@ func (r *run) runTest(t workspace.Test) Result {
 		res.Verdict, res.Note = RE, fmt.Sprintf("output limit exceeded (%d bytes)", outCap)
 	case waitErr != nil:
 		res.Verdict = RE
-		if res.ExitCode == -1 {
+		if res.ExitCode == -1 && res.Signal == "" {
 			res.Note = "killed by signal"
 		}
 	case r.spec.MemoryMB > 0 && res.MemoryMB > float64(r.spec.MemoryMB):
