@@ -143,6 +143,33 @@ func TestRuntimeError(t *testing.T) {
 	}
 }
 
+func TestSignalAndDetail(t *testing.T) {
+	need(t, "python3")
+	f := newFixture(t)
+	src := f.write("main.py", "import os,signal\nos.kill(os.getpid(), signal.SIGABRT)\n")
+	res, _ := f.run(src, "python", []workspace.Test{f.test("sample-1", "", "")}, nil)
+	if res[0].Verdict != RE || res[0].Signal != "SIGABRT" || res[0].Detail() != "killed by SIGABRT" {
+		t.Fatalf("%+v", res[0])
+	}
+}
+
+func TestResultDetail(t *testing.T) {
+	cases := []struct {
+		r    Result
+		want string
+	}{
+		{Result{Verdict: RE, ExitCode: 3}, "exit 3"},
+		{Result{Verdict: TLE, LimitMS: 1000, TimeMS: 2500}, "time limit 1000 ms, ran 2500 ms"},
+		{Result{Verdict: MLE, LimitMB: 256, MemoryMB: 300.5}, "memory limit 256 MB, used 300.5 MB"},
+		{Result{Verdict: AC}, ""},
+	}
+	for _, c := range cases {
+		if got := c.r.Detail(); got != c.want {
+			t.Errorf("%+v: got %q want %q", c.r, got, c.want)
+		}
+	}
+}
+
 func TestTLEIsKilledWithinHardLimit(t *testing.T) {
 	need(t, "python3")
 	f := newFixture(t)

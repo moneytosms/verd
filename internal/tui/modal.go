@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/moneytosms/verd/internal/runner"
@@ -28,6 +29,9 @@ func (m Model) modalBox() []string {
 		if row, ok := m.selected(); ok && row.Res != nil {
 			return m.diffBox(*row.Res, &m.run.diffOff, &m.run.diffInit, "")
 		}
+		if m.run.overall == runner.CE {
+			return m.textBox("Compile error", cleanLines(m.run.compile), &m.run.diffOff, true)
+		}
 	case m.subModal && m.sub != nil:
 		return m.subBox()
 	}
@@ -40,6 +44,17 @@ func (m Model) modalSize(maxW, maxH int) (w, h int) {
 
 // diffBox is the side-by-side expected/actual view of one test.
 func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra string) []string {
+	switch res.Verdict {
+	case runner.RE, runner.TLE, runner.MLE:
+		body := []string{res.Detail(), ""}
+		if strings.TrimSpace(res.Stderr) == "" {
+			body = append(body, "(stderr empty)")
+		} else {
+			body = append(body, "stderr:")
+			body = append(body, cleanLines(res.Stderr)...)
+		}
+		return m.textBox(res.Name+"  "+strings.TrimSpace(res.Verdict), body, diffOff, false)
+	}
 	st := m.styles()
 	w, h := m.modalSize(100, 36)
 	want, got := cleanLines(res.Expected), cleanLines(res.Output)
@@ -71,6 +86,28 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 	note := m.kx(fmt.Sprintf("%d-%d/%d%s  {problem.down}/{problem.up} scroll  {problem.back} close", min(off+1, total), end, total, extra))
 	return box("Diff: "+res.Name+"  "+strings.TrimSpace(res.Verdict), body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
+
+// textBox is a scrollable plain-text modal (compiler output, runtime errors); hl marks file:line lines.
+func (m Model) textBox(title string, lines []string, off *int, hl bool) []string {
+	st := m.styles()
+	w, h := m.modalSize(100, 36)
+	rows := max(3, h-3)
+	o := min(*off, max(0, len(lines)-rows))
+	end := min(len(lines), o+rows)
+	body := make([]string, 0, rows)
+	for _, l := range lines[o:end] {
+		l = cell([]string{l}, 0, w-4)
+		if hl && fileLine.MatchString(l) {
+			l = st.Bad.Render(l)
+		}
+		body = append(body, l)
+	}
+	note := m.kx(fmt.Sprintf("%d-%d/%d  {problem.down}/{problem.up} scroll  {problem.back} close", min(o+1, len(lines)), end, len(lines)))
+	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+}
+
+// fileLine matches compiler "file:line" locations.
+var fileLine = regexp.MustCompile(`:\d+(:\d+)?:`)
 
 // subBox is the Submission modal: where it was sent and the Verdict as it arrives.
 func (m Model) subBox() []string {
