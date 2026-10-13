@@ -302,6 +302,29 @@ func TestSplitYCopiesFocusedPane(t *testing.T) {
 	}
 }
 
+func TestSplitCopyInputExpectedOnly(t *testing.T) {
+	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
+	row, ok := m.selected()
+	if !ok {
+		t.Fatal("no selected test")
+	}
+	m, cmd := send(m, "I")
+	if cmd != nil || !strings.Contains(m.Notice, "select a test") {
+		t.Fatalf("statement pane: cmd=%v notice=%q", cmd, m.Notice)
+	}
+	for _, pane := range []int{paneTests, paneDetail} {
+		m.pane = pane
+		m, cmd = send(m, "I")
+		if cmd == nil || m.Notice != "copied "+row.Name+" input" {
+			t.Fatalf("I pane %d: cmd=%v notice=%q", pane, cmd, m.Notice)
+		}
+		m, cmd = send(m, "E")
+		if cmd == nil || m.Notice != "copied "+row.Name+" expected" {
+			t.Fatalf("E pane %d: cmd=%v notice=%q", pane, cmd, m.Notice)
+		}
+	}
+}
+
 func TestSplitMouseDragCopiesLines(t *testing.T) {
 	m := splitModel(t, Deps{Mouse: true, WheelLines: 3, MouseSelect: true})
 	ct := m.contentTop()

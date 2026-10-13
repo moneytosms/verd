@@ -66,3 +66,18 @@ func (m Model) copyPane() (Model, tea.Cmd) {
 	m.Notice = "copied " + what
 	return m, tea.SetClipboard(text)
 }
+
+// copyCase puts only the selected test's raw input or expected output on the clipboard.
+func (m Model) copyCase(field string) (Model, tea.Cmd) {
+	row, ok := m.selected()
+	if !ok || m.pane == paneStatement {
+		m.Notice = "select a test to copy its " + field
+		return m, nil
+	}
+	text := row.Input
+	if field == "expected" {
+		text = row.Want
+	}
+	m.Notice = "copied " + row.Name + " " + field
+	return m, tea.SetClipboard(strings.TrimRight(text, "\n") + "\n")
+}
