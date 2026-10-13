@@ -185,3 +185,23 @@ func TestEffectiveConfigIncludesMouseAndLanguageOverrides(t *testing.T) {
 		t.Errorf("effective config missing per-language override:\n%s", out)
 	}
 }
+
+func TestGnuPrefersHomebrewOnDarwin(t *testing.T) {
+	has := func(n string) func(string) (string, error) {
+		return func(x string) (string, error) {
+			if x == n {
+				return x, nil
+			}
+			return "", errors.New("no")
+		}
+	}
+	if g := gnu("darwin", "g++", has("g++-13")); g != "g++-13" {
+		t.Fatal(g)
+	}
+	if g := gnu("darwin", "g++", has("none")); g != "g++" {
+		t.Fatal(g)
+	}
+	if g := gnu("linux", "g++", has("g++-13")); g != "g++" {
+		t.Fatal(g)
+	}
+}

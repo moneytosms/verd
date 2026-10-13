@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -100,11 +102,26 @@ func Default() Config {
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
-			"c":      {Ext: "c", Compile: []string{"gcc", "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
-			"cpp":    {Ext: "cpp", Compile: []string{"g++", "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
+			"c":      {Ext: "c", Compile: []string{gnu(runtime.GOOS, "gcc", exec.LookPath), "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
+			"cpp":    {Ext: "cpp", Compile: []string{gnu(runtime.GOOS, "g++", exec.LookPath), "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
 			"python": {Ext: "py", Run: []string{"python3", "{src}"}, CFCompilerID: 31},
 		},
 	}
+}
+
+// gnu returns the compiler for base. On macOS plain g++/gcc is Apple Clang (no <bits/stdc++.h>),
+// so prefer a Homebrew GNU build (g++-15 .. g++-9) when one is on PATH.
+func gnu(goos, base string, look func(string) (string, error)) string {
+	if goos != "darwin" {
+		return base
+	}
+	for v := 15; v >= 9; v-- {
+		n := fmt.Sprintf("%s-%d", base, v)
+		if _, err := look(n); err == nil {
+			return n
+		}
+	}
+	return base
 }
 
 // Dir returns $XDG_CONFIG_HOME/verd, falling back to ~/.config/verd on every OS.
