@@ -143,6 +143,16 @@ func tex(s string) string {
 				a, k := arg(i)
 				i = k
 				b.WriteString("√" + paren(tex(a)))
+			case name == "color":
+				_, i = arg(i)
+				for i < len(r) && r[i] == ' ' {
+					i++
+				}
+			case name == "textcolor":
+				_, k := arg(i)
+				a, k := arg(k)
+				i = k
+				b.WriteString(tex(a))
 			case passthrough[name]:
 				a, k := arg(i)
 				i = k
