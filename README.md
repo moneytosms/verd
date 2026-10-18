@@ -116,7 +116,7 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd keys [--json]`, `verd keys set <ctx.action> <key>...` | List and rebind every shortcut. See [Customizing](./docs/customizing.md). |
 | `verd themes [show <name>]` | List themes, or print an editable `[themes.*]` block. |
 | `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
-| `verd snippet [--lang L] --list \| [--copy] <name>` | Print or copy a library snippet (bfs, dijkstra, modpow, ...). In the TUI press `i`. See [Snippets](./docs/config.md#snippets). |
+| `verd snippet [--lang L] --list \| --export \| [--copy] <name>` | Print, copy or export (VSCode JSON) library snippets (bfs, dijkstra, modpow, ...). In the TUI press `i`. See [Snippets](./docs/config.md#snippets). |
 | `verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>` | Search for a counterexample. Exit `0` only if none was found. `--batch N` runs gen as `gen <seed> <N>` and expects N cases separated by `---` lines. `--multi N` runs N cases per Solution/brute process: both must read `t` then `t` cases, and gen prints one case without `t`. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
 | `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |

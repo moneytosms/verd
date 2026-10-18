@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/editor"
@@ -308,5 +309,27 @@ func TestSnippetCmd(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(path); !strings.HasPrefix(string(b), "// custom 1900A") {
 		t.Fatalf("custom template not used: %q", b)
+	}
+}
+
+func TestSnippetExport(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	var out bytes.Buffer
+	if err := run([]string{"snippet", "--export", "--lang", "c"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]struct {
+		Prefix, Description string
+		Body                []string
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	m := got["modpow"]
+	if m.Prefix != "modpow" || len(m.Body) < 3 || m.Description == "" || strings.Contains(m.Body[0], "\n") {
+		t.Fatalf("%+v", m)
+	}
+	if !strings.Contains(out.String(), `"debug"`) || !strings.Contains(strings.Join(got["debug"].Body, "\n"), "fprintf") {
+		t.Fatal("debug snippet missing")
 	}
 }

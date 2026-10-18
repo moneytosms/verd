@@ -88,6 +88,7 @@ Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `
 - In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard.
 - `verd snippet --list [--lang python]` lists them; `verd snippet dijkstra` prints one (`--copy` puts it on the clipboard). In Neovim: `:r !verd snippet dijkstra`.
 - C snippets for graphs (`bfs`, `dfs`, `dijkstra`, `topo_sort`) build on `graphinput`; paste that first. Everything else is self-contained.
+- `verd snippet --export --lang cpp > ~/.config/nvim/snippets/verd-cpp.json` writes the library as VSCode-style JSON (prefix = snippet name). With LuaSnip: `require("luasnip.loaders.from_vscode").load_standalone({ path = "~/.config/nvim/snippets/verd-cpp.json", lang = "cpp" })`. VSCode takes the same file as a user snippet file. Re-export after you edit the library.
 - Snippets are plain code, not Templates: no `{{...}}` variables.
 
 Set `snippets_dir = "~/dotfiles/verd"` to keep Templates and snippets elsewhere (`~` is expanded).

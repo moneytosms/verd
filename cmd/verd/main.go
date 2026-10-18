@@ -293,8 +293,8 @@ usage: verd [--here] [command]
   test <file>                     run Sample and Custom Tests
   stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>
                                   search for a counterexample
-  snippet [--lang L] --list | [--copy] <name>
-                                  print or copy a library snippet (bfs, dijkstra, modpow, ...)
+  snippet [--lang L] --list | --export | [--copy] <name>
+                                  print, copy or export (VSCode JSON) library snippets
   submit <file>                   submit and track the Verdict
   update [--check]                update verd
   daily                           today's unsolved pick, weak topics first
