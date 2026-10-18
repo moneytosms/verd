@@ -65,7 +65,7 @@ func stressCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir s
 func buildStress(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail, mode runner.Mode, iter int, limit time.Duration, jobs, batch, multi int) (stress.Spec, error) {
 	ws := workspace.New(cfg.Workspace)
 	l := cfg.Lang[ref.Lang]
-	tdir := filepath.Join(config.Dir(), "templates")
+	tdir := cfg.TemplatesPath()
 	var progs [2]stress.Program
 	for i, kind := range []string{"gen.", "brute."} {
 		tmpl, _ := workspace.LoadKindTemplate(tdir, kind, ref.Lang, l)

@@ -22,7 +22,11 @@ _Avoid_: User test, manual test
 
 **Template**:
 Per-language starter source a new Solution is created from.
-_Avoid_: Boilerplate, snippet
+_Avoid_: Boilerplate
+
+**Snippet**:
+A reusable piece of code (bfs, dijkstra, modpow) from the snippet library, copied into a Solution by the user. Not a Template: it is never applied automatically.
+_Avoid_: Boilerplate, macro
 
 **Solution**:
 The user's source file for one Problem in one language.

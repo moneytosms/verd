@@ -7,6 +7,10 @@
 # Where Solutions and test files live: <workspace>/<contest>/<index>/
 # workspace = "~/verd"
 
+# Where your Templates (<dir>/templates/) and snippet library (<dir>/library/<lang>/) live.
+# `verd init` fills it with the defaults; edit or add files freely. Default: ~/.config/verd/snippets
+# snippets_dir = "~/.config/verd/snippets"
+
 # Language used for new Solutions: cpp | c | python (or any [lang.*] key).
 # default_lang = "cpp"
 

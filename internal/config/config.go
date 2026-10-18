@@ -20,6 +20,7 @@ import (
 type Config struct {
 	Handle          string   `toml:"handle"`
 	Workspace       string   `toml:"workspace"`
+	SnippetsDir     string   `toml:"snippets_dir"`
 	DefaultLang     string   `toml:"default_lang"`
 	TimeMultiplier  float64  `toml:"time_multiplier"`
 	FloatEps        float64  `toml:"float_eps"`
@@ -108,6 +109,22 @@ func Default() Config {
 		},
 	}
 }
+
+// SnippetsPath is where Templates and the snippet library live: snippets_dir with a leading ~
+// expanded, else <config dir>/snippets.
+func (c Config) SnippetsPath() string {
+	d := c.SnippetsDir
+	if d == "" {
+		return filepath.Join(Dir(), "snippets")
+	}
+	if home, err := os.UserHomeDir(); err == nil && (d == "~" || strings.HasPrefix(d, "~/")) {
+		d = filepath.Join(home, strings.TrimPrefix(d, "~"))
+	}
+	return d
+}
+
+// TemplatesPath is where the Solution, gen and brute Templates live.
+func (c Config) TemplatesPath() string { return filepath.Join(c.SnippetsPath(), "templates") }
 
 // gnu returns the compiler for base. On macOS plain g++/gcc is Apple Clang (no <bits/stdc++.h>),
 // so prefer a Homebrew GNU build (g++-15 .. g++-9) when one is on PATH.

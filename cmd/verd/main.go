@@ -78,13 +78,23 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		fmt.Fprintln(out, "wrote", path)
-		tmpls, err := workspace.InitTemplates(filepath.Join(config.Dir(), "templates"), config.Default().Lang, slices.Contains(args[1:], "--force"))
+		cfg, err := config.Load(path)
+		if err != nil {
+			cfg = config.Default()
+		}
+		force := slices.Contains(args[1:], "--force")
+		tmpls, err := workspace.InitTemplates(cfg.TemplatesPath(), config.Default().Lang, force)
 		for _, p := range tmpls {
 			fmt.Fprintln(out, "wrote", p)
 		}
 		if err != nil {
 			return err
 		}
+		nsnip, err := workspace.InitSnippets(cfg.SnippetsPath(), config.Default().Lang, force)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "wrote %d snippets to %s\n", nsnip, cfg.SnippetsPath())
 		if slices.Contains(args[1:], "--no-setup") || !term.IsTerminal(int(os.Stdin.Fd())) {
 			fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
 			return nil
@@ -249,6 +259,12 @@ func run(args []string, out io.Writer) error {
 			return &exitError{2, "usage: verd __complete config-keys|key-actions|themes"}
 		}
 		return completeCmd(out, args[1])
+	case "snippet":
+		cfg, err := loadConfig(path)
+		if err != nil {
+			return err
+		}
+		return snippetCmd(out, cfg, args[1:])
 	case "completions":
 		return completionsCmd(out, args[1:])
 	case "schema":
@@ -277,6 +293,8 @@ usage: verd [--here] [command]
   test <file>                     run Sample and Custom Tests
   stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>
                                   search for a counterexample
+  snippet [--lang L] --list | [--copy] <name>
+                                  print or copy a library snippet (bfs, dijkstra, modpow, ...)
   submit <file>                   submit and track the Verdict
   update [--check]                update verd
   daily                           today's unsolved pick, weak topics first
@@ -511,6 +529,13 @@ func runTUI(path string) error {
 			return err
 		},
 		EditTemplate: func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) },
+		Snippets: func(lang string) []tui.Snippet {
+			var out []tui.Snippet
+			for _, s := range workspace.ListSnippets(cfg.SnippetsPath(), lang, cfg.Lang[lang]) {
+				out = append(out, tui.Snippet{Name: s.Name, Desc: s.Desc, Code: s.Code})
+			}
+			return out
+		},
 		EditConfig: func() (*exec.Cmd, error) {
 			if _, err := os.Stat(path); err != nil {
 				if err := config.Init(path, false); err != nil {

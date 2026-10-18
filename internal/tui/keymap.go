@@ -102,6 +102,7 @@ var keyActions = []keyAction{
 	{"problem", "language", "switch language", ks("l")},
 	{"problem", "submit", "submit the Solution", ks("s")},
 	{"problem", "run_tests", "run tests", ks("t")},
+	{"problem", "snippets", "snippet library: copy bfs, dijkstra, modpow, ...", ks("i")},
 	{"problem", "stress", "stress test", ks("S")},
 	{"problem", "stress_save", "save the stress counterexample as a test", ks("w")},
 	{"problem", "cycle_mode", "cycle Comparison Mode", ks("c")},
@@ -293,6 +294,8 @@ func CheckKeys(user map[string][]string) error {
 // keyCtx is the context a key press lands in right now; "" means a text field has the keys.
 func (m Model) keyCtx() string {
 	switch {
+	case m.sp != nil:
+		return ""
 	case m.tm != nil:
 		if m.tm.ed != nil || m.tm.confirmDel {
 			return ""

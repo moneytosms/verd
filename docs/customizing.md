@@ -186,7 +186,7 @@ A Problem you opened stays open when you switch tabs; `esc` closes it.
 
 ## Languages and Templates
 
-Add or override languages under `[lang.<name>]` (`ext`, `compile`, `run`, `cf_compiler_id`) and edit Templates in `~/.config/verd/templates/`. Both are documented, with placeholders and Template variables, in [Configuration](./config.md#languages).
+Add or override languages under `[lang.<name>]` (`ext`, `compile`, `run`, `cf_compiler_id`) and edit Templates in `~/.config/verd/snippets/templates/`. Both are documented, with placeholders and Template variables, in [Configuration](./config.md#languages).
 
 ## Verify your changes
 

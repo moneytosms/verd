@@ -77,6 +77,8 @@ type Deps struct {
 	FetchContest func(contest int) error
 	// EditTemplate opens the language's Solution Template in the editor, creating it if absent (like Edit).
 	EditTemplate func(lang string) (*exec.Cmd, error)
+	// Snippets lists the snippet library for a language.
+	Snippets func(lang string) []Snippet
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
 	Reload func() (Data, error)
 	// Submit copies the Solution, opens the submit page and tracks the Submission (see SubmitStart).
@@ -211,6 +213,7 @@ type Model struct {
 	bodyW       int  // width the statement was rendered at
 	tm          *testMgr
 	fm          *filterMgr
+	sp          *snippetPicker
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
@@ -792,6 +795,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg, keep = m.remapKey(msg); !keep {
 			return m, nil
 		}
+		if m.sp != nil {
+			return m.updateSnippets(msg)
+		}
 		if m.tm != nil {
 			return m.updateTM(msg)
 		}
@@ -1079,6 +1085,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		cmd, err := m.deps.EditNote(*m.open)
 		return m.afterOpen(cmd, err, "note")
+	case "i":
+		m = m.openSnippets(m.lang())
 	case "T":
 		m = m.openTM(false)
 	case "a":

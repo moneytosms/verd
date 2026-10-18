@@ -142,6 +142,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `l` | `language` | switch language |
 | `s` | `submit` | submit the Solution |
 | `t` | `run_tests` | run tests |
+| `i` | `snippets` | snippet library: copy bfs, dijkstra, modpow, ... |
 | `S` | `stress` | stress test |
 | `w` | `stress_save` | save the stress counterexample as a test |
 | `c` | `cycle_mode` | cycle Comparison Mode |

@@ -65,13 +65,13 @@ cf_compiler_id = 75
 | `time_multiplier` | Scales this language's time limit (overrides global `time_multiplier`; `0` = inherit). Use for slow languages like Python or JVM. |
 | `float_eps` | Float tolerance for this language (overrides global `float_eps`; `0` = inherit). |
 | `memory_multiplier` | Multiplies the Problem's memory limit for this language (default `0` = 1). For JVM languages that need more heap. |
-| `template` | Path to a custom Solution template for this language (overrides the default from `~/.config/verd/templates/`). |
+| `template` | Path to a custom Solution template for this language (overrides the default from the `templates/` folder of `snippets_dir`). |
 
 Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Problem directory. Compiled binaries are cached by content, so an unchanged Solution is never rebuilt.
 
 ## Templates
 
-`verd init` writes starter Templates to `~/.config/verd/templates/` and never overwrites existing ones unless you pass `--force`.
+`verd init` writes starter Templates to `<snippets_dir>/templates/` (default `snippets_dir` is `~/.config/verd/snippets`) and never overwrites existing ones unless you pass `--force`. Moving from an older verd: move `~/.config/verd/templates/` to `~/.config/verd/snippets/templates/`.
 
 | File | Used for |
 | --- | --- |
@@ -81,12 +81,24 @@ Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Pro
 
 Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `{{.Problem.Name}}`, `{{.Problem.URL}}`, `{{.Handle}}`, `{{.Contest}}`, `{{.Index}}`, `{{.Date}}` (2026-10-10), `{{.Time}}` (20:50), `{{.DateTime}}`. Edit one per language in Settings, **Snippets**. `{{cursor}}` marks where Neovim places the cursor and is removed from the output.
 
+## Snippets
+
+`verd init` also copies the built-in snippet library to `<snippets_dir>/library/<lang>/<name>.<ext>` (C++, C and Python: bfs, dfs, dijkstra, dsu, segment tree, modpow, sieve, prefix sums, vector input, and more). Edit them or add your own: the file name is the snippet name and a comment on the first line is its description. A file with a built-in's name replaces it; verd also works without running `init` (the built-ins are embedded).
+
+- In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard.
+- `verd snippet --list [--lang python]` lists them; `verd snippet dijkstra` prints one (`--copy` puts it on the clipboard). In Neovim: `:r !verd snippet dijkstra`.
+- C snippets for graphs (`bfs`, `dfs`, `dijkstra`, `topo_sort`) build on `graphinput`; paste that first. Everything else is self-contained.
+- Snippets are plain code, not Templates: no `{{...}}` variables.
+
+Set `snippets_dir = "~/dotfiles/verd"` to keep Templates and snippets elsewhere (`~` is expanded).
+
 ## Files verd writes
 
 | Path | Contents |
 | --- | --- |
 | `~/.config/verd/config.toml` | Your config. |
-| `~/.config/verd/templates/` | Templates. |
+| `~/.config/verd/snippets/templates/` | Templates (in `snippets_dir`). |
+| `~/.config/verd/snippets/library/<lang>/` | The snippet library, one file per snippet. |
 | `~/.config/verd/credentials.json` | Only if the OS keyring was unavailable at `verd login`; mode `0600`. |
 | `~/.local/share/verd/verd.db` | SQLite cache: Problems, Contests, Submissions, per-Problem choices. |
 | `~/.cache/verd/` | Compiled binaries. |

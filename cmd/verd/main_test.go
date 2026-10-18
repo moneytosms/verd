@@ -52,7 +52,7 @@ func TestInitWritesTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, f := range []string{"cpp.cpp", "c.c", "python.py"} {
-		if _, err := os.Stat(filepath.Join(cfgHome, "verd", "templates", f)); err != nil {
+		if _, err := os.Stat(filepath.Join(cfgHome, "verd", "snippets", "templates", f)); err != nil {
 			t.Errorf("template %s not written: %v", f, err)
 		}
 	}
@@ -64,8 +64,8 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	cfgHome := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", cfgHome)
-	os.MkdirAll(filepath.Join(cfgHome, "verd", "templates"), 0o755)
-	os.WriteFile(filepath.Join(cfgHome, "verd", "templates", "cpp.cpp"), []byte("// {{.Problem.ID}} {{.Handle}}\n\n{{cursor}}\n"), 0o644)
+	os.MkdirAll(filepath.Join(cfgHome, "verd", "snippets", "templates"), 0o755)
+	os.WriteFile(filepath.Join(cfgHome, "verd", "snippets", "templates", "cpp.cpp"), []byte("// {{.Problem.ID}} {{.Handle}}\n\n{{cursor}}\n"), 0o644)
 
 	cfg := config.Default()
 	cfg.Workspace, cfg.Handle = t.TempDir(), "tourist"
@@ -270,5 +270,43 @@ func TestKeysImportExportRoundTrip(t *testing.T) {
 	}
 	if out, _ := do("keys", "--json"); !strings.Contains(out, "ctrl+t") {
 		t.Fatal("failed import must not change anything")
+	}
+}
+
+func TestSnippetCmd(t *testing.T) {
+	cfgHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgHome)
+	var out bytes.Buffer
+	if err := run([]string{"snippet", "--list"}, &out); err != nil || !strings.Contains(out.String(), "dijkstra") {
+		t.Fatalf("list: %v %q", err, out.String())
+	}
+	out.Reset()
+	if err := run([]string{"snippet", "--lang", "python", "modpow"}, &out); err != nil || !strings.Contains(out.String(), "def modpow") {
+		t.Fatalf("print: %v %q", err, out.String())
+	}
+	if err := run([]string{"snippet", "nope"}, &out); err == nil {
+		t.Fatal("unknown snippet should error")
+	}
+	// snippets_dir moves both the library and the Templates
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(cfgHome, "verd"), 0o755)
+	os.WriteFile(filepath.Join(cfgHome, "verd", "config.toml"), []byte("snippets_dir = '"+dir+"'\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "library", "cpp"), 0o755)
+	os.WriteFile(filepath.Join(dir, "library", "cpp", "mine.cpp"), []byte("// mine\nint x;\n"), 0o644)
+	out.Reset()
+	if err := run([]string{"snippet", "mine"}, &out); err != nil || out.String() != "// mine\nint x;\n" {
+		t.Fatalf("snippets_dir: %v %q", err, out.String())
+	}
+	// ...and a Template in <snippets_dir>/templates replaces the built-in one
+	os.MkdirAll(filepath.Join(dir, "templates"), 0o755)
+	os.WriteFile(filepath.Join(dir, "templates", "cpp.cpp"), []byte("// custom {{.Problem.ID}}\n"), 0o644)
+	cfg := config.Default()
+	cfg.SnippetsDir, cfg.Workspace = dir, t.TempDir()
+	path, _, err := ensureSolution(cfg, cf.Problem{ContestID: 1900, Index: "A"}, "cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); !strings.HasPrefix(string(b), "// custom 1900A") {
+		t.Fatalf("custom template not used: %q", b)
 	}
 }

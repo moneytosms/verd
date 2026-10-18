@@ -60,7 +60,7 @@ func ensureSolution(cfg config.Config, p cf.Problem, lang string) (path string, 
 			return "", 0, fmt.Errorf("template for %s at %s: %w", lang, l.Template, err)
 		}
 	} else {
-		tmpl, err = workspace.LoadTemplate(filepath.Join(config.Dir(), "templates"), lang, l)
+		tmpl, err = workspace.LoadTemplate(cfg.TemplatesPath(), lang, l)
 		if err != nil {
 			return "", 0, err
 		}
@@ -80,7 +80,7 @@ func editTemplate(cfg config.Config, ctrl *editor.Controller, lang string) (*exe
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(config.Dir(), "templates")
+	dir := cfg.TemplatesPath()
 	path := l.Template
 	if path == "" {
 		path = filepath.Join(dir, lang+"."+l.Ext)
