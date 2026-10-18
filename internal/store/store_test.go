@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/session"
 )
 
 func TestProblemsetRoundTrip(t *testing.T) {
@@ -141,5 +142,32 @@ func TestAddProblemsKeepsKnownRating(t *testing.T) {
 		if p.ContestID == 1 && (p.Rating != 800 || p.Name != "New" || len(p.Tags) != 1) {
 			t.Fatalf("%+v", p)
 		}
+	}
+}
+
+func TestSessionRoundTrip(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if x, err := s.Session(); err != nil || x != nil {
+		t.Fatalf("empty: %v %v", x, err)
+	}
+	want := session.Session{ContestID: 1900, Name: "Round", Mode: session.Virtual, Start: 10, End: 7210}
+	if err := s.SaveSession(want); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.Session(); err != nil || got == nil || *got != want {
+		t.Fatalf("%+v %v", got, err)
+	}
+	want.Mode = session.Practice
+	s.SaveSession(want) // replaces: there is only one
+	if got, _ := s.Session(); got.Mode != session.Practice {
+		t.Fatalf("%+v", got)
+	}
+	s.EndSession()
+	if x, _ := s.Session(); x != nil {
+		t.Fatal("ended session must be gone")
 	}
 }

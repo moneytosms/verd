@@ -27,6 +27,7 @@ import (
 	"github.com/moneytosms/verd/internal/refresh"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/session"
 	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/stress"
@@ -509,6 +510,15 @@ func runTUI(path string) error {
 			return err
 		},
 		EditTemplate: func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) },
+		StartSession: func(c cf.Contest, mode string) (session.Session, error) {
+			now := time.Now().Unix()
+			x := session.Session{ContestID: c.ID, Name: c.Name, Mode: mode, Start: now}
+			if mode == session.Virtual {
+				x.End = now + c.Duration
+			}
+			return x, s.SaveSession(x)
+		},
+		EndSession: s.EndSession,
 		Snippets: func(lang string) []tui.Snippet {
 			var out []tui.Snippet
 			for _, s := range workspace.ListSnippets(cfg.SnippetsPath(), lang, cfg.Lang[lang]) {
@@ -623,6 +633,10 @@ func loadData(s *store.Store, handle string) (tui.Data, error) {
 	}
 	subs, err := s.AllSubmissions()
 	if err != nil {
+		return d, err
+	}
+	d.Subs = subs
+	if d.Session, err = s.Session(); err != nil {
 		return d, err
 	}
 	var cfOnly []cf.Problem // stats are about Codeforces: other sources have no ratings or Submissions

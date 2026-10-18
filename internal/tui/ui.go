@@ -132,6 +132,9 @@ func overlay(base []string, box []string, w, h int) []string {
 // ratingText is the Problem's rating coloured like the Codeforces rank bands (ANSI palette, so themes apply).
 func (m Model) ratingText(p cf.Problem) string {
 	s := fmt.Sprintf("%6s", ratingStr(p))
+	if m.isBlind(p) {
+		return m.styles().Dim.Render(fmt.Sprintf("%6s", "?"))
+	}
 	if p.Rating <= 0 {
 		return m.styles().Dim.Render(s)
 	}

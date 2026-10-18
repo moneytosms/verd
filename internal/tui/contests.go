@@ -8,6 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/session"
 	"github.com/moneytosms/verd/internal/store"
 )
 
@@ -71,9 +72,17 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "esc", "q":
-			m.contestOpen, m.cpCursor, m.contestNote = nil, 0, ""
+			m.contestOpen, m.cpCursor, m.contestNote, m.sessConfirm = nil, 0, "", ""
 		case "r", "ctrl+r":
 			return m.fetchContest()
+		case "s":
+			return m.startSession(*m.contestOpen, session.Virtual)
+		case "p":
+			return m.startSession(*m.contestOpen, session.Practice)
+		case "e":
+			if m.sess != nil && m.sess.ContestID == m.contestOpen.ID {
+				m.sessSum = true
+			}
 		case "up", "k":
 			m.cpCursor = max(0, m.cpCursor-1)
 		case "down", "j":
@@ -143,9 +152,18 @@ func (m Model) contestBox() []string {
 		if i == m.cpCursor {
 			cur = st.Accent.Render(">")
 		}
-		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), m.ratingText(p)))
+		last := m.ratingText(p)
+		if m.isBlind(p) {
+			last = fmt.Sprintf("%-8s", m.contestResult(p))
+		}
+		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), last))
 	}
-	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, m.kx("{contest.open} open  {contest.down}/{contest.up} move  r refetch  {contest.close} close"), w, len(body)+2, true, st, m.borderStyle())
+	hint := "{contest.open} open  {contest.down}/{contest.up} move  r refetch  {contest.start} virtual  {contest.practice} practice  {contest.close} close"
+	if m.sess != nil && m.sess.ContestID == c.ID {
+		body = append([]string{st.Warn.Render(m.sessLine()), ""}, body...)
+		hint = "{contest.open} open  {contest.down}/{contest.up} move  {contest.end_session} summary and end  {contest.close} close"
+	}
+	return box(fmt.Sprintf("%d  %s", c.ID, clean(c.Name)), body, m.kx(hint), w, len(body)+2, true, st, m.borderStyle())
 }
 
 func (m Model) viewContests(b *strings.Builder) string {
@@ -183,6 +201,9 @@ func (m Model) viewContests(b *strings.Builder) string {
 			when, whenStyle = "running", st.Bad
 		}
 		line := "  " + whenStyle.Render(fmt.Sprintf("%-12s", when)) + " " + fit(clean(c.Name), max(30, min(72, m.contentWidth()-24))) + " " + st.Dim.Render(fmt.Sprint(c.ID))
+		if m.sess != nil && m.sess.ContestID == c.ID {
+			line += " " + st.Warn.Render("● session")
+		}
 		if i == m.contestCursor {
 			line = paintRow(st.Accent.Render("▌")+" "+strings.TrimPrefix(line, "  "), m.contentWidth(), st.Selected)
 		}

@@ -17,6 +17,7 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/session"
 	"github.com/moneytosms/verd/internal/stats"
 	"github.com/moneytosms/verd/internal/store"
 	"github.com/moneytosms/verd/internal/stress"
@@ -77,6 +78,9 @@ type Deps struct {
 	FetchContest func(contest int) error
 	// EditTemplate opens the language's Solution Template in the editor, creating it if absent (like Edit).
 	EditTemplate func(lang string) (*exec.Cmd, error)
+	// StartSession begins a contest session (virtual or practice) and stores it; EndSession forgets it.
+	StartSession func(c cf.Contest, mode string) (session.Session, error)
+	EndSession   func() error
 	// Snippets lists the snippet library for a language.
 	Snippets func(lang string) []Snippet
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
@@ -127,6 +131,8 @@ type RunOpts struct {
 
 // Data is everything the UI renders from the cache.
 type Data struct {
+	Session  *session.Session // the running contest session, nil if none
+	Subs     []cf.Submission  // every stored Submission, for scoring the session
 	Handle   string
 	Rating   int // latest rating, 0 = unrated
 	Problems []cf.Problem
@@ -214,6 +220,11 @@ type Model struct {
 	tm          *testMgr
 	fm          *filterMgr
 	sp          *snippetPicker
+	raw         Data // last loaded data, before the session hides anything
+	sess        *session.Session
+	sessResult  session.Result
+	sessSum     bool              // the session summary modal is open
+	sessConfirm string            // mode awaiting a second keypress
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
@@ -278,6 +289,8 @@ func (m Model) borderStyle() string {
 func (m Model) WithData(d Data) Model {
 	m.handle, m.rating, m.syncedAt = d.Handle, d.Rating, d.SyncedAt
 	m.Problems, m.status, m.stats = d.Problems, d.Statuses, d.Stats
+	m.raw = d
+	m = m.applySession(d)
 	m.statsSel = min(m.statsSel, max(0, len(d.Stats.Unsolved)-1))
 	m = m.WithContests(d.Contests)
 	return m.refilter()
@@ -518,10 +531,14 @@ func (m Model) contentWidth() int {
 }
 
 func (m Model) Init() tea.Cmd {
-	if len(m.deps.Refresh) == 0 {
-		return tea.RequestBackgroundColor
+	cmds := []tea.Cmd{tea.RequestBackgroundColor}
+	if m.sess != nil {
+		cmds = append(cmds, sessTick())
 	}
-	return tea.Batch(tea.RequestBackgroundColor, m.refresh(0))
+	if len(m.deps.Refresh) > 0 {
+		cmds = append(cmds, m.refresh(0))
+	}
+	return tea.Batch(cmds...)
 }
 
 // ExternalRun attaches a Test Run started elsewhere (e.g. `verd test` from Neovim, over the
@@ -702,6 +719,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return nm, tea.Batch(cmd, run)
 		}
 		return m, cmd
+	case sessTickMsg:
+		return m.onSessTick()
 	case editorTickMsg:
 		if m.deps.EditorAlive != nil && m.deps.EditorAlive() {
 			return m, editorTick()
@@ -794,6 +813,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var keep bool
 		if msg, keep = m.remapKey(msg); !keep {
 			return m, nil
+		}
+		if m.sessSum {
+			return m.updateSessSummary(msg)
 		}
 		if m.sp != nil {
 			return m.updateSnippets(msg)

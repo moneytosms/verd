@@ -50,6 +50,9 @@ var keyActions = []keyAction{
 	{"contests", "open", "list the contest's Problems", ks("enter")},
 
 	{"contest", "close", "close", ks("q", "esc")},
+	{"contest", "start", "start a virtual contest session (finished contests)", ks("s")},
+	{"contest", "practice", "start a practice session: no timer or penalty", ks("p")},
+	{"contest", "end_session", "show the session summary and end it", ks("e")},
 	{"contest", "up", "move up", ks("k", "up")},
 	{"contest", "down", "move down", ks("j", "down")},
 	{"contest", "open", "open the Problem", ks("enter")},
@@ -294,7 +297,7 @@ func CheckKeys(user map[string][]string) error {
 // keyCtx is the context a key press lands in right now; "" means a text field has the keys.
 func (m Model) keyCtx() string {
 	switch {
-	case m.sp != nil:
+	case m.sp != nil, m.sessSum:
 		return ""
 	case m.tm != nil:
 		if m.tm.ed != nil || m.tm.confirmDel {

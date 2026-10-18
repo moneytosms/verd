@@ -16,6 +16,7 @@ import (
 
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/scrape"
+	"github.com/moneytosms/verd/internal/session"
 	_ "modernc.org/sqlite"
 )
 
@@ -500,4 +501,30 @@ func (s *Store) AllSubmissions() ([]cf.Submission, error) {
 		out = append(out, x)
 	}
 	return out, rows.Err()
+}
+
+// Session returns the running contest session, nil if none.
+func (s *Store) Session() (*session.Session, error) {
+	var x session.Session
+	err := s.db.QueryRow("SELECT contest_id, name, mode, start_at, end_at FROM session WHERE id = 1").Scan(&x.ContestID, &x.Name, &x.Mode, &x.Start, &x.End)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &x, nil
+}
+
+// SaveSession starts (or replaces) the contest session.
+func (s *Store) SaveSession(x session.Session) error {
+	_, err := s.db.Exec(`INSERT OR REPLACE INTO session(id, contest_id, name, mode, start_at, end_at) VALUES(1,?,?,?,?,?)`,
+		x.ContestID, x.Name, x.Mode, x.Start, x.End)
+	return err
+}
+
+// EndSession forgets the contest session.
+func (s *Store) EndSession() error {
+	_, err := s.db.Exec("DELETE FROM session")
+	return err
 }

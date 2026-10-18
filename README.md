@@ -135,6 +135,7 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 | [Configuration](./docs/config.md) | Every config key, languages, Templates, file locations. |
 | [Keys](./docs/keys.md) | Key bindings for each screen. |
 | [Testing and stress](./docs/testing.md) | Test Runs, Comparison Modes, Custom Tests, stress workflow. |
+| [Contest sessions](./docs/contests.md) | Virtual and practice sessions: timer, local scoring, hidden ratings. |
 | [Sources](./docs/sources.md) | CSES next to Codeforces, the Source filter, manual solved marks, and what USACO would need. |
 | [Neovim](./docs/neovim.md) | Split modes and copy-pasteable keymaps. |
 | [Submitting](./docs/submit.md) | Browser handoff, direct mode, `verd login`, risks. |

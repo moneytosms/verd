@@ -89,11 +89,11 @@ func (m Model) viewList(b *strings.Builder) string {
 		id := fmt.Sprintf("%-8s", p.Code())
 		tagW := max(10, w-nameW-34)
 		if i == m.cursor {
-			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + fmt.Sprintf(" %7d  ", p.SolvedCount) + m.tagChips(p, tagW)
+			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + m.tagChips(p, tagW)
 			b.WriteString(paintRow(line, w, st.Selected) + "\n")
 			continue
 		}
-		b.WriteString("  " + m.markOf(m.statusOf(p)) + " " + id + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + fmt.Sprintf(" %7d  ", p.SolvedCount) + m.tagChips(p, tagW) + "\n")
+		b.WriteString("  " + m.markOf(m.statusOf(p)) + " " + id + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + m.tagChips(p, tagW) + "\n")
 	}
 	if len(m.visible) == 0 {
 		b.WriteString("\n  " + st.Dim.Render("no problems match: X clears the filters") + "\n")

@@ -193,6 +193,9 @@ func (m Model) infoLines(w int) []string {
 	if p.Rating > 0 {
 		rating = fmt.Sprint(p.Rating)
 	}
+	if m.isBlind(p) {
+		rating = "hidden during the session"
+	}
 	mark := ""
 	switch m.statusOf(p) {
 	case store.StatusSolved:

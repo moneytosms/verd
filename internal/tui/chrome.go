@@ -85,6 +85,14 @@ func (m Model) header(w int) string {
 			who += " " + ratingStyle(m.rating).Bold(true).Render(fmt.Sprint(m.rating))
 		}
 	}
+	if m.sess != nil {
+		banner := st.Warn.Render(m.sessLine())
+		if who != "" {
+			who = banner + "  " + who
+		} else {
+			who = banner
+		}
+	}
 	gap := w - xansi.StringWidth(left) - xansi.StringWidth(who) - 1
 	if gap < 1 {
 		who, gap = "", 1
