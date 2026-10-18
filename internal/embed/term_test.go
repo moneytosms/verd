@@ -177,6 +177,9 @@ func TestKeyEncoding(t *testing.T) {
 		{"ctrl+up", press(tea.KeyUp, tea.ModCtrl, ""), "\x1b[1;5A"},
 		{"shift+left", press(tea.KeyLeft, tea.ModShift, ""), "\x1b[1;2D"},
 		{"alt+ctrl+right", press(tea.KeyRight, tea.ModAlt|tea.ModCtrl, ""), "\x1b[1;7C"},
+		{"up with num lock", press(tea.KeyUp, tea.ModNumLock, ""), "\x1b[A"},
+		{"escape with caps lock", press(tea.KeyEscape, tea.ModCapsLock, ""), "\x1b"},
+		{"left on repeat", tea.KeyPressMsg{Code: tea.KeyLeft, IsRepeat: true}, "\x1b[D"},
 		{"ctrl+delete", press(tea.KeyDelete, tea.ModCtrl, ""), "\x1b[3;5~"},
 	} {
 		got := capture(t, "", func(term *Term) { term.SendKey(tc.key) })

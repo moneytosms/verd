@@ -21,7 +21,7 @@ Neovim runs in a pseudo-terminal inside verd. While it has the keyboard everythi
 | --- | --- |
 | `ctrl+\` | hand the keyboard between verd and the editor |
 | `alt+h` / `alt+l` | keyboard to the left / right column |
-| `alt+z` | hide verd so the editor fills the window |
+| `alt+z` | zoom whichever side has the keyboard (editor or verd) to fill the window |
 | `alt+]` / `alt+[` | grow / shrink the editor column |
 | `alt+s` | swap the editor to the other side |
 

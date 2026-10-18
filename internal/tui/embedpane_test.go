@@ -309,3 +309,32 @@ func TestEmbeddedZoomConfig(t *testing.T) {
 		t.Fatalf("zoomed should return (0, width): got left=%d, right=%d, width=%d", left, right, m.width)
 	}
 }
+
+func TestAltZZoomsTheFocusedSide(t *testing.T) {
+	term := startTerm(t, `exec cat`)
+	m := embedModel(t, term, 120, 12)
+	press := func(m Model) Model {
+		nm, _ := m.Update(tea.KeyPressMsg{Code: 'z', Mod: tea.ModAlt})
+		return nm.(Model)
+	}
+	m = press(m) // editor has focus: it fills the window
+	if !m.embed.zoom || !m.embed.focus {
+		t.Fatalf("alt+z with the editor focused should zoom the editor: %+v", m.embed)
+	}
+	m = press(m)
+	if m.embed.zoom || m.embed.zoomV {
+		t.Fatal("alt+z again restores the split")
+	}
+	m.embed.focus = false // verd has the keyboard
+	m = press(m)
+	if !m.embed.zoomV || m.embed.zoom {
+		t.Fatalf("alt+z with verd focused should zoom verd: %+v", m.embed)
+	}
+	if l, r := m.layout(); l != 120 || r != 0 {
+		t.Fatalf("zoomed verd takes the whole window: %d %d", l, r)
+	}
+	m = press(m)
+	if m.embed.zoomV {
+		t.Fatal("alt+z again restores the split")
+	}
+}

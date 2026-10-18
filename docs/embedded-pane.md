@@ -17,7 +17,7 @@ Keys go to Neovim while it has focus. The following editor keys work while the e
 | `ctrl+\` | toggle keyboard between verd and the editor |
 | `alt+h` | keyboard to the left column |
 | `alt+l` | keyboard to the right column |
-| `alt+z` | hide verd and give the editor the whole window (toggle) |
+| `alt+z` | zoom whichever side has the keyboard to the whole window (toggle) |
 | `alt+]` | grow the editor column by 5% |
 | `alt+[` | shrink the editor column by 5% |
 | `alt+s` | swap editor between left and right column |

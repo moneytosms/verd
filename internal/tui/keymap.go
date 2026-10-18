@@ -183,7 +183,7 @@ var keyActions = []keyAction{
 	{"editor", "focus", "toggle the keyboard between verd and the embedded editor", ks("ctrl+\\")},
 	{"editor", "focus_left", "keyboard to the left column", ks("alt+h")},
 	{"editor", "focus_right", "keyboard to the right column", ks("alt+l")},
-	{"editor", "zoom", "hide or show verd (editor fullscreen)", ks("alt+z")},
+	{"editor", "zoom", "zoom the focused side to fullscreen (toggle)", ks("alt+z")},
 	{"editor", "wider", "grow the editor column", ks("alt+]")},
 	{"editor", "narrower", "shrink the editor column", ks("alt+[")},
 	{"editor", "swap_side", "move editor between left and right", ks("alt+s")},

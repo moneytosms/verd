@@ -20,6 +20,7 @@ type embedPane struct {
 	term  *embed.Term
 	focus bool // keys go to the editor
 	zoom  bool // editor fullscreen, verd hidden
+	zoomV bool // verd fullscreen, editor hidden (alt+z while verd has the keyboard)
 }
 
 // paneLeft reports whether the editor column is on the left.
@@ -30,6 +31,9 @@ func (m Model) paneLeft() bool { return m.deps.EmbedSide == "left" }
 func (m Model) layout() (left, right int) {
 	if m.embed.zoom && m.embed.term != nil {
 		return 0, m.width
+	}
+	if m.embed.zoomV {
+		return m.width, 0
 	}
 	r := m.deps.EmbedRatio
 	if r <= 0 || r >= 1 {
@@ -111,8 +115,16 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 	case tea.KeyPressMsg:
 		key := msg.String()
 		if slices.Contains(m.edKeys("zoom"), key) {
-			m.embed.zoom = !m.embed.zoom
-			m.embed.focus = m.embed.zoom // hiding verd hands keys to the editor
+			// zoom whichever side has the keyboard; pressing it again restores the split
+			switch {
+			case m.embed.zoom, m.embed.zoomV:
+				m.embed.zoom, m.embed.zoomV = false, false
+			case m.embed.focus:
+				m.embed.zoom = true
+			default:
+				m.embed.zoomV = true
+			}
+			m.embed.focus = m.embed.zoom
 			if m.embed.focus {
 				t.Focus()
 			} else {

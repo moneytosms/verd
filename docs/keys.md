@@ -248,7 +248,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `ctrl+\` | `focus` | toggle the keyboard between verd and the embedded editor |
 | `alt+h` | `focus_left` | keyboard to the left column |
 | `alt+l` | `focus_right` | keyboard to the right column |
-| `alt+z` | `zoom` | hide or show verd (editor fullscreen) |
+| `alt+z` | `zoom` | zoom the focused side to fullscreen (toggle) |
 | `alt+]` | `wider` | grow the editor column |
 | `alt+[` | `narrower` | shrink the editor column |
 | `alt+s` | `swap_side` | move editor between left and right |

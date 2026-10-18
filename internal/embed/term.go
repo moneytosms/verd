@@ -159,6 +159,10 @@ func (t *Term) Blur()  { t.em.Blur() }
 
 // SendKey encodes a key press for the program the classic xterm way.
 func (t *Term) SendKey(k tea.KeyPressMsg) {
+	// Lock-key state, repeat and the kitty alternate codes are not part of the key: the emulator
+	// matches keys exactly, so with Num/Caps Lock on, arrows and escape would otherwise be dropped.
+	k.Mod &^= tea.ModCapsLock | tea.ModNumLock | tea.ModScrollLock
+	k.IsRepeat, k.BaseCode, k.ShiftedCode = false, 0, 0
 	if seq, ok := modifiedKey(k); ok {
 		t.em.SendText(seq) // the emulator does not encode modified cursor/editing keys
 		return
