@@ -39,15 +39,33 @@ import (
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		var ee *exitError
+		msg, code := err.Error(), 1
 		if errors.As(err, &ee) {
-			if ee.msg != "" {
-				fmt.Fprintln(os.Stderr, "verd:", ee.msg)
-			}
-			os.Exit(ee.code)
+			msg, code = ee.msg, ee.code
 		}
-		fmt.Fprintln(os.Stderr, "verd:", err)
-		os.Exit(1)
+		if msg != "" {
+			fmt.Fprintln(os.Stderr, "verd:", msg)
+		}
+		if h := usageHint(os.Args[1:], msg); h != "" {
+			fmt.Fprintln(os.Stderr, h)
+		}
+		os.Exit(code)
 	}
+}
+
+// usageHint points a usage error at the command's help page.
+func usageHint(args []string, msg string) string {
+	if len(args) == 0 || !strings.Contains(msg, "usage:") {
+		return ""
+	}
+	topic := []string{args[0]}
+	if len(args) > 1 && !strings.HasPrefix(args[1], "-") {
+		topic = append(topic, args[1])
+	}
+	if d, ok := findDoc(topic); ok {
+		return "run `verd help " + d.Name + "` for details"
+	}
+	return ""
 }
 
 // Set by goreleaser via -ldflags; "dev" for go install / go build.
@@ -61,9 +79,8 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "verd %s (%s)\n", version, commit)
 		return nil
 	}
-	if len(args) == 1 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
-		fmt.Fprint(out, helpText)
-		return nil
+	if topic, ok := wantsHelp(args); ok {
+		return showHelp(out, topic)
 	}
 	path := filepath.Join(config.Dir(), "config.toml")
 	if i := slices.Index(args, "--here"); i >= 0 { // keep Solutions in the current directory
@@ -272,48 +289,6 @@ func run(args []string, out io.Writer) error {
 	}
 	return fmt.Errorf("unknown command %q (see verd --help)", args[0])
 }
-
-const helpText = `verd: terminal Codeforces + CSES
-
-usage: verd [--here] [command]
-
-  (none)                          open the TUI
-  init [--force] [--no-setup]     write config and Templates, offer setup
-  setup                           guided setup
-  config                          print effective config
-  config path | keys              config file path | settable keys
-  config get <key> | set <key> <value>
-                                  read or change one key (comments kept)
-  keys [--json]                   list every shortcut, default and current
-  keys contexts                   list contexts
-  keys set <ctx.action> <key>...  rebind (several keys allowed); keys reset <ctx.action>
-  keys presets | preset <name> | export | import <file|->
-                                  apply presets, export or import shortcuts
-  themes [show <name>]            list themes | print an editable [themes.*] block
-  test <file>                     run Sample and Custom Tests
-  stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>
-                                  search for a counterexample
-  snippet [--lang L] --list | --export | [--copy] <name>
-                                  print, copy or export (VSCode JSON) library snippets
-  snippet add [--lang L] [--desc D] <name> [file|-]
-                                  add a snippet from a file or stdin (no source: edit a new one)
-  snippet edit|rm [--lang L] <name>
-                                  edit (built-ins get an editable copy) | remove your snippet
-  snippet open | path             open the library folder in your editor | print the snippets dir
-  submit <file>                   submit and track the Verdict
-  update [--check]                update verd
-  daily                           today's unsolved pick, weak topics first
-  sync [cses]                     pull solved CSES tasks into marks
-  login | logout [cses]           manage direct-submit sessions
-  doctor                          diagnostics: config, compilers, editor, terminal
-  completions bash|zsh|fish       print shell completion script
-  schema                          print JSON Schema for config.toml
-  version, --version              print version
-
-flags:
-  --here                          use the current directory as Workspace
-  -h, --help                      show this help
-`
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
 var hereWorkspace bool

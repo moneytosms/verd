@@ -111,7 +111,7 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd [--here]` | Open the TUI. `--here` keeps Solutions in the current directory (`<dir>/<contest>/<index>/`) instead of the configured Workspace. |
 | `verd init [--force] [--no-setup]` | Write the default config, Templates and snippet library, then offer the guided setup (skipped when not in a terminal). |
 | `verd setup` | Guided setup: handle, Workspace, language, theme, editor split and submit mode, written into `config.toml`. Safe to re-run. |
-| `verd --help` | List the commands. |
+| `verd help [command]`, `verd <command> --help` | Detailed help for every command: usage, options, examples and exit codes. Colored on a terminal, plain text when piped, with `NO_COLOR` or `TERM=dumb` (`FORCE_COLOR=1` forces colors). |
 | `verd config [path\|keys\|get <key>\|set <key> <value>]` | Print the effective config, or read and change one key. |
 | `verd keys [--json]`, `verd keys set <ctx.action> <key>...` | List and rebind every shortcut. See [Customizing](./docs/customizing.md). |
 | `verd themes [show <name>]` | List themes, or print an editable `[themes.*]` block. |
