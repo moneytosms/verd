@@ -77,12 +77,43 @@ func clockText(d time.Duration) string {
 // sessLine is the one-line status of the running session: mode, clock and score.
 func (m Model) sessLine() string {
 	s, now := m.sess, m.clock()
-	clock := clockText(s.Elapsed(now)) + " elapsed"
-	if s.End > 0 {
-		clock = clockText(s.Left(now)) + " left"
+	switch {
+	case s.Mode == session.Live && !s.Started(now):
+		return fmt.Sprintf("live  starts in %s", clockText(s.UntilStart(now)))
+	case s.End > 0:
+		return fmt.Sprintf("%s  %s left  %s", s.Mode, clockText(s.Left(now)), m.sessScore())
 	}
-	line := fmt.Sprintf("%s  %s  solved %d/%d", s.Mode, clock, m.sessResult.Solved, len(m.sessResult.Rows))
-	if s.Mode == session.Virtual {
+	return fmt.Sprintf("%s  %s elapsed  %s", s.Mode, clockText(s.Elapsed(now)), m.sessScore())
+}
+
+// liveRow is the Codeforces standings row of a live session, when it has arrived and the handle took part.
+func (m Model) liveRow() *cf.StandingRow {
+	if m.sess == nil || m.sess.Mode != session.Live || m.standing == nil {
+		return nil
+	}
+	return m.standing.Row
+}
+
+// sessScore is the score text: the Codeforces standings row for a live session, else the local score.
+func (m Model) sessScore() string {
+	if m.sess.Mode == session.Live && m.standing != nil {
+		r := m.standing.Row
+		switch {
+		case r == nil:
+			return "not in the standings (register on the site)"
+		case m.standing.Contest.Type == "ICPC":
+			solved := 0
+			for _, pr := range r.Results {
+				if pr.Solved() {
+					solved++
+				}
+			}
+			return fmt.Sprintf("rank %d  solved %d  penalty %d", r.Rank, solved, r.Penalty)
+		}
+		return fmt.Sprintf("rank %d  %.0f pts", r.Rank, r.Points)
+	}
+	line := fmt.Sprintf("solved %d/%d", m.sessResult.Solved, len(m.sessResult.Rows))
+	if m.sess.Mode != session.Practice {
 		line += fmt.Sprintf("  penalty %d", m.sessResult.Penalty)
 	}
 	return line
@@ -95,8 +126,10 @@ func (m Model) sessionDeadline() time.Duration {
 	return time.Unix(m.sess.End, 0).Sub(time.Unix(m.sess.Start, 0))
 }
 
-// startSession begins a session after a second press of the same key confirms it.
+// startSession begins a session after a second press of the same key confirms it. A finished
+// contest is replayed (virtual or practice); one that is running or upcoming is joined live.
 func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
+	live := !c.Finished()
 	switch {
 	case m.deps.StartSession == nil:
 		return m, nil
@@ -104,13 +137,15 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 		m.contestNote = "this contest's session is already running"
 		return m, nil
 	case m.sess != nil:
-		m.contestNote = fmt.Sprintf("end the running session first (open contest %d and press {contest.end_session})", m.sess.ContestID)
-		m.contestNote = m.kx(m.contestNote)
+		m.contestNote = m.kx(fmt.Sprintf("end the running session first (open contest %d and press {contest.end_session})", m.sess.ContestID))
 		return m, nil
-	case !c.Finished():
-		m.contestNote = "sessions replay finished contests; joining a live contest comes later"
+	case live && mode == session.Practice:
+		m.contestNote = "practice replays a finished contest"
 		return m, nil
-	case len(m.contestProblems(c)) == 0:
+	case live && m.handle == "":
+		m.contestNote = "set your handle first: live results come from the standings"
+		return m, nil
+	case !live && len(m.contestProblems(c)) == 0:
 		m.contestNote = ""
 		nm, cmd := m.fetchContest()
 		m = nm.(Model)
@@ -119,11 +154,21 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 		}
 		return m, cmd
 	}
+	if live {
+		mode = session.Live
+	}
 	if m.sessConfirm != mode {
 		m.sessConfirm = mode
-		what := "a virtual contest of " + clockText(time.Duration(c.Duration)*time.Second)
-		if mode == session.Practice {
+		var what string
+		switch {
+		case mode == session.Practice:
 			what = "practice with no timer"
+		case !live:
+			what = "a virtual contest of " + clockText(time.Duration(c.Duration)*time.Second)
+		case c.Phase == "BEFORE":
+			what = "waiting for the start (register on the site first)"
+		default:
+			what = "the live contest: results come from the standings every minute (register on the site first)"
 		}
 		m.contestNote = m.kx("ratings and tags will be hidden. Press the same key again to start " + what + ", {contest.close} to cancel")
 		return m, nil
@@ -135,6 +180,7 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 		return m, nil
 	}
 	m.raw.Session = &s
+	m.standing, m.standAt, m.standErr = nil, time.Time{}, ""
 	m = m.WithData(m.raw)
 	m.contestNote, m.cpCursor = "", 0
 	return m, sessTick()
@@ -148,8 +194,62 @@ func (m Model) endSession() Model {
 			return m
 		}
 	}
-	m.raw.Session, m.sessSum = nil, false
+	m.raw.Session, m.sessSum, m.standing = nil, false, nil
 	return m.WithData(m.raw)
+}
+
+type standingMsg struct {
+	st  *cf.Standing
+	err error
+	at  time.Time
+}
+
+// standEvery is how often the live standings are downloaded: they are the whole table, many MB for a big round.
+func (m Model) standEvery() time.Duration {
+	if m.standing != nil && m.standing.Bytes > 8<<20 {
+		return 2 * time.Minute
+	}
+	return time.Minute
+}
+
+func (m Model) pollStanding() (Model, tea.Cmd) {
+	m.standBusy = true
+	fetch, id, at := m.deps.Standings, m.sess.ContestID, m.clock()
+	return m, func() tea.Msg {
+		st, err := fetch(id)
+		return standingMsg{st, err, at}
+	}
+}
+
+func (m Model) onStanding(msg standingMsg) Model {
+	m.standBusy, m.standAt = false, msg.at
+	if msg.err != nil {
+		m.standErr = clean(msg.err.Error())
+		return m
+	}
+	m.standing, m.standErr = msg.st, ""
+	return m
+}
+
+// liveTick drives a live session: fetch the Problems once the contest starts, then poll the standings.
+func (m Model) liveTick() (Model, tea.Cmd) {
+	now := m.clock()
+	if !m.sess.Started(now) {
+		return m, nil
+	}
+	var cmds []tea.Cmd
+	c := cf.Contest{ID: m.sess.ContestID}
+	if len(m.contestProblems(c)) == 0 && !m.contestBusy && m.deps.FetchContest != nil && now.Sub(m.sessFetchAt) >= 5*time.Second {
+		m.contestBusy, m.sessFetchAt = true, now
+		fetch, id := m.deps.FetchContest, c.ID
+		cmds = append(cmds, func() tea.Msg { return contestFetchedMsg{fetch(id)} })
+	}
+	if m.deps.Standings != nil && !m.standBusy && (m.standAt.IsZero() || now.Sub(m.standAt) >= m.standEvery()) {
+		var cmd tea.Cmd
+		m, cmd = m.pollStanding()
+		cmds = append(cmds, cmd)
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m Model) onSessTick() (tea.Model, tea.Cmd) {
@@ -158,7 +258,14 @@ func (m Model) onSessTick() (tea.Model, tea.Cmd) {
 	}
 	if m.sess.Over(m.clock()) {
 		m.sessSum = true // time is up: show the summary and stop the clock
+		if m.sess.Mode == session.Live && m.deps.Standings != nil && !m.standBusy {
+			return m.pollStanding() // one last look at the standings
+		}
 		return m, nil
+	}
+	if m.sess.Mode == session.Live {
+		nm, cmd := m.liveTick()
+		return nm, tea.Batch(cmd, sessTick())
 	}
 	return m, sessTick()
 }
@@ -200,9 +307,12 @@ func (m Model) sessSummaryBox() []string {
 			body = append(body, fmt.Sprintf("  %s %-3s %s", st.Dim.Render("·"), r.Index, m.resultCell(r)))
 		}
 	}
-	body = append(body, "", fmt.Sprintf("solved %d/%d", m.sessResult.Solved, len(m.sessResult.Rows)))
-	if s.Mode == session.Virtual {
-		body = append(body, fmt.Sprintf("penalty %d", m.sessResult.Penalty))
+	body = append(body, "", m.sessScore())
+	if row := m.liveRow(); row != nil {
+		body = append(body, st.Dim.Render("results can change after system testing"))
+	}
+	if m.standErr != "" {
+		body = append(body, st.Bad.Render(fit(m.standErr, w-6)))
 	}
 	if len(upsolve) > 0 {
 		body = append(body, "", st.Dim.Render("upsolve: "+strings.Join(upsolve, " ")))
@@ -226,10 +336,62 @@ func (m Model) resultCell(r session.Row) string {
 
 // contestResult is the session cell for a problem of the session's contest.
 func (m Model) contestResult(p cf.Problem) string {
+	if row := m.liveRow(); row != nil {
+		for i, sp := range m.standing.Problems {
+			if sp.Index == p.Index && i < len(row.Results) {
+				return m.liveCell(row.Results[i], m.standing.Contest.Type)
+			}
+		}
+	}
 	for _, r := range m.sessResult.Rows {
 		if r.Index == p.Index {
 			return m.resultCell(r)
 		}
 	}
 	return ""
+}
+
+// liveCell is a standings result: points (or the solve minute for ICPC) and wrong attempts; a star
+// marks a result that system testing has not confirmed yet.
+func (m Model) liveCell(r cf.ProblemResult, typ string) string {
+	st := m.styles()
+	star := ""
+	if r.Type == "PRELIMINARY" {
+		star = "*"
+	}
+	switch {
+	case r.Solved():
+		cell := fmt.Sprintf("%.0f%s", r.Points, star)
+		if typ == "ICPC" && r.BestSecs != nil {
+			cell = fmt.Sprintf("%dm%s", *r.BestSecs/60, star)
+		}
+		cell = st.Good.Render(cell)
+		if r.Rejected > 0 {
+			cell += st.Bad.Render(fmt.Sprintf(" +%d", r.Rejected))
+		}
+		return cell
+	case r.Rejected > 0:
+		return st.Bad.Render(fmt.Sprintf("-%d", r.Rejected))
+	}
+	return ""
+}
+
+// liveStatus is the mark of a problem in a live session, from the standings row.
+func (m Model) liveStatus(p cf.Problem) (store.Status, bool) {
+	row := m.liveRow()
+	if row == nil || !m.isBlind(p) {
+		return 0, false
+	}
+	for i, sp := range m.standing.Problems {
+		if sp.Index == p.Index && i < len(row.Results) {
+			switch r := row.Results[i]; {
+			case r.Solved():
+				return store.StatusSolved, true
+			case r.Rejected > 0:
+				return store.StatusAttempted, true
+			}
+			return store.StatusNone, true
+		}
+	}
+	return 0, false
 }

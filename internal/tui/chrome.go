@@ -87,10 +87,10 @@ func (m Model) header(w int) string {
 	}
 	if m.sess != nil {
 		banner := st.Warn.Render(m.sessLine())
-		if who != "" {
+		if who != "" && w-xansi.StringWidth(left)-xansi.StringWidth(banner+"  "+who)-1 >= 1 {
 			who = banner + "  " + who
 		} else {
-			who = banner
+			who = banner // too narrow for both: the clock matters more than the handle
 		}
 	}
 	gap := w - xansi.StringWidth(left) - xansi.StringWidth(who) - 1

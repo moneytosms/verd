@@ -81,6 +81,8 @@ type Deps struct {
 	// StartSession begins a contest session (virtual or practice) and stores it; EndSession forgets it.
 	StartSession func(c cf.Contest, mode string) (session.Session, error)
 	EndSession   func() error
+	// Standings downloads the live standings of a contest with the user's row (see cf.Client.Standings).
+	Standings func(contest int) (*cf.Standing, error)
 	// Snippets lists the snippet library for a language.
 	Snippets func(lang string) []Snippet
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
@@ -223,8 +225,13 @@ type Model struct {
 	raw         Data // last loaded data, before the session hides anything
 	sess        *session.Session
 	sessResult  session.Result
-	sessSum     bool              // the session summary modal is open
-	sessConfirm string            // mode awaiting a second keypress
+	sessSum     bool         // the session summary modal is open
+	sessConfirm string       // mode awaiting a second keypress
+	standing    *cf.Standing // latest live standings of the session contest
+	standAt     time.Time
+	standBusy   bool
+	standErr    string
+	sessFetchAt time.Time
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
@@ -381,6 +388,9 @@ func (m Model) sourceOpts() []string {
 }
 
 func (m Model) statusOf(p cf.Problem) store.Status {
+	if st, ok := m.liveStatus(p); ok {
+		return st
+	}
 	return m.status[fmt.Sprintf("%d%s", p.ContestID, p.Index)]
 }
 
@@ -721,6 +731,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case sessTickMsg:
 		return m.onSessTick()
+	case standingMsg:
+		return m.onStanding(msg), nil
 	case editorTickMsg:
 		if m.deps.EditorAlive != nil && m.deps.EditorAlive() {
 			return m, editorTick()

@@ -145,7 +145,9 @@ func (m Model) contestBox() []string {
 		}
 	}
 	if m.contestNote != "" {
-		body = append(body, st.Bad.Render(fit(m.contestNote, w-6)))
+		for _, l := range wrap(m.contestNote, w-6) {
+			body = append(body, st.Bad.Render(l))
+		}
 	}
 	for i, p := range ps {
 		cur := " "
@@ -158,7 +160,7 @@ func (m Model) contestBox() []string {
 		}
 		body = append(body, fmt.Sprintf("%s %s %-3s %s %s", cur, m.markOf(m.statusOf(p)), clean(p.Index), fit(clean(p.Name), w-24), last))
 	}
-	hint := "{contest.open} open  {contest.down}/{contest.up} move  r refetch  {contest.start} virtual  {contest.practice} practice  {contest.close} close"
+	hint := "{contest.open} open  {contest.down}/{contest.up} move  r refetch  {contest.start} session  {contest.practice} practice  {contest.close} close"
 	if m.sess != nil && m.sess.ContestID == c.ID {
 		body = append([]string{st.Warn.Render(m.sessLine()), ""}, body...)
 		hint = "{contest.open} open  {contest.down}/{contest.up} move  {contest.end_session} summary and end  {contest.close} close"

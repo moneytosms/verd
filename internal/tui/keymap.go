@@ -50,7 +50,7 @@ var keyActions = []keyAction{
 	{"contests", "open", "list the contest's Problems", ks("enter")},
 
 	{"contest", "close", "close", ks("q", "esc")},
-	{"contest", "start", "start a virtual contest session (finished contests)", ks("s")},
+	{"contest", "start", "start a session: virtual (finished contest), live (running) or wait for the start (upcoming)", ks("s")},
 	{"contest", "practice", "start a practice session: no timer or penalty", ks("p")},
 	{"contest", "end_session", "show the session summary and end it", ks("e")},
 	{"contest", "up", "move up", ks("k", "up")},

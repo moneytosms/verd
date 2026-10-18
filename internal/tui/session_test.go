@@ -1,6 +1,7 @@
 package tui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"strings"
 	"testing"
 	"time"
@@ -107,9 +108,13 @@ func TestSessionRefusals(t *testing.T) {
 	m := New(ps, "", deps).WithData(Data{Problems: ps, Contests: cs})
 	m, _ = send(m, "2")
 	m, _ = send(m, "enter") // the running contest sorts first
+	m, _ = send(m, "p")
+	if m.sess != nil || !strings.Contains(plain(m), "practice replays a finished contest") {
+		t.Fatalf("practice is for finished contests:\n%s", plain(m))
+	}
 	m, _ = send(m, "s")
-	if m.sess != nil || !strings.Contains(plain(m), "finished contests") {
-		t.Fatalf("live contests are not sessions yet:\n%s", plain(m))
+	if m.sess != nil || !strings.Contains(plain(m), "set your handle first") {
+		t.Fatalf("a live session needs the handle for the standings:\n%s", plain(m))
 	}
 	m, _ = send(m, "esc")
 	m, _ = send(m, "j")
@@ -125,5 +130,134 @@ func TestSessionRefusals(t *testing.T) {
 	m, _ = send(m, "s")
 	if !strings.Contains(plain(m), "end the running session first") {
 		t.Fatalf("one session at a time:\n%s", plain(m))
+	}
+}
+
+// collect runs a command (flattening batches) and returns the messages it produced.
+func collect(cmd tea.Cmd) []tea.Msg {
+	if cmd == nil {
+		return nil
+	}
+	msg := cmd()
+	if b, ok := msg.(tea.BatchMsg); ok {
+		var out []tea.Msg
+		for _, c := range b {
+			out = append(out, collect(c)...)
+		}
+		return out
+	}
+	return []tea.Msg{msg}
+}
+
+func TestLiveSessionUsesStandings(t *testing.T) {
+	now := time.Unix(100_600, 0)
+	ps := []cf.Problem{{ContestID: 7, Index: "A", Name: "a", Rating: 800}, {ContestID: 7, Index: "B", Name: "b"}}
+	cs := []cf.Contest{{ID: 7, Name: "Live round", Phase: "CODING", Start: 100_000, Duration: 7200}}
+	calls, fetches := 0, 0
+	secs := int64(120)
+	deps := Deps{
+		Now: func() time.Time { return now },
+		StartSession: func(c cf.Contest, mode string) (session.Session, error) {
+			return session.Session{ContestID: c.ID, Name: c.Name, Mode: mode, Start: c.Start, End: c.Start + c.Duration}, nil
+		},
+		FetchContest: func(int) error { fetches++; return nil },
+		Standings: func(id int) (*cf.Standing, error) {
+			calls++
+			return &cf.Standing{
+				Contest:  cf.Contest{ID: id, Type: "CF"},
+				Problems: []cf.Problem{{Index: "A", Points: 500}, {Index: "B", Points: 1000}},
+				Row: &cf.StandingRow{Rank: 5, Points: 490, Results: []cf.ProblemResult{
+					{Points: 490, Rejected: 1, Type: "PRELIMINARY", BestSecs: &secs}, {}}},
+			}, nil
+		},
+	}
+	m := New(ps, "", deps).WithData(Data{Handle: "me", Problems: ps, Contests: cs})
+	m, _ = send(m, "2")
+	m, _ = send(m, "enter")
+	m, _ = send(m, "s")
+	if !strings.Contains(plain(m), "live contest") || m.sess != nil {
+		t.Fatalf("confirm first:\n%s", plain(m))
+	}
+	m, _ = send(m, "s")
+	if m.sess == nil || m.sess.Mode != session.Live || m.sess.End != 107_200 {
+		t.Fatalf("%+v", m.sess)
+	}
+	if !strings.Contains(plain(m), "live  1:50:00 left") {
+		t.Fatalf("real clock, not a fresh timer:\n%s", plain(m))
+	}
+
+	// the first tick downloads the standings; the next ones wait a minute
+	m, cmd := m.liveTick()
+	for _, msg := range collect(cmd) {
+		nm, _ := m.Update(msg)
+		m = nm.(Model)
+	}
+	if calls != 1 || fetches != 0 {
+		t.Fatalf("calls=%d fetches=%d", calls, fetches)
+	}
+	out := plain(m)
+	for _, want := range []string{"rank 5  490 pts", "490* +1"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("live view missing %q:\n%s", want, out)
+		}
+	}
+	if m.statusOf(ps[0]) != store.StatusSolved || m.statusOf(ps[1]) != store.StatusNone {
+		t.Fatal("marks follow the standings row")
+	}
+	now = now.Add(30 * time.Second)
+	if _, cmd := m.liveTick(); cmd != nil && len(collect(cmd)) > 0 || calls != 1 {
+		t.Fatalf("polled again after 30s: %d", calls)
+	}
+	now = now.Add(31 * time.Second)
+	m, cmd = m.liveTick()
+	for _, msg := range collect(cmd) {
+		nm, _ := m.Update(msg)
+		m = nm.(Model)
+	}
+	if calls != 2 {
+		t.Fatalf("calls=%d", calls)
+	}
+
+	// the end: one last poll, then the summary warns that system testing can change it
+	now = time.Unix(107_201, 0)
+	nm, cmd := m.Update(sessTickMsg{})
+	m = nm.(Model)
+	for _, msg := range collect(cmd) {
+		nm, _ := m.Update(msg)
+		m = nm.(Model)
+	}
+	if !m.sessSum || calls != 3 || !strings.Contains(plain(m), "results can change after system testing") {
+		t.Fatalf("calls=%d\n%s", calls, plain(m))
+	}
+}
+
+func TestLiveSessionWaitsForTheStart(t *testing.T) {
+	now := time.Unix(1000, 0)
+	cs := []cf.Contest{{ID: 8, Name: "Soon", Phase: "BEFORE", Start: 1600, Duration: 7200}}
+	standings, fetches := 0, 0
+	deps := Deps{
+		Now: func() time.Time { return now },
+		StartSession: func(c cf.Contest, mode string) (session.Session, error) {
+			return session.Session{ContestID: c.ID, Mode: mode, Start: c.Start, End: c.Start + c.Duration}, nil
+		},
+		FetchContest: func(int) error { fetches++; return nil },
+		Standings:    func(int) (*cf.Standing, error) { standings++; return &cf.Standing{}, nil },
+	}
+	m := New(nil, "", deps).WithData(Data{Handle: "me", Contests: cs})
+	m, _ = send(m, "2")
+	m, _ = send(m, "enter")
+	m, _ = send(m, "s")
+	m, _ = send(m, "s")
+	if m.sess == nil || !strings.Contains(plain(m), "live  starts in 0:10:00") {
+		t.Fatalf("countdown:\n%s", plain(m))
+	}
+	if nm, cmd := m.liveTick(); len(collect(cmd)) != 0 || standings != 0 || fetches != 0 || nm.sess == nil {
+		t.Fatal("nothing is requested before the start")
+	}
+	now = time.Unix(1601, 0)
+	m, cmd := m.liveTick()
+	collect(cmd)
+	if fetches != 1 || standings != 1 {
+		t.Fatalf("at the start: fetches=%d standings=%d", fetches, standings)
 	}
 }

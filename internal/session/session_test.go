@@ -62,3 +62,18 @@ func TestOverAndLeft(t *testing.T) {
 		t.Fatal("left")
 	}
 }
+
+func TestLiveSession(t *testing.T) {
+	s := Session{ContestID: 7, Mode: Live, Start: 1000, End: 8200}
+	now := time.Unix(900, 0)
+	if s.Started(now) || s.UntilStart(now) != 100*time.Second || s.Elapsed(now) != 0 {
+		t.Fatal("before the start")
+	}
+	if !s.Started(time.Unix(1000, 0)) || s.UntilStart(time.Unix(1000, 0)) != 0 {
+		t.Fatal("at the start")
+	}
+	r := Score(s, []string{"A"}, []cf.Submission{sub(7, "A", "WRONG_ANSWER", 1060), sub(7, "A", "OK", 1600)})
+	if r.Solved != 1 || r.Penalty != 10+PenaltyMinutes {
+		t.Fatalf("a live fallback score has a penalty: %+v", r)
+	}
+}

@@ -74,7 +74,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q`, `esc` | `close` | close |
-| `s` | `start` | start a virtual contest session (finished contests) |
+| `s` | `start` | start a session: virtual (finished contest), live (running) or wait for the start (upcoming) |
 | `p` | `practice` | start a practice session: no timer or penalty |
 | `e` | `end_session` | show the session summary and end it |
 | `k`, `up` | `up` | move up |

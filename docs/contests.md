@@ -1,6 +1,8 @@
 # Contest sessions
 
-Replay a finished Codeforces contest as a timed session: open the Contests tab (`2`), press `enter` on a contest, then:
+Run a Codeforces contest as a timed session: open the Contests tab (`2`), press `enter` on a contest, then:
+
+Finished contests are replayed:
 
 | Key | Starts |
 | --- | --- |
@@ -21,4 +23,15 @@ Scoring is local and ICPC style: a solve costs its minute plus 20 minutes per wr
 
 One session runs at a time and survives restarting verd.
 
-Not yet: joining a contest that is running right now, and waiting for one to start. Codeforces' own virtual participation (the register button on the site) is separate and does not see these Submissions as virtual.
+## Live contests
+
+Press `s` on a contest that is running or upcoming (register on the Codeforces site first; verd cannot do that for you).
+
+- **Upcoming:** the session waits. The header counts down (`live  starts in 0:09:41`); when the contest begins verd downloads the Problems by itself.
+- **Running:** the clock is the real one (`live  1:50:00 left`), not a fresh timer.
+- **Results come from the Codeforces standings, not from verd's own scoring.** Every minute verd downloads the standings and keeps your row: rank and points for Codeforces-type rounds (`rank 5  490 pts`), solved and penalty for ICPC-type ones. The modal shows each problem's points and wrong attempts (`490* +1`; a star means system testing has not confirmed it yet) and the marks follow your row. Between polls nothing changes, so a fresh Verdict can take up to a minute to show; submitting is unchanged.
+- Codeforces only serves the complete standings, which is several MB for a big round, so verd streams the response and keeps one row. After a download over 8 MB it polls every two minutes instead of every minute.
+- If your handle is not in the standings the header says `not in the standings (register on the site)`; set `handle` first, since the row is found by it.
+- At the end a last download feeds the summary, which warns that results can change after system testing.
+
+Codeforces' own virtual participation (the register button on the site) is separate and does not see replayed Submissions as virtual.

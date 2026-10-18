@@ -11,6 +11,7 @@ import (
 const (
 	Virtual  = "virtual"  // replay a finished contest from now, for its duration
 	Practice = "practice" // same view, no deadline and no penalty
+	Live     = "live"     // the real contest: its own clock, results from the Codeforces standings
 )
 
 // PenaltyMinutes is added per wrong attempt before the accepted one (ICPC style).
@@ -25,6 +26,9 @@ type Session struct {
 	End       int64 // unix seconds; 0 = no deadline (practice)
 }
 
+// Started reports whether the clock is running; a live session can be created before the start.
+func (s Session) Started(now time.Time) bool { return now.Unix() >= s.Start }
+
 // Over reports whether the deadline has passed.
 func (s Session) Over(now time.Time) bool { return s.End > 0 && now.Unix() >= s.End }
 
@@ -37,7 +41,12 @@ func (s Session) Left(now time.Time) time.Duration {
 }
 
 // Elapsed is the time since the start.
-func (s Session) Elapsed(now time.Time) time.Duration { return now.Sub(time.Unix(s.Start, 0)) }
+func (s Session) Elapsed(now time.Time) time.Duration { return max(0, now.Sub(time.Unix(s.Start, 0))) }
+
+// UntilStart is the wait before a live session begins, 0 once it has.
+func (s Session) UntilStart(now time.Time) time.Duration {
+	return max(0, time.Unix(s.Start, 0).Sub(now))
+}
 
 // Row is one problem's result.
 type Row struct {
@@ -88,7 +97,7 @@ func Score(s Session, indexes []string, subs []cf.Submission) Result {
 	for _, r := range res.Rows {
 		if r.Solved {
 			res.Solved++
-			if s.Mode == Virtual {
+			if s.Mode != Practice {
 				res.Penalty += r.Minute + PenaltyMinutes*r.Wrong
 			}
 		}

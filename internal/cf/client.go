@@ -38,6 +38,7 @@ type Problem struct {
 	Rating      int      `json:"rating"`
 	Tags        []string `json:"tags"`
 	SolvedCount int      `json:"-"`
+	Points      float64  `json:"points"` // contest points (Codeforces-type contests), 0 outside contests
 }
 
 type Client struct {
@@ -144,13 +145,11 @@ func (c *Client) Problemset(ctx context.Context) ([]Problem, error) {
 // ContestProblems fetches one contest's Problems from contest.standings. Unlike problemset.problems
 // it also covers running contests; a contest that has not started is an APIError. Ratings are unknown.
 func (c *Client) ContestProblems(ctx context.Context, contest int) ([]Problem, error) {
-	var r struct {
-		Problems []Problem `json:"problems"`
-	}
-	if err := c.api(ctx, "contest.standings", url.Values{"contestId": {strconv.Itoa(contest)}}, &r); err != nil {
+	st, err := c.Standings(ctx, contest, "")
+	if err != nil {
 		return nil, err
 	}
-	return r.Problems, nil
+	return st.Problems, nil
 }
 
 // Page fetches a problem page. A Cloudflare challenge (header, 403, or interstitial body) is ErrChallenge.
@@ -198,6 +197,7 @@ type Contest struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
 	Phase    string `json:"phase"`
+	Type     string `json:"type"` // CF, ICPC or IOI: how the standings are scored
 	Duration int64  `json:"durationSeconds"`
 	Start    int64  `json:"startTimeSeconds"`
 }

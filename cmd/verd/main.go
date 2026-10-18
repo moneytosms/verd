@@ -513,12 +513,18 @@ func runTUI(path string) error {
 		StartSession: func(c cf.Contest, mode string) (session.Session, error) {
 			now := time.Now().Unix()
 			x := session.Session{ContestID: c.ID, Name: c.Name, Mode: mode, Start: now}
-			if mode == session.Virtual {
+			switch mode {
+			case session.Virtual:
 				x.End = now + c.Duration
+			case session.Live: // the real clock
+				x.Start, x.End = c.Start, c.Start+c.Duration
 			}
 			return x, s.SaveSession(x)
 		},
 		EndSession: s.EndSession,
+		Standings: func(contest int) (*cf.Standing, error) {
+			return client.Standings(context.Background(), contest, cfg.Handle)
+		},
 		Snippets: func(lang string) []tui.Snippet {
 			var out []tui.Snippet
 			for _, s := range workspace.ListSnippets(cfg.SnippetsPath(), lang, cfg.Lang[lang]) {
