@@ -112,7 +112,8 @@ func TestEmbeddedFocusRoutesKeys(t *testing.T) {
 }
 
 func TestEmbeddedResizePropagates(t *testing.T) {
-	term := startTerm(t, `stty size; trap 'stty size' WINCH; while :; do sleep 0.05; done`)
+	// print the size again and again: a single print at startup can race with the pty being sized
+	term := startTerm(t, `while :; do stty size; sleep 0.05; done`)
 	m := embedModel(t, term, 100, 20)
 	_, right := m.layout()
 	want := "20 " + itoa(right)
