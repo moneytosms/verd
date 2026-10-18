@@ -1397,7 +1397,7 @@ func TestConfigHotReload(t *testing.T) {
 	// Send ConfigChangedMsg
 	nm, cmd := m.Update(ConfigChangedMsg{})
 	m = nm.(Model)
-	if cmd != nil {
+	if !idle(cmd) {
 		t.Fatalf("ConfigChangedMsg should not produce a command, got %v", cmd)
 	}
 	if reloaded != 1 {
@@ -1436,7 +1436,7 @@ func TestConfigReloadHandlesErrors(t *testing.T) {
 	m := New(nil, "", deps)
 	nm, cmd := m.Update(ConfigChangedMsg{})
 	m = nm.(Model)
-	if cmd != nil {
+	if !idle(cmd) {
 		t.Fatal("error should not produce a command")
 	}
 	if !strings.Contains(m.Notice, "config reload failed") {
@@ -1457,7 +1457,7 @@ func TestConfigReloadInvalidKeysKeepsOldKeymap(t *testing.T) {
 	m := New(nil, "", deps)
 	nm, cmd := m.Update(ConfigChangedMsg{})
 	m = nm.(Model)
-	if cmd != nil {
+	if !idle(cmd) {
 		t.Fatal("error should not produce a command")
 	}
 	if !strings.Contains(m.Notice, "keys:") {

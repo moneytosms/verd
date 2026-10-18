@@ -310,7 +310,7 @@ func TestSplitCopyInputExpectedOnly(t *testing.T) {
 		t.Fatal("no selected test")
 	}
 	m, cmd := send(m, "I")
-	if cmd != nil || !strings.Contains(m.Notice, "select a test") {
+	if !idle(cmd) || !strings.Contains(m.Notice, "select a test") {
 		t.Fatalf("statement pane: cmd=%v notice=%q", cmd, m.Notice)
 	}
 	for _, pane := range []int{paneTests, paneDetail} {
@@ -331,7 +331,7 @@ func TestSplitCopyOutputOnly(t *testing.T) {
 	row, _ := m.selected()
 	m.pane = paneTests
 	m, cmd := send(m, "O")
-	if cmd != nil || !strings.Contains(m.Notice, "run tests first") {
+	if !idle(cmd) || !strings.Contains(m.Notice, "run tests first") {
 		t.Fatalf("no result: cmd=%v notice=%q", cmd, m.Notice)
 	}
 	m.run = &testRun{results: []runner.Result{{Name: row.Name, Verdict: runner.WA, Output: "7\n"}}}

@@ -71,7 +71,7 @@ Trivial C++ programs, 16 threads: ~3.8k iterations/s default, ~5.4k with `--batc
 - `f` in the TUI opens a test full-screen: input, expected, stdout and stderr, for any verdict. `verd test <file> -v` prints the same for every test; `-t sample-2` runs one test.
 - Failures get a `why:` line in plain English (segfault, division by zero, `std::out_of_range`, Python `IndexError`, ...) and an `at:` source location when stderr has one.
 - New C++ files include `debug.h` under `#ifdef LOCAL`. `debug(a, b)` prints `[L12] a = 5, b = [1, 2, 3]` to stderr for any value (containers, nested, pairs, tuples, maps, queues). Local test builds define `LOCAL`; on Codeforces `debug` compiles to nothing, so there is nothing to strip. C has `debug("%d", x)`; Python has `debug(f"{x=}", y)` (runs set the `LOCAL` environment variable).
-- `debugm(grid)` prints a matrix one row per line; `debugg(adj)` prints an adjacency list as `u: v v v` (weighted `v(w)`; vectors and maps both work).
+- The same `debug(x)` handles 2D values: a matrix, grid, adjacency list or map of lists prints one row per line (`0: [1, 2]`), so there is no separate matrix or graph macro. On Codeforces `debug(...)` expands to `42`, as in tourist's template.
 - verd writes `debug.h` into `~/.local/share/verd/include` and a `compile_flags.txt` into the Workspace root so clangd finds it. Re-run `verd init --force` to refresh your Templates (existing ones are never overwritten otherwise).
 
 ### Partial runs and failures

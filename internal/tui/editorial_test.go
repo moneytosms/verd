@@ -104,7 +104,7 @@ func TestEditorialNoneAndHiddenInSession(t *testing.T) {
 	m, cmd := send(m, "enter")
 	m, _ = step(t, m, cmd)
 	m, cmd = send(m, "H")
-	if m.edv != nil || cmd != nil || !strings.Contains(m.Notice, "hidden during the session") {
+	if m.edv != nil || !idle(cmd) || !strings.Contains(m.Notice, "hidden during the session") {
 		t.Fatalf("editorial must be hidden in a session: %q", m.Notice)
 	}
 

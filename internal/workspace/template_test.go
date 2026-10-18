@@ -133,7 +133,7 @@ func TestDefaultCppTemplateBuildsWithDebugHeader(t *testing.T) {
 	src := filepath.Join(dir, "main.cpp")
 	os.WriteFile(src, []byte(text), 0o644)
 	for _, flags := range [][]string{{"-DLOCAL", "-I" + config.IncludeDir()}, {}} { // local and Codeforces-style
-		args := append(append([]string{"-std=c++20", "-Wall", "-Werror"}, flags...), "-o", filepath.Join(dir, "a"), src)
+		args := append(append([]string{"-std=c++20", "-Wall", "-Wno-unused-value", "-Werror"}, flags...), "-o", filepath.Join(dir, "a"), src)
 		if out, err := exec.Command(gxx, args...).CombinedOutput(); err != nil {
 			t.Fatalf("%v: %v\n%s", flags, err, out)
 		}

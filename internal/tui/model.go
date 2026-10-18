@@ -173,7 +173,8 @@ type Model struct {
 	syncedAt    time.Time
 
 	Problems []cf.Problem
-	Notice   string // transient note shown in the footer
+	Notice   string // transient note shown in the footer; fades after a few seconds
+	noticeID int
 	deps     Deps
 	status   map[string]store.Status
 
@@ -652,12 +653,27 @@ func (m Model) load(p cf.Problem, force bool) tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if c, ok := msg.(noticeClearMsg); ok {
+		if c.id == m.noticeID {
+			m.Notice = ""
+		}
+		return m, nil
+	}
+	old := m.Notice
 	nm, cmd := m.update(msg)
 	if mm, ok := nm.(Model); ok {
 		nm = mm.rewrap()
+		if n := nm.(Model); n.Notice != "" && n.Notice != old { // a new notice fades after a few seconds
+			n.noticeID++
+			id := n.noticeID
+			nm, cmd = n, tea.Batch(cmd, tea.Tick(5*time.Second, func(time.Time) tea.Msg { return noticeClearMsg{id} }))
+		}
 	}
 	return nm, cmd
 }
+
+// noticeClearMsg removes the footer notice numbered id, unless a newer one has replaced it.
+type noticeClearMsg struct{ id int }
 
 // rewrap re-renders the statement when the pane it lives in changed width (resize, layout switch).
 func (m Model) rewrap() Model {

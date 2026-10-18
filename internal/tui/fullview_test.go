@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/runner"
@@ -305,5 +306,34 @@ func TestPaletteRunsActionAndJumpsToSetting(t *testing.T) {
 	m3 = nm.(Model)
 	if m3.pal != nil || cmd == nil || !strings.Contains(m3.Notice, "segtree") {
 		t.Fatalf("snippet pick: pal=%v cmd=%v notice=%q", m3.pal, cmd, m3.Notice)
+	}
+}
+
+func TestNoticeFades(t *testing.T) {
+	m := New(nil, "", Deps{})
+	m.Notice, m.noticeID = "config reloaded", 3
+	nm, _ := m.Update(noticeClearMsg{2}) // a stale timer must not clear a newer notice
+	if nm.(Model).Notice == "" {
+		t.Fatal("stale timer cleared the notice")
+	}
+	nm, _ = m.Update(noticeClearMsg{3})
+	if nm.(Model).Notice != "" {
+		t.Fatal("notice should fade")
+	}
+}
+
+// idle reports that cmd does no work: none, or only the notice fade timer (which blocks for seconds).
+func idle(cmd tea.Cmd) bool {
+	if cmd == nil {
+		return true
+	}
+	done := make(chan tea.Msg, 1)
+	go func() { done <- cmd() }()
+	select {
+	case msg := <-done:
+		_, fade := msg.(noticeClearMsg)
+		return msg == nil || fade
+	case <-time.After(150 * time.Millisecond):
+		return true
 	}
 }

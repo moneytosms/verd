@@ -1,6 +1,6 @@
 // verd debug.h: debug(a, b, ...) prints "[L12] a = 5, b = [1, 2, 3]" to stderr.
 // Handles ints, floats, strings, pairs, tuples, optionals, any container (nested), queues, stacks, heaps.
-// debugm(grid) prints one row per line; debugg(adj) prints a graph as "u: v v v" (weighted: "v(w)").
+// 2D values (matrix, grid, adjacency list, map of lists) print one row per line, "row: [..]".
 // Needs C++20. Included only under -DLOCAL (verd adds it for local runs); on Codeforces debug() is a no-op.
 #pragma once
 #include <bits/stdc++.h>
@@ -70,50 +70,38 @@ inline vector<string> names(const string &s) {
     return r;
 }
 
-template <class... T> void out(const char *ns, int line, const T &...xs) {
-    vector<string> n = names(ns), v{str(xs)...};
-    cerr << "[L" << line << "]";
-    for (size_t i = 0; i < v.size(); i++) cerr << (i ? ", " : " ") << n[i] << " = " << v[i];
-    cerr << endl;
+template <class T> constexpr bool is_range = requires(const T &x) { std::begin(x); std::end(x); } && !is_convertible_v<T, string_view>;
+
+// a 2D value (vector of vectors, grid, adjacency list, map of lists) is shown one row per line
+template <class T> constexpr bool is_table() {
+    if constexpr (is_range<T>) {
+        using E = remove_cvref_t<decltype(*std::begin(declval<const T &>()))>;
+        if constexpr (requires { typename T::mapped_type; }) return is_range<typename T::mapped_type>;
+        else return is_range<E>;
+    } else return false;
 }
 
-// "v" or, for a (v, weight) pair, "v(w)"
-template <class E> string edge(const E &e) {
-    if constexpr (requires { e.first; e.second; }) return str(e.first) + "(" + str(e.second) + ")";
-    else return str(e);
-}
-
-// debugm: one row per line, row index in front
-template <class M> void matrix(const char *name, int line, const M &m) {
-    cerr << "[L" << line << "] " << name << " =\n";
+template <class T> string table(const T &t) {
+    string s;
     size_t i = 0;
-    for (const auto &row : m) {
-        cerr << "  " << i++ << ":";
-        for (const auto &x : row) {
-            if constexpr (is_same_v<remove_cvref_t<decltype(x)>, char>) cerr << ' ' << x;
-            else cerr << ' ' << str(x);
-        }
-        cerr << '\n';
+    for (const auto &e : t) {
+        if constexpr (requires { typename T::mapped_type; }) s += "\n  " + str(e.first) + ": " + str(e.second);
+        else s += "\n  " + to_string(i++) + ": " + str(e);
     }
+    return s;
 }
 
-// debugg: adjacency list (vector or map of neighbour lists), one node per line
-template <class G> void graph(const char *name, int line, const G &g) {
-    cerr << "[L" << line << "] " << name << " =\n";
-    auto show = [](const auto &u, const auto &adj) {
-        cerr << "  " << str(u) << ":";
-        for (const auto &e : adj) cerr << ' ' << edge(e);
-        cerr << '\n';
-    };
-    if constexpr (requires { typename G::key_type; }) {
-        for (const auto &[u, adj] : g) show(u, adj);
-    } else {
-        size_t u = 0;
-        for (const auto &adj : g) show(u++, adj);
-    }
+template <class T> string show(const T &x) {
+    if constexpr (is_table<T>()) { string s = table(x); return s.empty() ? "[]" : s; }
+    else return str(x);
+}
+
+template <class... T> void out(const char *ns, int line, const T &...xs) {
+    vector<string> n = names(ns), v{show(xs)...};
+    cerr << "[L" << line << "]";
+    for (size_t i = 0; i < v.size(); i++) cerr << (i ? ", " : " ") << n[i] << " =" << (v[i][0] == '\n' ? "" : " ") << v[i];
+    cerr << endl;
 }
 } // namespace dbg_
 
 #define debug(...) dbg_::out(#__VA_ARGS__, __LINE__, __VA_ARGS__)
-#define debugm(m) dbg_::matrix(#m, __LINE__, m)
-#define debugg(g) dbg_::graph(#g, __LINE__, g)

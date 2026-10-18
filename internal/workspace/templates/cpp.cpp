@@ -7,9 +7,7 @@ using namespace std;
 #ifdef LOCAL
 #include "debug.h"
 #else
-#define debug(...) ((void)0)
-#define debugm(...) ((void)0)
-#define debugg(...) ((void)0)
+#define debug(...) 42
 #endif
 
 using ll = long long;
