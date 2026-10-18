@@ -12,7 +12,7 @@ run_tests = "ctrl+t"
 submit = ["s", "ctrl+s"]   # a list gives several keys
 ```
 
-Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `stats`, `picker`, `settings`, `problem`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
+Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `stats`, `picker`, `settings`, `problem`, `editorial`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
 
 Other changes in this release: opening a Problem and switching tabs no longer closes it (it is hidden until you return to its tab; `esc` closes it).
 
@@ -273,7 +273,10 @@ Small things open in a modal over the screen you were on. `q` or `esc` closes a 
 | Filters | `f` | see Problems |
 | Diff | `d` on a failing test, or a stress counterexample | `j`/`k` scroll, `w` saves a counterexample, `q` closes |
 | Submission | `s` | Live status and final Verdict; `q` closes, tracking continues |
-| Contest Problems | `enter` on a contest | `j`/`k` move, `enter` opens, `q` closes |
+| Contest Problems | `enter` on a contest | `j`/`k` move, `enter` opens, `s` starts a [session](./contests.md), `H` editorial, `q` closes |
+| Editorial | `H` | `enter` reveals the next hint, `j`/`k` scroll, `o` opens the post, `q` closes. See [Editorials](./editorials.md) |
+| Snippets | `i` | Type to filter, `enter` copies, `tab` switches language, `esc` closes. See [Snippets](./config.md#snippets) |
+| Session summary | `e` in the contest modal, or when the time is up | `e`/`enter` ends the session, `esc` keeps it |
 | Test manager | `T` | `j`/`k` move, `a` add, `e` edit, `c` copy (also works on samples), `d` delete (asks first), `E` add in Neovim, `t` run, `q` closes |
 | Test editor | `a`, `e` or `c` in the manager | Type, arrows move, `tab` switches input / expected, `ctrl+s` saves, `esc` cancels. Paste works. |
 

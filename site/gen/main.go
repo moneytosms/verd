@@ -35,6 +35,24 @@ var docOrder = []struct{ file, blurb string }{
 	{"embedded-pane", "Running Neovim inside verd: focus keys, sides, zoom, known gaps."},
 	{"sources", "CSES next to Codeforces, the Source filter and manual solved marks."},
 	{"submit", "Browser handoff, direct mode, verd login and the risks."},
+	{"contests", "Virtual, practice and live contest sessions: timer, scoring, hidden ratings."},
+	{"editorials", "Where editorials come from, hint-by-hint reveal and offline use."},
+}
+
+// guideOrder is the Guide chapters in reading order (docs/guide/<file>.md); title is the sidebar label.
+var guideOrder = []struct{ file, title, blurb string }{
+	{"start", "Quick start", "Install, set up and solve your first problem in five minutes."},
+	{"problems", "Finding problems", "Search, filters, the Picker, stats, CSES and working offline."},
+	{"solve", "Read, edit and test", "The Problem view, editors, test runs, verdicts, comparison modes and custom tests."},
+	{"stress", "Stress testing", "Find the input where your solution and a brute force disagree, and make it fast."},
+	{"submit", "Submitting", "Browser handoff and direct mode, and following the verdict."},
+	{"contests", "Contests and sessions", "Virtual, practice and live sessions with a timer and scoring."},
+	{"editorials", "Editorials", "Read an editorial one hint at a time."},
+	{"snippets", "Snippets and Templates", "Starter files and a library of ready algorithms: bfs, dijkstra, modpow and more."},
+	{"customize", "Customize", "Config, themes, shortcuts, reading, layout and your own languages."},
+	{"cli", "Command line", "Every command, exit codes and scripting examples."},
+	{"editors", "Neovim and editors", "Splits, the embedded pane, keymaps and snippets in your editor."},
+	{"troubleshooting", "Troubleshooting", "The doctor, common errors and where verd keeps its files."},
 }
 
 type navItem struct {
@@ -51,6 +69,8 @@ type page struct {
 	SideTitle               string
 	TOC                     []navItem
 	Prev, Next              *navItem
+	Kicker, Heading, Lead   string // heading of an index page
+	Numbered                bool   // number the cards (a reading order)
 }
 
 var md = goldmark.New(
@@ -140,16 +160,56 @@ func build(out string) (err error) {
 		decorate(&pg, "../", "docs")
 		must(write(filepath.Join(out, "docs", d.file+".html"), docTmpl, pg))
 	}
-	idx := page{Title: "Documentation", Desc: "Guides and references for verd.", Root: "../", Side: nil}
+	idx := page{Title: "Documentation", Desc: "Guides and references for verd.", Root: "../", Side: nil,
+		Kicker: "Documentation", Heading: "References", Lead: "Every option, key and file, written to be read by people and to be followed by agents. New here? Start with the Guide."}
 	decorate(&idx, "../", "docs")
 	idx.TOC = items
 	must(write(filepath.Join(out, "docs", "index.html"), docIndexTmpl, idx))
-	fmt.Printf("built %d pages into %s\n", 3+len(items)+1, out)
+
+	// guide
+	must(os.MkdirAll(filepath.Join(out, "guide"), 0o755))
+	var gitems []navItem
+	gbodies := map[string]string{}
+	gtocs := map[string][]navItem{}
+	gtitles := map[string]string{}
+	for _, g := range guideOrder {
+		src, err := os.ReadFile("docs/guide/" + g.file + ".md")
+		must(err)
+		body, title, toc := renderIn(src, "guide")
+		gbodies[g.file], gtocs[g.file], gtitles[g.file] = body, toc, title
+		gitems = append(gitems, navItem{Title: g.title, Href: g.file + ".html", Blurb: g.blurb})
+	}
+	for i, g := range guideOrder {
+		side := make([]navItem, len(gitems))
+		copy(side, gitems)
+		side[i].On = true
+		pg := page{Title: gtitles[g.file], Desc: g.blurb, Root: "../", Body: gbodies[g.file], Side: side, SideTitle: "Guide", TOC: gtocs[g.file]}
+		if i > 0 {
+			pg.Prev = &gitems[i-1]
+		}
+		if i < len(gitems)-1 {
+			pg.Next = &gitems[i+1]
+		}
+		decorate(&pg, "../", "guide")
+		must(write(filepath.Join(out, "guide", g.file+".html"), docTmpl, pg))
+	}
+	gidx := page{Title: "Guide", Desc: "A step-by-step guide to everything verd does, with small examples.", Root: "../",
+		Kicker: "Guide", Heading: "Learn verd, step by step", Lead: "Short chapters with examples you can copy. Read them in order, or jump to the one you need. For every option and key, see the References.", Numbered: true}
+	decorate(&gidx, "../", "guide")
+	gidx.TOC = gitems
+	must(write(filepath.Join(out, "guide", "index.html"), docIndexTmpl, gidx))
+	fmt.Printf("built %d pages into %s\n", 3+len(items)+1+len(gitems)+1, out)
 	return nil
 }
 
 // render converts markdown to HTML: tables, heading ids, .md links -> .html, copy-able code blocks.
 func render(src []byte, root string) (body, title string, toc []navItem) {
+	return renderIn(src, "")
+}
+
+// renderIn is render for a page of a section ("" = docs, "guide"): links are written for GitHub, where
+// docs/guide/x.md links to ../config.md, and are mapped onto the site layout.
+func renderIn(src []byte, section string) (body, title string, toc []navItem) {
 	var buf bytes.Buffer
 	must(md.Convert(src, &buf))
 	b := buf.String()
@@ -163,16 +223,28 @@ func render(src []byte, root string) (body, title string, toc []navItem) {
 	b = h2Re.ReplaceAllString(b, `<h2 id="$1">$2<a class="anchor" href="#$1">#</a></h2>`)
 	b = hrefRe.ReplaceAllStringFunc(b, func(a string) string {
 		m := hrefRe.FindStringSubmatch(a)
-		return `href="` + fixLink(m[1]) + m[2] + `"`
+		return `href="` + fixLink(m[1], section) + m[2] + `"`
 	})
 	return b, title, toc
 }
 
 // fixLink maps links written for GitHub (./keys.md, ./adr/..., ../README.md) onto the site.
-func fixLink(h string) string {
+func fixLink(h, section string) string {
 	switch {
 	case h == "", strings.Contains(h, "://"), strings.HasPrefix(h, "mailto:"):
 		return h
+	case section == "guide" && strings.HasSuffix(h, ".md"):
+		base := strings.TrimSuffix(filepath.Base(h), ".md")
+		switch {
+		case strings.HasPrefix(h, "../"): // docs/guide/x.md -> docs/<base>.md; install and usage are site pages
+			if base == "install" || base == "usage" {
+				return "../" + base + ".html"
+			}
+			return "../docs/" + base + ".html"
+		}
+		return base + ".html" // ./other-chapter.md
+	case strings.HasSuffix(h, ".md") && (strings.HasPrefix(h, "./guide/") || strings.HasPrefix(h, "guide/")):
+		return "../guide/" + strings.TrimSuffix(filepath.Base(h), ".md") + ".html"
 	case strings.HasPrefix(h, "./adr"), strings.HasPrefix(h, "adr/"), strings.HasPrefix(h, "./docs/adr"):
 		return repo + "/tree/main/docs/adr"
 	case strings.HasSuffix(h, ".md") && (strings.HasPrefix(h, "./docs/") || strings.HasPrefix(h, "docs/")):
@@ -224,12 +296,12 @@ func nav(root, on string) string {
 	}
 	return `<nav><div class="wrap"><a class="logo" href="` + root + `index.html"><img class="mark" src="` + root + `assets/favicon.svg" alt="" width="26" height="26">verd<span>_</span></a>` +
 		l("home", "index.html#features", "Features") + l("install", "install.html", "Install") + l("usage", "usage.html", "Usage") +
-		l("docs", "docs/index.html", "Docs") + `<a class="gh" href="` + repo + `">GitHub</a></div></nav>`
+		l("guide", "guide/index.html", "Guide") + l("docs", "docs/index.html", "Docs") + `<a class="gh" href="` + repo + `">GitHub</a></div></nav>`
 }
 
 func footer(root string) string {
 	return `<footer><div class="wrap"><span>verd · MIT licensed · not affiliated with Codeforces or CSES</span><span>` +
-		`<a href="` + repo + `">GitHub</a> · <a href="` + repo + `/releases">Releases</a> · <a href="` + root + `docs/index.html">Docs</a> · ` +
+		`<a href="` + repo + `">GitHub</a> · <a href="` + repo + `/releases">Releases</a> · <a href="` + root + `guide/index.html">Guide</a> · <a href="` + root + `docs/index.html">Docs</a> · ` +
 		`<a href="` + repo + `/issues">Issues</a></span></div></footer>`
 }
 
@@ -274,8 +346,8 @@ var proseTmpl = template.Must(template.New("prose").Parse(head + `<div class="wr
 var docTmpl = template.Must(template.New("doc").Funcs(nil).Parse(head + `<div class="wrap"><div class="layout"><nav class="side" aria-label="Documentation"><h4>{{.SideTitle}}</h4>{{range .Side}}<a{{if .On}} class="on"{{end}} href="{{.Href}}">{{.Title}}</a>{{end}}</nav>
 <article class="prose">{{.BodyHTML}}<div class="pager">{{if .Prev}}<a href="{{.Prev.Href}}"><small>Previous</small>{{.Prev.Title}}</a>{{else}}<span></span>{{end}}{{if .Next}}<a class="next" href="{{.Next.Href}}"><small>Next</small>{{.Next.Title}}</a>{{end}}</div></article>` + tocBlock + `</div></div>` + tail))
 
-var docIndexTmpl = template.Must(template.New("idx").Parse(head + `<div class="wrap"><div class="pagehead"><div class="kicker">Documentation</div><h1>Guides and references</h1><p>Everything verd does, written to be read by people and to be followed by agents.</p></div>
-<div class="docgrid">{{range .TOC}}<a class="card" href="{{.Href}}"><h3>{{.Title}}</h3><p>{{.Blurb}}</p></a>{{end}}</div></div>` + tail))
+var docIndexTmpl = template.Must(template.New("idx").Funcs(template.FuncMap{"inc": func(i int) int { return i + 1 }}).Parse(head + `<div class="wrap"><div class="pagehead"><div class="kicker">{{.Kicker}}</div><h1>{{.Heading}}</h1><p>{{.Lead}}</p></div>
+<div class="docgrid">{{range $i, $c := .TOC}}<a class="card" href="{{$c.Href}}"><h3>{{if $.Numbered}}<span class="num">{{inc $i}}</span>{{end}}{{$c.Title}}</h3><p>{{$c.Blurb}}</p></a>{{end}}</div></div>` + tail))
 
 // BodyHTML is Body as trusted HTML.
 func (p page) BodyHTML() template.HTML { return template.HTML(p.Body) }

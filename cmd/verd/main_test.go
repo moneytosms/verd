@@ -458,3 +458,43 @@ func TestChooseMux(t *testing.T) {
 		}
 	}
 }
+
+func TestSnippetsDirIsSettableAndInTheSchema(t *testing.T) {
+	cfgHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgHome)
+	var out bytes.Buffer
+	if err := run([]string{"config", "set", "snippets_dir", "~/dotfiles/verd"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := run([]string{"config", "get", "snippets_dir"}, &out); err != nil || strings.TrimSpace(out.String()) != "~/dotfiles/verd" {
+		t.Fatalf("%v %q", err, out.String())
+	}
+	out.Reset()
+	if err := run([]string{"schema"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	var s struct {
+		Properties map[string]struct {
+			Type    string
+			Default any
+			Enum    []string
+		}
+	}
+	if err := json.Unmarshal(out.Bytes(), &s); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range config.SettableKeys() {
+		if _, ok := s.Properties[k]; !ok {
+			t.Errorf("schema is missing %s", k)
+		}
+	}
+	if s.Properties["autotest"].Default != true || s.Properties["embed_side"].Enum[0] != "left" || s.Properties["tabs"].Type != "array" {
+		t.Fatalf("defaults and enums come from the config: %+v", s.Properties["autotest"])
+	}
+	out.Reset()
+	run([]string{"__complete", "config-keys"}, &out)
+	if !strings.Contains(out.String(), "snippets_dir") || !strings.Contains(out.String(), "reading_width") {
+		t.Fatalf("completion lists every settable key:\n%s", out.String())
+	}
+}

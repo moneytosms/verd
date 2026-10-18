@@ -130,6 +130,8 @@ Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexampl
 
 ## Documentation
 
+New here? Follow the **[Guide](./docs/guide/start.md)** (also at [moneytosms.github.io/verd/guide](https://moneytosms.github.io/verd/guide/index.html)): short chapters with examples for finding problems, testing, stress, submitting, contests, editorials, snippets, customizing and the command line. The pages below are the reference.
+
 | Page | Covers |
 | --- | --- |
 | [Customizing](./docs/customizing.md) | Set up and restyle verd from the CLI: shortcuts, themes, layout. Written for people and agents. |

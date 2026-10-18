@@ -280,7 +280,7 @@ func Load(path string) (Config, error) {
 // Get returns a top-level settable key's value as text.
 func (c Config) Get(key string) (string, bool) {
 	vals := map[string]any{
-		"handle": c.Handle, "workspace": c.Workspace, "default_lang": c.DefaultLang, "theme": c.Theme,
+		"handle": c.Handle, "workspace": c.Workspace, "snippets_dir": c.SnippetsDir, "default_lang": c.DefaultLang, "theme": c.Theme,
 		"background": c.Background, "editor": c.Editor, "split": c.Split, "embed_focus_key": c.EmbedFocusKey,
 		"embed_side": c.EmbedSide, "embed_zoom": c.EmbedZoom, "submit_mode": c.SubmitMode, "time_multiplier": c.TimeMultiplier,
 		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest,

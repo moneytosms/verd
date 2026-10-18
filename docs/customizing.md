@@ -114,6 +114,7 @@ down = ["j", "down", "ctrl+n"]
 | `problems`, `contests`, `stats`, `picker`, `settings` | That tab. |
 | `contest` | The contest modal on the Contests tab. |
 | `problem` | The Problem view, including the diff and stress overlays. |
+| `editorial` | The editorial modal (`H`): reveal, scroll, open the post. |
 | `testmgr` | The test manager modal (`T`). |
 | `submission` | The Submission modal. |
 | `help` | The help overlay. |

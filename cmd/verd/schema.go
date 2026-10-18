@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
+
+	"github.com/moneytosms/verd/internal/config"
 )
 
 // schemaCmd prints a JSON Schema for config.toml.
@@ -22,56 +26,34 @@ func buildSchema() map[string]any {
 	// Top-level properties
 	props := make(map[string]any)
 
-	// String fields
-	for _, k := range []string{"handle", "workspace", "default_lang", "theme", "editor", "embed_focus_key"} {
-		props[k] = map[string]any{
-			"type":        "string",
-			"description": "Configuration key",
+	// every key `verd config set` accepts, with its type, enum values and default
+	def := config.Default()
+	for _, k := range config.KeyInfos() {
+		p := map[string]any{"type": k.Type}
+		if k.Type == "array" {
+			p["items"] = map[string]any{"type": "string"}
 		}
-	}
-
-	// Background: enum
-	props["background"] = map[string]any{
-		"type":    "string",
-		"enum":    []string{"auto", "dark", "light"},
-		"default": "auto",
-	}
-
-	// Split: enum
-	props["split"] = map[string]any{
-		"type":    "string",
-		"enum":    []string{"auto", "tmux", "herdr", "embedded", "suspend"},
-		"default": "auto",
-	}
-
-	// EmbedSide: enum
-	props["embed_side"] = map[string]any{
-		"type":    "string",
-		"enum":    []string{"left", "right"},
-		"default": "right",
-	}
-
-	// SubmitMode: enum
-	props["submit_mode"] = map[string]any{
-		"type":    "string",
-		"enum":    []string{"browser", "direct"},
-		"default": "browser",
-	}
-
-	// Boolean fields
-	for _, k := range []string{"autotest", "source_cf", "source_cses"} {
-		props[k] = map[string]any{
-			"type":    "boolean",
-			"default": false,
+		if len(k.Options) > 0 {
+			p["enum"] = k.Options
 		}
-	}
-
-	// Number fields
-	for _, k := range []string{"time_multiplier", "float_eps", "embed_ratio"} {
-		props[k] = map[string]any{
-			"type":    "number",
-			"minimum": 0,
+		if v, ok := def.Get(k.Name); ok && v != "" {
+			switch k.Type {
+			case "boolean":
+				p["default"] = v == "true"
+			case "number", "integer":
+				if f, err := strconv.ParseFloat(v, 64); err == nil {
+					p["default"] = f
+				}
+			case "array":
+				p["default"] = strings.Split(v, ",")
+			default:
+				p["default"] = v
+			}
 		}
+		if k.Type == "number" || k.Type == "integer" {
+			p["minimum"] = 0
+		}
+		props[k.Name] = p
 	}
 
 	// Lang table: [lang.<name>]
@@ -94,6 +76,10 @@ func buildSchema() map[string]any {
 		"type":        "integer",
 		"description": "Codeforces compiler ID",
 	}
+	for _, k := range []string{"time_multiplier", "float_eps", "memory_multiplier"} {
+		langProps[k] = map[string]any{"type": "number", "minimum": 0}
+	}
+	langProps["template"] = map[string]any{"type": "string", "description": "Path to a custom Solution Template for this language"}
 
 	props["lang"] = map[string]any{
 		"type": "object",
@@ -119,7 +105,7 @@ func buildSchema() map[string]any {
 		},
 	}
 	keysPatternProps := make(map[string]any)
-	for _, ctx := range []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "testmgr", "submission", "help", "editor"} {
+	for _, ctx := range []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "editorial", "testmgr", "submission", "help", "editor"} {
 		keysPatternProps[ctx] = map[string]any{
 			"type":                 "object",
 			"additionalProperties": actionValues,

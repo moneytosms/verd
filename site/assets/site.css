@@ -205,3 +205,4 @@ button:active{transform:scale(.96)}
 @keyframes blink{50%{opacity:0}}
 @keyframes bootglow{from{transform:translate(-50%,-50%) scale(.95)}to{transform:translate(-50%,-50%) scale(1.08)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}#boot{display:none}}
+.docgrid .card h3 .num{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;margin-right:10px;border-radius:8px;font:700 13px var(--mono);color:var(--green);background:#1d2619;vertical-align:1px}

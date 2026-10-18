@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+
+	"github.com/moneytosms/verd/internal/config"
 )
 
 // completionsCmd handles `verd completions bash|zsh|fish` and the hidden `verd __complete <what>`.
@@ -32,8 +34,7 @@ func completionsCmd(out io.Writer, args []string) error {
 func completeCmd(out io.Writer, what string) error {
 	switch what {
 	case "config-keys":
-		// Static list of settable keys
-		for _, k := range []string{"autotest", "background", "default_lang", "editor", "embed_focus_key", "embed_ratio", "embed_side", "float_eps", "handle", "source_cf", "source_cses", "split", "submit_mode", "theme", "time_multiplier", "workspace"} {
+		for _, k := range config.SettableKeys() {
 			fmt.Fprintln(out, k)
 		}
 	case "key-actions":

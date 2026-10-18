@@ -53,6 +53,7 @@ Everything is configurable, live, from Settings (`5`) or from `config.toml` (edi
 
 ## Where to go next
 
+- The [Guide](guide/index.html) walks through everything with small examples: finding problems, testing, stress, submitting, contests, editorials, snippets, customizing and the command line
 - [Customizing](docs/customizing.html) for shortcuts, themes, layout and reading options
 - [Testing and stress](docs/testing.html) for Comparison Modes and the stress workflow
 - [Submitting](docs/submit.html) for browser handoff versus direct submit, and the risks

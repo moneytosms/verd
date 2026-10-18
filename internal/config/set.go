@@ -31,6 +31,7 @@ var settable = map[string]struct {
 }{
 	"handle":           {kString, nil},
 	"workspace":        {kString, nil},
+	"snippets_dir":     {kString, nil},
 	"default_lang":     {kString, nil},
 	"theme":            {kString, nil},
 	"background":       {kString, []string{"auto", "dark", "light"}},
@@ -199,5 +200,22 @@ func SettableKeys() []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// KeyInfo describes a key `verd config set` accepts: for the JSON Schema and completions.
+type KeyInfo struct {
+	Name    string
+	Type    string   // JSON Schema type: string, number, integer, boolean or array
+	Options []string // allowed values of an enum key
+}
+
+// KeyInfos lists every settable key, sorted by name.
+func KeyInfos() []KeyInfo {
+	types := map[keyKind]string{kString: "string", kFloat: "number", kInt: "integer", kBool: "boolean", kStrings: "array"}
+	var out []KeyInfo
+	for _, k := range SettableKeys() {
+		out = append(out, KeyInfo{k, types[settable[k].kind], settable[k].opts})
+	}
 	return out
 }

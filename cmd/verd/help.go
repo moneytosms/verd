@@ -452,7 +452,7 @@ func renderRoot(w io.Writer, color bool) {
 		{"--version", "print the version"},
 	}, s.name)
 	section(w, s, "MORE")
-	fmt.Fprintf(w, "  %s for one command, docs in docs/ and at https://moneytosms.github.io/verd\n", s.wrap(s.name, "verd help <command>"))
+	fmt.Fprintf(w, "  %s for one command; guide and reference at https://moneytosms.github.io/verd\n", s.wrap(s.name, "verd help <command>"))
 }
 
 // findDoc resolves "snippet add" style topics, trying two words and then one.

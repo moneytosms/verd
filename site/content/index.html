@@ -18,17 +18,17 @@
     <code id="cmd"><b>$</b> curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh</code>
     <button id="copy" type="button">Copy</button>
   </div>
-  <p class="sub">or <code>go install github.com/moneytosms/verd/cmd/verd@latest</code></p>
+  <p class="sub">or <code>go install github.com/moneytosms/verd/cmd/verd@latest</code> · <a href="{{ROOT}}guide/index.html">Read the guide</a></p>
   <div class="shot"><img src="{{ROOT}}assets/hero.svg" alt="verd showing a problem with all local tests AC, then a stress run that found a counterexample"></div>
 </div></header>
 
 <section id="features"><div class="wrap">
   <div class="kicker">Features</div>
   <h2>Everything the contest loop needs</h2>
-  <p class="sec-lead">Local first, offline tolerant, and out of your way. <a href="{{ROOT}}usage.html">See the full tour</a>.</p>
+  <p class="sec-lead">Local first, offline tolerant, and out of your way. <a href="{{ROOT}}usage.html">See the full tour</a> or <a href="{{ROOT}}guide/index.html">follow the guide</a>.</p>
   <div class="grid">
     <div class="card c1"><span class="ic">AC WA TLE</span><h3>Local verdicts first</h3><p>AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a Codeforces submission.</p></div>
-    <div class="card c2"><span class="ic">nvim</span><h3>Neovim stays Neovim</h3><p>It opens in a tmux or herdr split beside verd, or embedded in the pane. Run <code>verd test</code>, <code>submit</code> and <code>stress</code> from inside Neovim.</p></div>
+    <div class="card c2"><span class="ic">nvim</span><h3>Neovim stays Neovim</h3><p>It opens in a tmux or herdr split beside verd, or inside verd's own window. Run <code>verd test</code>, <code>submit</code> and <code>stress</code> from inside Neovim.</p></div>
     <div class="card c3"><span class="ic">stress</span><h3>Stress testing built in</h3><p>Per-language <code>gen</code> and <code>brute</code> templates. <kbd>S</kbd> finds a counterexample and shows the diff; <kbd>w</kbd> saves it as your next custom test.</p></div>
     <div class="card c4"><span class="ic">stats</span><h3>Your history, used</h3><p>Solved marks, per-topic stats, a rating chart, and a problem picker with a weak-topics preset.</p></div>
     <div class="card c5"><span class="ic">cache</span><h3>Offline tolerant</h3><p>Everything renders from a local SQLite cache. The network refreshes it in the background and respects rate limits.</p></div>
@@ -36,6 +36,9 @@
     <div class="card c2"><span class="ic">$EDITOR</span><h3>Your editor</h3><p>Neovim by default. Switch to vim, helix, nano, micro, emacs or VS Code in Settings, live.</p></div>
     <div class="card c3"><span class="ic">keys</span><h3>Every key is yours</h3><p>Rebind any shortcut from Settings or <code>config.toml</code>, with fuzzy search, presets (vim, emacs, arrows) and export/import. Hints and help follow your bindings.</p></div>
     <div class="card c4"><span class="ic">theme</span><h3>Themes and reading</h3><p>Eight themes or your own palette, border styles, statement width, spacing and heading style. Edits to <code>config.toml</code> apply live.</p></div>
+    <div class="card c5"><span class="ic">contest</span><h3>Contest sessions</h3><p>Replay a finished contest as a timed virtual run, practice one, or join a live round with real standings. Ratings and tags stay hidden while it runs.</p></div>
+    <div class="card c6"><span class="ic">editorial</span><h3>Editorials, one hint at a time</h3><p><kbd>H</kbd> shows the editorial with every hint and the solution locked. <kbd>enter</kbd> opens the next one, strictly in order.</p></div>
+    <div class="card c1"><span class="ic">snippets</span><h3>A snippet library</h3><p>Thirty-five ready algorithms for C++, C and Python: bfs, dijkstra, dsu, segment tree, modpow. <kbd>i</kbd> copies one; add your own with <code>verd snippet add</code>.</p></div>
     <div class="card c6"><span class="ic">safe</span><h3>Safe submit by default</h3><p>Browser handoff copies the solution, opens the submit page and tracks the verdict. Direct submit is opt-in and experimental.</p></div>
   </div>
 </div></section>
