@@ -16,6 +16,8 @@
 
 Switching tabs does not close a problem; it waits for you on its own tab.
 
+**Images** in statements are fetched in the background and drawn in place: as real pixels in kitty and Ghostty (the Kitty graphics protocol), and as colour half-blocks in every other terminal, Alacritty included. Until an image arrives, or when it cannot be fetched, you see `[image]` with its link. In tmux or zellij verd uses half-blocks. Change it with `verd config set images auto|kitty|blocks|off`.
+
 ## Edit
 
 `e` creates `main.<ext>` from your [Template](./snippets.md) the first time and opens your editor.

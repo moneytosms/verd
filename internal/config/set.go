@@ -47,6 +47,7 @@ var settable = map[string]struct {
 	"autotest":         {kBool, nil},
 	"source_cf":        {kBool, nil},
 	"source_cses":      {kBool, nil},
+	"images":           {kString, []string{"auto", "kitty", "blocks", "off"}},
 	"reading_size":     {kString, []string{"compact", "normal", "large"}},
 	"reading_width":    {kInt, nil},
 	"reading_margin":   {kInt, nil},

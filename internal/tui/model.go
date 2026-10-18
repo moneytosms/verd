@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"math/rand"
 	"os/exec"
 	"sort"
@@ -111,6 +112,7 @@ type Deps struct {
 	Autotest bool
 	// Mouse controls mouse reporting and wheel behavior.
 	Mouse       bool
+	FetchImage  func(url string) (image.Image, error) // nil: download into the cache
 	WheelLines  int
 	MouseSelect bool
 	// LoadState and SaveState persist per-Problem choices (Comparison Mode).
@@ -175,7 +177,11 @@ type Model struct {
 	Problems []cf.Problem
 	Notice   string // transient note shown in the footer; fades after a few seconds
 	noticeID int
-	zen      bool // session-only: hide the header, footer and Problem info; keep the statement and tests
+	imgs     map[string]image.Image // statement images by address (nil = could not be loaded)
+	imgSent  map[string]bool        // Kitty uploads and placements already written
+	imgWant  bool                   // the statement just loaded: fetch its images
+	rawOut   string                 // terminal escape sequences to write after this update
+	zen      bool                   // session-only: hide the header, footer and Problem info; keep the statement and tests
 	deps     Deps
 	status   map[string]store.Status
 
@@ -667,9 +673,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	old := m.Notice
+	if m.imgSent == nil {
+		m.imgSent = map[string]bool{}
+	}
 	nm, cmd := m.update(msg)
 	if mm, ok := nm.(Model); ok {
 		nm = mm.rewrap()
+		if n := nm.(Model); n.imgWant || n.rawOut != "" {
+			cmds := []tea.Cmd{cmd}
+			if n.imgWant {
+				cmds = append(cmds, n.fetchImages()...)
+			}
+			if n.rawOut != "" {
+				cmds = append(cmds, tea.Raw(n.rawOut))
+			}
+			n.imgWant, n.rawOut = false, ""
+			nm, cmd = n, tea.Batch(cmds...)
+		}
 		if n := nm.(Model); n.Notice != "" && n.Notice != old { // a new notice fades after a few seconds
 			n.noticeID++
 			id := n.noticeID
@@ -690,7 +710,7 @@ func (m Model) rewrap() Model {
 	w := m.stmtWidth()
 	opts := m.readingOptions()
 	if body, err := scrape.Render(m.detail.Statement, w, m.styles().Glamour, opts); err == nil {
-		m.body, m.bodyW = strings.Split(body, "\n"), w
+		m = m.setBody(body, w)
 		m.scroll = min(m.scroll, m.maxScroll())
 	}
 	return m
@@ -798,7 +818,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
-			m.body, m.bodyW = strings.Split(msg.body, "\n"), msg.w
+			m = m.setBody(msg.body, msg.w)
+			m.imgWant = true
 			m = m.loadCases()
 			if m.pending != nil {
 				r := *m.pending
@@ -806,6 +827,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.attachExternal(r)
 			}
 		}
+	case imagesMsg:
+		m = m.onImages(msg)
 	case syncDoneMsg:
 		m.Notice = msg.text
 		if msg.err != nil {
@@ -1477,7 +1500,7 @@ func (m Model) screen() string {
 	}
 	if bx := m.modalBox(); bx != nil {
 		for i, l := range lines { // scrim: mute what is behind the modal so it stands out
-			lines[i] = st.Dim.Render(xansi.Strip(l))
+			lines[i] = st.Dim.Render(scrimText(l))
 		}
 		modalY := m.height - 3
 		if !m.ftrOn() {

@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"fmt"
 	"html"
 	"strings"
 	"unicode"
@@ -118,10 +119,12 @@ func Render(statementHTML string, width int, style string, o Options) (string, e
 	st.Find("sub").Each(func(_ int, s *goquery.Selection) {
 		s.ReplaceWithHtml(html.EscapeString(script(s.Text(), subFrom, subTo, "_")))
 	})
-	// Images can't render in a terminal: replace with alt text + OSC 8 link.
-	st.Find("img").Each(func(_ int, s *goquery.Selection) {
+	// Images are not text: leave a token paragraph (see below).
+	// Each image becomes its own paragraph holding ImageToken(i), so the caller can draw the i-th
+	// image (ImageURLs) there, or turn the token into "[image]" when it cannot.
+	st.Find("img").Each(func(i int, s *goquery.Selection) {
 		src, _ := s.Attr("src")
-		s.ReplaceWithHtml("<a href=\"" + html.EscapeString(absImage(src)) + "\">[image]</a>")
+		s.ReplaceWithHtml("<p><a href=\"" + html.EscapeString(absImage(src)) + "\">" + ImageToken(i) + "</a></p>")
 	})
 	body, err := st.Html()
 	if err != nil {
@@ -243,4 +246,22 @@ func absImage(src string) string {
 		return "https://codeforces.com" + src
 	}
 	return src
+}
+
+// ImageToken is the text left in a rendered statement where its i-th image goes.
+func ImageToken(i int) string { return fmt.Sprintf("VERDIMG%dZ", i) }
+
+// ImageURLs are the addresses of a statement's images, in the order of their tokens.
+func ImageURLs(statementHTML string) []string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(statementHTML))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	doc.Find(".problem-statement").Find(".header, .sample-tests").Remove()
+	doc.Find(".problem-statement img").Each(func(_ int, s *goquery.Selection) {
+		src, _ := s.Attr("src")
+		out = append(out, absImage(src))
+	})
+	return out
 }

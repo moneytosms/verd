@@ -1,12 +1,15 @@
 package tui
 
 import (
+	"image"
+	"image/color"
 	"math/rand"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/store"
 )
 
@@ -73,5 +76,56 @@ func TestPickerWorksWithOnlyCSES(t *testing.T) {
 	m, _ = send(m, "4")
 	if m.picked == nil || m.picked.ContestID != 1068 {
 		t.Fatalf("CSES-only picker found nothing:\n%s", plain(m))
+	}
+}
+
+// drain runs cmd and everything it batches (skipping timers), feeding each message back to m.
+func drain(t *testing.T, m Model, cmd tea.Cmd) Model {
+	t.Helper()
+	if cmd == nil {
+		return m
+	}
+	switch msg := cmd().(type) {
+	case nil:
+	case tea.BatchMsg:
+		for _, c := range msg {
+			m = drain(t, m, c)
+		}
+	case imagesMsg, detailMsg:
+		nm, next := m.Update(msg)
+		m = drain(t, nm.(Model), next)
+	}
+	return m
+}
+
+func TestStatementImagesAreDrawn(t *testing.T) {
+	pic := image.NewRGBA(image.Rect(0, 0, 64, 32))
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			pic.Set(x, y, color.RGBA{200, 30, 30, 255})
+		}
+	}
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"><p>See</p><p><img src="/file/abc"></p><p>after</p></div>`}, nil
+		},
+		FetchImage: func(u string) (image.Image, error) {
+			if u != "https://cses.fi/file/abc" {
+				t.Errorf("image address: %s", u)
+			}
+			return pic, nil
+		},
+	}
+	m := New([]cf.Problem{{ContestID: 1068, Index: cf.SourceCSES, Name: "N"}}, "", deps)
+	m.cfgVals["images"] = "blocks"
+	m, cmd := send(m, "enter")
+	if out := plain(drain(t, m, cmd)); !strings.Contains(out, "▀") || strings.Contains(out, "VERDIMG") {
+		t.Fatalf("image should be drawn as blocks, token hidden:\n%s", out)
+	}
+	m = New([]cf.Problem{{ContestID: 1068, Index: cf.SourceCSES, Name: "N"}}, "", deps)
+	m.cfgVals["images"] = "off"
+	m, cmd = send(m, "enter")
+	if out := plain(drain(t, m, cmd)); strings.Contains(out, "▀") || !strings.Contains(out, "[image]") {
+		t.Fatalf("images off should leave a link:\n%s", out)
 	}
 }

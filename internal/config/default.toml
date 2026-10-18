@@ -82,6 +82,9 @@
 # zoom = "alt+z"
 
 # Reading preferences: how statements are laid out and styled.
+# images = "auto"
+#   Statement images in the terminal: auto | kitty | blocks | off.
+#   auto: the Kitty protocol in kitty and Ghostty, colour half-blocks everywhere else.
 # reading_size = "normal"
 #   One switch for how roomy statements feel: compact | normal | large.
 #   large: a narrower column and wider margin (verd cannot change your terminal's
