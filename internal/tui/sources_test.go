@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -62,5 +63,15 @@ func TestSourceOffHidesItsProblems(t *testing.T) {
 	m.cfgVals["source_cses"] = "true"
 	if m = m.refilter(); len(m.visible) != 2 {
 		t.Fatal("enabling shows it")
+	}
+}
+
+func TestPickerWorksWithOnlyCSES(t *testing.T) {
+	ps := []cf.Problem{{ContestID: 1068, Index: cf.SourceCSES, Name: "Weird Algorithm"}}
+	m := New(nil, "", Deps{}).WithData(Data{Problems: ps}).WithRand(rand.New(rand.NewSource(1)))
+	m.cfgVals["source_cf"], m.cfgVals["source_cses"] = "false", "true"
+	m, _ = send(m, "4")
+	if m.picked == nil || m.picked.ContestID != 1068 {
+		t.Fatalf("CSES-only picker found nothing:\n%s", plain(m))
 	}
 }

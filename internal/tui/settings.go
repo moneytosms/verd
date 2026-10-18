@@ -169,7 +169,7 @@ func (m Model) applyLive(key, value string) Model {
 		if m.filter.Source != "" && !m.sourceOn(m.filter.Source) {
 			m.filter.Source = ""
 		}
-		m.cursor = 0
+		m.cursor, m.pickInit, m.pickExpr, m.pickPreset = 0, false, "", "" // the Picker redraws under the new sources
 		m = m.refilter()
 	case "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
 		// Invalidate bodyW to force re-render with new reading preferences

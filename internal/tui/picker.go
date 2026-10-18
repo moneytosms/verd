@@ -44,12 +44,22 @@ func Pick(problems []cf.Problem, status func(cf.Problem) store.Status, f Filter,
 	return pool[rng.Intn(len(pool))], len(hit), true
 }
 
+// pickDefault is PickFilter, minus the rating band when Codeforces is off: CSES Problems are unrated
+// and would never match it.
+func (m Model) pickDefault() Filter {
+	f := PickFilter(m.stats.Rating)
+	if !m.sourceOn(cf.SourceCF) {
+		f.MinRating, f.MaxRating = 0, 0
+	}
+	return f
+}
+
 // WithRand sets the random source (tests seed it).
 func (m Model) WithRand(r *rand.Rand) Model { m.rng = r; return m }
 
 // weakFilter is the "weak topics" preset: the 3 weakest tags, in the user's band, unsolved.
 func (m Model) weakFilter() (Filter, bool) {
-	f := PickFilter(m.stats.Rating)
+	f := m.pickDefault()
 	for _, t := range m.stats.Weaknesses {
 		f.AnyOf = append(f.AnyOf, t.Tag)
 	}
@@ -74,7 +84,7 @@ func (m Model) roll() Model {
 // enterPicker prepares the Picker tab the first time it is shown.
 func (m Model) enterPicker() Model {
 	if !m.pickInit {
-		m.pickInit, m.pickFilter = true, PickFilter(m.stats.Rating)
+		m.pickInit, m.pickFilter = true, m.pickDefault()
 		m = m.roll()
 	}
 	return m
@@ -86,7 +96,7 @@ func (m Model) withWeakPreset() Model {
 	m.pickInit = true
 	if !ok {
 		m.pickPreset = ""
-		m.pickFilter = PickFilter(m.stats.Rating)
+		m.pickFilter = m.pickDefault()
 		m.pickNote = "no weak topics yet: sync more Submissions (a topic needs 20+ Problems in your band)"
 		return m.roll()
 	}
@@ -133,7 +143,10 @@ func (m Model) viewPicker(b *strings.Builder) string {
 	}
 	b.WriteString("\n")
 	f := m.pickFilter
-	desc := fmt.Sprintf("rating %d-%d", f.MinRating, f.MaxRating)
+	desc := "any rating"
+	if f.MinRating > 0 || f.MaxRating > 0 {
+		desc = fmt.Sprintf("rating %d-%d", f.MinRating, f.MaxRating)
+	}
 	if m.pickPreset != "" {
 		desc += ", preset: " + m.pickPreset + " (" + clean(strings.Join(f.AnyOf, ", ")) + ")"
 	}

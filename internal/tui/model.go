@@ -486,7 +486,7 @@ func (m Model) updateInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			f.Unsolved = true // the Picker only suggests unsolved Problems
 			if f.MinRating == 0 && f.MaxRating == 0 {
-				d := PickFilter(m.stats.Rating)
+				d := m.pickDefault()
 				f.MinRating, f.MaxRating = d.MinRating, d.MaxRating
 			}
 			m.pickFilter, m.pickExpr, m.pickPreset, m.pickNote = f, m.input.text, "", ""
