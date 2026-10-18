@@ -8,10 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
 
@@ -38,7 +40,38 @@ type Material struct {
 	Locale string // "en", "ru" or "" when the page does not say
 }
 
-var blogHref = regexp.MustCompile(`/blog/entry/(\d+)`)
+var blogPath = regexp.MustCompile(`^/blog/entry/(\d+)/?$`)
+
+// clean drops control characters: titles and labels come from the network and end up in a terminal.
+func clean(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+// linkOf turns a scraped href into a safe link: relative ones resolve against Codeforces, only
+// http(s) is kept, and a Codeforces blog post gets its URL rebuilt from the id alone.
+func linkOf(href string) (link string, blogID int, ok bool) {
+	base, err := url.Parse(cf.BaseURL)
+	if err != nil {
+		return "", 0, false
+	}
+	u, err := base.Parse(strings.TrimSpace(href))
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return "", 0, false
+	}
+	host := strings.TrimPrefix(u.Hostname(), "www.")
+	if host == strings.TrimPrefix(base.Hostname(), "www.") || host == "codeforces.com" {
+		if g := blogPath.FindStringSubmatch(u.Path); g != nil {
+			id, _ := strconv.Atoi(g[1])
+			return cf.BaseURL + "/blog/entry/" + g[1], id, true
+		}
+	}
+	return clean(u.String()), 0, true
+}
 
 func kindOf(label string) Kind {
 	l := strings.ToLower(label)
@@ -69,17 +102,14 @@ func ParseMaterials(page []byte) ([]Material, error) {
 		}
 		box.Find("ul li a[href]").Each(func(_ int, a *goquery.Selection) {
 			href, _ := a.Attr("href")
+			link, id, ok := linkOf(href)
+			if !ok {
+				return
+			}
 			loc := strings.Trim(strings.TrimSpace(a.Find(".resource-locale").Text()), "()")
 			a.Find(".resource-locale").Remove()
-			label := strings.TrimSpace(a.Text())
-			m := Material{Kind: kindOf(label), Label: label, URL: href, Locale: loc}
-			if g := blogHref.FindStringSubmatch(href); g != nil {
-				m.BlogID, _ = strconv.Atoi(g[1])
-			}
-			if strings.HasPrefix(m.URL, "/") {
-				m.URL = cf.BaseURL + m.URL
-			}
-			out = append(out, m)
+			label := clean(strings.TrimSpace(a.Text()))
+			out = append(out, Material{Kind: kindOf(label), Label: label, URL: link, BlogID: id, Locale: clean(loc)})
 		})
 	})
 	return out, nil
@@ -163,7 +193,7 @@ func Sections(content string, contest int, index string) (blocks []Block, whole 
 	kids.Slice(from, to).Each(func(_ int, el *goquery.Selection) {
 		if el.Is("div.spoiler") {
 			flush()
-			title := strings.TrimSpace(el.Find("b.spoiler-title").First().Text())
+			title := clean(strings.TrimSpace(el.Find("b.spoiler-title").First().Text()))
 			body, _ := el.Find(".spoiler-content").First().Html()
 			blocks = append(blocks, Block{Title: title, HTML: body, Spoiler: true})
 			return
@@ -220,9 +250,9 @@ const materialsTTL = 6 * time.Hour
 func titleText(html string) string {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
-		return html
+		return clean(html)
 	}
-	return strings.TrimSpace(doc.Text())
+	return clean(strings.TrimSpace(doc.Text()))
 }
 
 // Load returns a problem's editorial, cache-first: the materials box comes from the problem

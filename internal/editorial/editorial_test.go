@@ -219,3 +219,58 @@ func TestLoadNoEditorialAndRussianOnly(t *testing.T) {
 		t.Fatalf("CSES has no editorials: %+v %v", res, err)
 	}
 }
+
+func TestHostileMaterialsAreSanitized(t *testing.T) {
+	page := "<html><body><div class=\"roundbox\"><div class=\"caption\">Contest materials</div><ul>" +
+		"<li><a href=\"/blog/entry/5\">Tutorial\x1b[31mred</a></li>" +
+		"<li><a href=\"https://evil.example/blog/entry/6\">Tutorial</a></li>" +
+		"<li><a href=\"javascript:alert(1)\">Tutorial</a></li>" +
+		"<li><a href=\"/blog/entry/7?x=1#y\">Tutorial #2</a></li>" +
+		"<li><a href=\"//codeforces.com/blog/entry/8/\">Tutorial #3</a></li>" +
+		"<li><a href=\"https://youtu.be/abc\">Video Tutorial</a></li>" +
+		"</ul></div></body></html>"
+	ms, err := ParseMaterials([]byte(page))
+	if err != nil {
+		t.Fatal(err)
+	}
+	byURL := map[string]Material{}
+	for _, m := range ms {
+		byURL[m.URL] = m
+		if strings.ContainsAny(m.Label+m.URL, "\x1b\x07") {
+			t.Fatalf("control characters survived: %+v", m)
+		}
+	}
+	if m := byURL["https://codeforces.com/blog/entry/5"]; m.BlogID != 5 || m.Label != "Tutorial[31mred" {
+		t.Fatalf("relative blog link: %+v", m)
+	}
+	if m, ok := byURL["https://evil.example/blog/entry/6"]; !ok || m.BlogID != 0 {
+		t.Fatalf("a foreign host is a plain link, never a blog id to fetch: %+v", m)
+	}
+	for u := range byURL {
+		if strings.HasPrefix(u, "javascript:") {
+			t.Fatal("javascript: links must be dropped")
+		}
+	}
+	if byURL["https://codeforces.com/blog/entry/7"].BlogID != 7 {
+		t.Fatal("the URL is rebuilt from the id alone: the query and fragment are dropped")
+	}
+	if byURL["https://codeforces.com/blog/entry/8"].BlogID != 8 {
+		t.Fatalf("protocol-relative codeforces link with a trailing slash: %+v", byURL)
+	}
+	if m := byURL["https://youtu.be/abc"]; m.Kind != Video || m.BlogID != 0 {
+		t.Fatalf("%+v", m)
+	}
+	if pick, ok := PickTutorial(ms); !ok || pick.BlogID == 0 {
+		t.Fatalf("%+v", pick)
+	}
+}
+
+func TestSpoilerTitleIsCleaned(t *testing.T) {
+	c := "<div class=\"ttypography\"><p><a href=\"/contest/5/problem/A\">5A - x</a></p><div class=\"spoiler\"><b class=\"spoiler-title\">Hint\x1b[2J</b><div class=\"spoiler-content\"><p>t</p></div></div></div>"
+	blocks, _, _ := Sections(c, 5, "A")
+	for _, b := range blocks {
+		if strings.Contains(b.Title, "\x1b") {
+			t.Fatalf("%q", b.Title)
+		}
+	}
+}
