@@ -69,6 +69,21 @@ func usageHint(args []string, msg string) string {
 	return ""
 }
 
+// chooseMux picks how the editor opens. Inside tmux or herdr it is a split pane; outside one, "auto"
+// draws the editor inside verd (the embedded pane). "suspend" keeps the old suspend-and-resume.
+func chooseMux(mode string, env func(string) string, embedded func() mux.Mux) mux.Mux {
+	if mode == "embedded" {
+		return embedded()
+	}
+	if m := mux.Detect(mode, env); m != nil {
+		return m
+	}
+	if mode == "auto" || mode == "" {
+		return embedded()
+	}
+	return nil
+}
+
 // Set by goreleaser via -ldflags; "dev" for go install / go build.
 var (
 	version = "dev"
@@ -348,11 +363,8 @@ func runTUI(path string) error {
 	var prog *tea.Program
 	ctrl := &editor.Controller{Bin: "nvim", SockDir: config.RuntimeDir()}
 	pickMux := func(mode string) mux.Mux {
-		if mode == "embedded" {
-			// Controller calls Open from the update loop, so messages must not block on prog.Send.
-			return &embed.Adapter{Send: func(m any) { go prog.Send(m) }}
-		}
-		return mux.Detect(mode, os.Getenv)
+		// Controller calls Open from the update loop, so messages must not block on prog.Send.
+		return chooseMux(mode, os.Getenv, func() mux.Mux { return &embed.Adapter{Send: func(m any) { go prog.Send(m) }} })
 	}
 	ctrl.Mux = pickMux(cfg.Split)
 	ctrl.SetEditor(cfg.Editor)

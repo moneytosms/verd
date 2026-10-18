@@ -41,7 +41,9 @@
 
 # How the editor opens: auto | tmux | herdr | embedded | suspend
 # split = "auto"
-#   embedded draws Neovim inside verd (opt-in, works outside tmux/herdr). Keys go to Neovim
+#   auto uses a tmux or herdr split when verd runs inside one, else draws Neovim inside verd.
+#   suspend hands the whole terminal to the editor instead (the old behavior).
+#   embedded draws Neovim inside verd even in tmux/herdr. Keys go to Neovim
 #   while it has focus; embed_focus_key hands them back to verd. Kitty-keyboard-only chords
 #   (e.g. ctrl+shift combinations) are not encoded.
 

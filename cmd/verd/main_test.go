@@ -7,6 +7,8 @@ import (
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/editor"
+	"github.com/moneytosms/verd/internal/embed"
+	"github.com/moneytosms/verd/internal/mux"
 	"os"
 	"path/filepath"
 	"strings"
@@ -420,5 +422,39 @@ func TestSnippetManage(t *testing.T) {
 	}
 	if err := do("path"); err != nil || strings.TrimSpace(out.String()) != dir {
 		t.Fatalf("path: %v %q", err, out.String())
+	}
+}
+
+func TestChooseMux(t *testing.T) {
+	emb := func() mux.Mux { return &embed.Adapter{} }
+	none := func(string) string { return "" }
+	tmuxEnv := func(k string) string {
+		return map[string]string{"TMUX": "/tmp/tmux-1/default,1,0", "TMUX_PANE": "%1"}[k]
+	}
+	isEmbedded := func(m mux.Mux) bool { _, ok := m.(*embed.Adapter); return ok }
+	for _, c := range []struct {
+		name, mode string
+		env        func(string) string
+		want       string // "embedded", "tmux" or "suspend"
+	}{
+		{"auto outside a multiplexer embeds", "auto", none, "embedded"},
+		{"empty means auto", "", none, "embedded"},
+		{"auto inside tmux splits", "auto", tmuxEnv, "tmux"},
+		{"explicit embedded wins in tmux", "embedded", tmuxEnv, "embedded"},
+		{"suspend is the opt-out", "suspend", none, "suspend"},
+		{"suspend inside tmux still suspends", "suspend", tmuxEnv, "suspend"},
+		{"forced tmux outside tmux suspends", "tmux", none, "suspend"},
+	} {
+		got := chooseMux(c.mode, c.env, emb)
+		kind := "suspend"
+		switch {
+		case isEmbedded(got):
+			kind = "embedded"
+		case got != nil:
+			kind = "tmux"
+		}
+		if kind != c.want {
+			t.Errorf("%s: got %s, want %s", c.name, kind, c.want)
+		}
 	}
 }

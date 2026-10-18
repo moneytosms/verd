@@ -35,7 +35,7 @@ var settingDefs = []settingDef{
 	{"Sources", "source_cf", "Codeforces", "Show Codeforces Problems in the list, the picker and search.", "bool", true},
 	{"Sources", "source_cses", "CSES", "Show the CSES Problem Set (400 tasks, grouped by topic). Press {app.refresh} to load it after turning it on. Mark tasks solved with {problems.mark_solved}, or pull your solved list in with {problems.sync_cses} (after verd sync cses once).", "bool", true},
 	{"Editor", "editor", "Editor", "Your editor command: nvim (default), vim, hx, nano, micro, emacs, code and so on. Any command works from config.toml. Only Neovim reuses its pane on the next e.", "enum", true},
-	{"Editor", "split", "Editor split", "How the editor opens: auto, tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
+	{"Editor", "split", "Editor split", "How the editor opens: auto (a tmux or herdr split, else embedded in verd), tmux, herdr, embedded (inside verd) or suspend.", "enum", false},
 	{"Editor", "embed_ratio", "Embedded share", "Share of the window verd keeps when the editor is embedded (0.1 to 0.9).", "text", false},
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_zoom", "Start zoomed", "Start the editor zoomed (fullscreen) when it opens.", "bool", true},
