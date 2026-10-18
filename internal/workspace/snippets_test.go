@@ -98,12 +98,18 @@ func TestShippedSnippetsBuild(t *testing.T) {
 						t.Fatal(err)
 					}
 				case "cpp":
+					// the configured compiler: on macOS that is a Homebrew GNU g++ when there is one, since Apple Clang has no <bits/stdc++.h>
+					cxx := config.Default().Lang["cpp"].Compile[0]
+					probe := write("probe.cpp", cppPre+"int main() {}\n")
+					if exec.Command(cxx, "-std=c++20", "-fsyntax-only", probe).Run() != nil {
+						t.Skip(cxx + " cannot include <bits/stdc++.h>")
+					}
 					top := write("top.cpp", cppPre+s.Code+"\nint main() {}\n")
-					if try("top-level", "g++", "-std=c++20", "-fsyntax-only", top) == nil {
+					if try("top-level", cxx, "-std=c++20", "-fsyntax-only", top) == nil {
 						return
 					}
 					in := write("in.cpp", cppPre+"int main() {\n"+vars[key]+"\n{\n"+s.Code+"\n}\n}\n")
-					if err := try("in main", "g++", "-std=c++20", "-fsyntax-only", in); err != nil {
+					if err := try("in main", cxx, "-std=c++20", "-fsyntax-only", in); err != nil {
 						t.Fatal(err)
 					}
 				case "c":
