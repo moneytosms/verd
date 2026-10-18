@@ -86,13 +86,13 @@ func TestKeyEditorRebindsAndSaves(t *testing.T) {
 	if m.ke == nil || !strings.Contains(plain(m), "Keyboard shortcuts") {
 		t.Fatalf("editor should open:\n%s", plain(m))
 	}
-	// first row is common.help: rebind it to F1-less "H"
+	// first row is common.help: rebind it to F1-less "Z"
 	m, _ = send(m, "enter")
-	m, _ = send(m, "H")
-	if len(saved) != 2 || saved[0] != "common.help" || saved[1] != "H" {
+	m, _ = send(m, "Z")
+	if len(saved) != 2 || saved[0] != "common.help" || saved[1] != "Z" {
 		t.Fatalf("saved %v", saved)
 	}
-	if got := m.km.user["common.help"]; len(got) != 1 || got[0] != "H" {
+	if got := m.km.user["common.help"]; len(got) != 1 || got[0] != "Z" {
 		t.Fatalf("keymap not updated: %v", got)
 	}
 	// a conflicting key is refused and nothing is saved

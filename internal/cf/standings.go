@@ -187,3 +187,22 @@ func skip(dec *json.Decoder) error {
 	var v json.RawMessage
 	return dec.Decode(&v)
 }
+
+// BlogEntry is a Codeforces blog post (editorials are blog posts).
+type BlogEntry struct {
+	ID             int    `json:"id"`
+	Title          string `json:"title"` // HTML, usually <p>...</p>
+	Content        string `json:"content"`
+	Locale         string `json:"locale"`
+	OriginalLocale string `json:"originalLocale"`
+}
+
+// BlogEntry fetches a post's HTML through blogEntry.view, which works anonymously (the blog
+// pages themselves sit behind the Cloudflare challenge).
+func (c *Client) BlogEntry(ctx context.Context, id int) (*BlogEntry, error) {
+	var b BlogEntry
+	if err := c.api(ctx, "blogEntry.view", url.Values{"blogEntryId": {strconv.Itoa(id)}}, &b); err != nil {
+		return nil, err
+	}
+	return &b, nil
+}

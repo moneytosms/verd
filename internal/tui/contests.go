@@ -83,6 +83,10 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if m.sess != nil && m.sess.ContestID == m.contestOpen.ID {
 				m.sessSum = true
 			}
+		case "H":
+			if len(ps) > 0 {
+				return m.openEditorial(ps[m.cpCursor])
+			}
 		case "up", "k":
 			m.cpCursor = max(0, m.cpCursor-1)
 		case "down", "j":

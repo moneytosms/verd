@@ -528,3 +528,34 @@ func (s *Store) EndSession() error {
 	_, err := s.db.Exec("DELETE FROM session")
 	return err
 }
+
+// Materials returns a contest's cached "Contest materials" list (JSON written by the caller) and
+// when it was fetched; ok is false if it was never fetched.
+func (s *Store) Materials(contest int) (data string, at time.Time, ok bool, err error) {
+	var ts int64
+	err = s.db.QueryRow("SELECT data, fetched_at FROM contest_materials WHERE contest_id = ?", contest).Scan(&data, &ts)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", time.Time{}, false, nil
+	}
+	return data, time.Unix(ts, 0), err == nil, err
+}
+
+func (s *Store) SaveMaterials(contest int, data string, at time.Time) error {
+	_, err := s.db.Exec("INSERT OR REPLACE INTO contest_materials(contest_id, data, fetched_at) VALUES(?,?,?)", contest, data, at.Unix())
+	return err
+}
+
+// Blog returns a cached blog post, nil if it was never fetched.
+func (s *Store) Blog(id int) (*cf.BlogEntry, error) {
+	b := cf.BlogEntry{ID: id}
+	err := s.db.QueryRow("SELECT title, locale, content FROM blog_entries WHERE id = ?", id).Scan(&b.Title, &b.Locale, &b.Content)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return &b, err
+}
+
+func (s *Store) SaveBlog(b *cf.BlogEntry, at time.Time) error {
+	_, err := s.db.Exec("INSERT OR REPLACE INTO blog_entries(id, title, locale, content, fetched_at) VALUES(?,?,?,?,?)", b.ID, b.Title, b.Locale, b.Content, at.Unix())
+	return err
+}

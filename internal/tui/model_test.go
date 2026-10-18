@@ -370,7 +370,7 @@ func TestHelpOverlayListsCurrentScreenKeys(t *testing.T) {
 	m, _ = send(m, "1")
 	m, _ = send(m, "enter")
 	m, _ = send(m, "?")
-	if out := plain(m); !strings.Contains(out, "Keys: Problem") || !strings.Contains(out, "refetch statement") {
+	if out := plain(m); !strings.Contains(out, "Keys: Problem") || !strings.Contains(out, "edit the Solution in your editor") {
 		t.Errorf("problem help wrong:\n%s", out)
 	}
 	// typing '?' in the search prompt is text, not help

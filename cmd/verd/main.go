@@ -21,6 +21,7 @@ import (
 	"github.com/moneytosms/verd/internal/config"
 	"github.com/moneytosms/verd/internal/creds"
 	"github.com/moneytosms/verd/internal/editor"
+	"github.com/moneytosms/verd/internal/editorial"
 	"github.com/moneytosms/verd/internal/embed"
 	"github.com/moneytosms/verd/internal/ipc"
 	"github.com/moneytosms/verd/internal/mux"
@@ -292,6 +293,22 @@ func run(args []string, out io.Writer) error {
 			return &exitError{2, "usage: verd __complete config-keys|key-actions|themes"}
 		}
 		return completeCmd(out, args[1])
+	case "editorial":
+		cfg, err := loadConfig(path)
+		if err != nil {
+			return err
+		}
+		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		client := cf.New(cf.BaseURL)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		return editorialCmd(out, cfg, func(p cf.Problem) (*editorial.Result, error) {
+			return editorial.Load(ctx, s, client, p, time.Now())
+		}, args[1:])
 	case "snippet":
 		cfg, err := loadConfig(path)
 		if err != nil {
@@ -534,6 +551,9 @@ func runTUI(path string) error {
 			return x, s.SaveSession(x)
 		},
 		EndSession: s.EndSession,
+		Editorial: func(p cf.Problem) (*editorial.Result, error) {
+			return editorial.Load(context.Background(), s, client, p, time.Now())
+		},
 		Standings: func(contest int) (*cf.Standing, error) {
 			return client.Standings(context.Background(), contest, cfg.Handle)
 		},

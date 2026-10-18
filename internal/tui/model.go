@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/editorial"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/session"
@@ -83,6 +84,8 @@ type Deps struct {
 	EndSession   func() error
 	// Standings downloads the live standings of a contest with the user's row (see cf.Client.Standings).
 	Standings func(contest int) (*cf.Standing, error)
+	// Editorial loads a problem's editorial (see editorial.Load).
+	Editorial func(p cf.Problem) (*editorial.Result, error)
 	// Snippets lists the snippet library for a language.
 	Snippets func(lang string) []Snippet
 	// Reload re-reads the cache (no network), e.g. after a Submission lands.
@@ -222,6 +225,7 @@ type Model struct {
 	tm          *testMgr
 	fm          *filterMgr
 	sp          *snippetPicker
+	edv         *editorialView
 	raw         Data // last loaded data, before the session hides anything
 	sess        *session.Session
 	sessResult  session.Result
@@ -731,6 +735,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case sessTickMsg:
 		return m.onSessTick()
+	case editorialMsg:
+		return m.onEditorial(msg), nil
 	case standingMsg:
 		return m.onStanding(msg), nil
 	case editorTickMsg:
@@ -825,6 +831,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var keep bool
 		if msg, keep = m.remapKey(msg); !keep {
 			return m, nil
+		}
+		if m.edv != nil {
+			return m.updateEditorial(msg)
 		}
 		if m.sessSum {
 			return m.updateSessSummary(msg)
@@ -1121,6 +1130,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.afterOpen(cmd, err, "note")
 	case "i":
 		m = m.openSnippets(m.lang())
+	case "H":
+		return m.openEditorial(*m.open)
 	case "T":
 		m = m.openTM(false)
 	case "a":

@@ -100,6 +100,18 @@ var helpDocs = []cmdDoc{
 		See:      []string{"login", "config"},
 	},
 	{
+		Name: "editorial", Group: "The contest loop", Summary: "read a problem's editorial, hints first",
+		Usage: []string{"verd editorial [--reveal N | --all] <file|contest/index>"},
+		About: "Prints the part of the contest's editorial that is about this problem. Hints, the solution and code are spoilers: they stay hidden until you ask, strictly in order (--reveal 2 opens the first two, --all opens everything). Announcements, video tutorials and discussion streams are listed as links only.\n\nThe editorial link comes from the \"Contest materials\" box of the problem page and the text from the blog post behind it; both are cached, so a second look works offline. Only English editorials are shown. In the TUI press H in the Problem view for the same thing, one hint at a time. It is hidden while a contest session runs on that contest.",
+		Flags: []opt{
+			{"--reveal N", "open the first N hints and spoilers (default 0)"},
+			{"--all", "open every spoiler"},
+		},
+		Exit:     "0 when an editorial was printed; 1 when none is published, it is Russian only, or the problem is not from Codeforces; 2 on other errors.",
+		Examples: []opt{{"verd editorial 1900/A", "text before the first hint"}, {"verd editorial --reveal 1 1900A", "plus the first hint"}, {"verd editorial --all ~/verd/1900/A/main.cpp", "everything"}},
+		See:      []string{"test", "snippet"},
+	},
+	{
 		Name: "snippet", Group: "The contest loop", Summary: "print, copy, export and manage library snippets",
 		Usage: []string{"verd snippet [--lang L] --list", "verd snippet [--lang L] [--copy] <name>", "verd snippet [--lang L] --export", "verd snippet add|edit|rm|open|path ..."},
 		About: "The snippet library holds reusable code (bfs, dijkstra, modpow, prefix_sum, ...) for C++, C and Python. The built-ins ship inside verd; your own files in <snippets_dir>/library/<lang>/ add to them or replace them by name. The first-line comment of a file is its description. In the TUI press i in the Problem view for a picker that copies to the clipboard.\n\nA unique name prefix is enough wherever a name is expected.",

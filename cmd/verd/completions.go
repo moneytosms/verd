@@ -88,7 +88,7 @@ _verd_complete() {
             ;;
         *)
             if [[ "$cword" -eq 1 ]]; then
-                echo -e "init\nsetup\nconfig\ntest\nstress\nsnippet\nhelp\nsubmit\nupdate\ndaily\nsync\nlogin\nlogout\nkeys\nthemes\ndoctor\ncompletions\nversion"
+                echo -e "init\nsetup\nconfig\ntest\nstress\nsnippet\neditorial\nhelp\nsubmit\nupdate\ndaily\nsync\nlogin\nlogout\nkeys\nthemes\ndoctor\ncompletions\nversion"
             fi
             ;;
     esac
@@ -116,6 +116,7 @@ _verd() {
                 "test:run tests"
                 "stress:stress test"
                 "snippet:print or copy a snippet"
+                "editorial:read an editorial"
                 "help:show help for a command"
                 "submit:submit solution"
                 "update:update verd"
@@ -208,6 +209,7 @@ complete -c verd -n "__fish_use_subcommand_only" -a "config" -d "print or change
 complete -c verd -n "__fish_use_subcommand_only" -a "test" -d "run tests"
 complete -c verd -n "__fish_use_subcommand_only" -a "stress" -d "stress test"
 complete -c verd -n "__fish_use_subcommand_only" -a "snippet" -d "print or copy a snippet"
+complete -c verd -n "__fish_use_subcommand_only" -a "editorial" -d "read an editorial"
 complete -c verd -n "__fish_use_subcommand_only" -a "help" -d "show help for a command"
 complete -c verd -n "__fish_use_subcommand_only" -a "submit" -d "submit solution"
 complete -c verd -n "__fish_use_subcommand_only" -a "update" -d "update verd"

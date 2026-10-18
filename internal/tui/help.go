@@ -55,6 +55,7 @@ var guide = []string{
 	"4  Cases    {problem.add_test} adds a test, {problem.manage_tests} manages them: edit, copy a sample, delete.",
 	"5  Stress   {problem.stress} creates gen and brute, then hunts for a counterexample. {problem.stress_save} saves it as a test.",
 	"6  Submit   {problem.submit} sends the Solution. The Submission modal shows the Verdict live.",
+	"   Editorial {problem.editorial} shows the editorial; enter reveals the next hint, strictly in order.",
 	"   Snippets {problem.snippets} opens the snippet library: type to filter, enter copies (bfs, dijkstra, modpow, ...).",
 	"   Contests Contests tab, enter on a contest: s session (virtual, or live for a running one), p practice. See docs/contests.md.",
 	"7  Tune     Settings (5) changes theme, language, editor and submit mode without editing files.",

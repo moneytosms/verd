@@ -14,6 +14,8 @@ func (m Model) modalBox() []string {
 	switch {
 	case m.ke != nil:
 		return m.keyEditorBox()
+	case m.edv != nil:
+		return m.editorialBox()
 	case m.sessSum && m.sess != nil:
 		return m.sessSummaryBox()
 	case m.sp != nil:

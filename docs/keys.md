@@ -77,6 +77,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `s` | `start` | start a session: virtual (finished contest), live (running) or wait for the start (upcoming) |
 | `p` | `practice` | start a practice session: no timer or penalty |
 | `e` | `end_session` | show the session summary and end it |
+| `H` | `editorial` | editorial of the selected problem |
 | `k`, `up` | `up` | move up |
 | `j`, `down` | `down` | move down |
 | `enter` | `open` | open the Problem |
@@ -146,6 +147,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `s` | `submit` | submit the Solution |
 | `t` | `run_tests` | run tests |
 | `i` | `snippets` | snippet library: copy bfs, dijkstra, modpow, ... |
+| `H` | `editorial` | editorial: hints and solution, revealed one at a time |
 | `S` | `stress` | stress test |
 | `w` | `stress_save` | save the stress counterexample as a test |
 | `c` | `cycle_mode` | cycle Comparison Mode |
@@ -182,6 +184,21 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `4` | `section_4` | jump to Stderr |
 | `y` | `copy` | copy the section at the top |
 | `r` | `rerun` | rerun just this test |
+
+## Editorial
+
+| Key(s) | Action | What it does |
+| --- | --- | --- |
+| `q`, `esc` | `close` | close the editorial |
+| `enter`, `space`, `n` | `reveal` | reveal the next hint or the solution |
+| `j`, `down` | `down` | scroll down |
+| `k`, `up` | `up` | scroll up |
+| `pgdown` | `page_down` | page down |
+| `pgup` | `page_up` | page up |
+| `home`, `g` | `top` | jump to the top |
+| `end`, `G` | `bottom` | jump to the bottom |
+| `o` | `browser` | open the post in the browser |
+| `r` | `retry` | retry after a failed load |
 
 ## Test manager
 

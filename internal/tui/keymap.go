@@ -53,6 +53,7 @@ var keyActions = []keyAction{
 	{"contest", "start", "start a session: virtual (finished contest), live (running) or wait for the start (upcoming)", ks("s")},
 	{"contest", "practice", "start a practice session: no timer or penalty", ks("p")},
 	{"contest", "end_session", "show the session summary and end it", ks("e")},
+	{"contest", "editorial", "editorial of the selected problem", ks("H")},
 	{"contest", "up", "move up", ks("k", "up")},
 	{"contest", "down", "move down", ks("j", "down")},
 	{"contest", "open", "open the Problem", ks("enter")},
@@ -106,6 +107,7 @@ var keyActions = []keyAction{
 	{"problem", "submit", "submit the Solution", ks("s")},
 	{"problem", "run_tests", "run tests", ks("t")},
 	{"problem", "snippets", "snippet library: copy bfs, dijkstra, modpow, ...", ks("i")},
+	{"problem", "editorial", "editorial: hints and solution, revealed one at a time", ks("H")},
 	{"problem", "stress", "stress test", ks("S")},
 	{"problem", "stress_save", "save the stress counterexample as a test", ks("w")},
 	{"problem", "cycle_mode", "cycle Comparison Mode", ks("c")},
@@ -139,6 +141,16 @@ var keyActions = []keyAction{
 	{"full", "copy", "copy the section at the top", ks("y")},
 	{"full", "rerun", "rerun just this test", ks("r")},
 
+	{"editorial", "close", "close the editorial", ks("q", "esc")},
+	{"editorial", "reveal", "reveal the next hint or the solution", ks("enter", "space", "n")},
+	{"editorial", "down", "scroll down", ks("j", "down")},
+	{"editorial", "up", "scroll up", ks("k", "up")},
+	{"editorial", "page_down", "page down", ks("pgdown")},
+	{"editorial", "page_up", "page up", ks("pgup")},
+	{"editorial", "top", "jump to the top", ks("home", "g")},
+	{"editorial", "bottom", "jump to the bottom", ks("end", "G")},
+	{"editorial", "browser", "open the post in the browser", ks("o")},
+	{"editorial", "retry", "retry after a failed load", ks("r")},
 	{"testmgr", "close", "close", ks("q", "esc")},
 	{"testmgr", "down", "move down", ks("j", "down")},
 	{"testmgr", "up", "move up", ks("k", "up")},
@@ -182,18 +194,19 @@ var keyGroups = map[string][]string{
 	"problem":    {"problem", "tabs", "common"},
 	"full":       {"full", "common"},
 	"testmgr":    {"testmgr"},
+	"editorial":  {"editorial"},
 	"submission": {"submission"},
 	"help":       {"help", "common"},
 	"editor":     {"editor"},
 }
 
 // keyGroupOrder is how the shortcut editor lists the groups.
-var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "full", "testmgr", "submission", "help", "editor"}
+var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "full", "editorial", "testmgr", "submission", "help", "editor"}
 
 var keyGroupTitle = map[string]string{
 	"common": "Everywhere", "tabs": "Tabs", "app": "Tab screens", "problems": "Problems", "contests": "Contests",
 	"contest": "Contest modal", "stats": "Stats", "picker": "Picker", "settings": "Settings", "problem": "Problem view", "full": "Full-screen test view",
-	"testmgr": "Test manager", "submission": "Submission modal", "help": "Help", "editor": "Embedded editor",
+	"editorial": "Editorial", "testmgr": "Test manager", "submission": "Submission modal", "help": "Help", "editor": "Embedded editor",
 }
 
 // keymap is the user's bindings over keyActions. user is "group.id" -> keys.
@@ -297,6 +310,8 @@ func CheckKeys(user map[string][]string) error {
 // keyCtx is the context a key press lands in right now; "" means a text field has the keys.
 func (m Model) keyCtx() string {
 	switch {
+	case m.edv != nil:
+		return "editorial"
 	case m.sp != nil, m.sessSum:
 		return ""
 	case m.tm != nil:
