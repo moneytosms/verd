@@ -62,7 +62,7 @@ func TestVerdTestACAndWA(t *testing.T) {
 	}
 	cfg, path, cache, detail := setup(t, "a,b=map(int,input().split())\nprint(a+b)\n", "main.py", sumDetail)
 	var out bytes.Buffer
-	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path); err != nil {
+	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{}); err != nil {
 		t.Fatalf("all AC must exit 0: %v\n%s", err, out.String())
 	}
 	for _, want := range []string{"1A  python", "sample-1", "sample-2", "AC", "2/2 AC"} {
@@ -77,7 +77,7 @@ func TestVerdTestACAndWA(t *testing.T) {
 	// wrong answer: non-zero exit, mismatch reported
 	os.WriteFile(path, []byte("a,b=map(int,input().split())\nprint(a+b+(1 if a==5 else 0))\n"), 0o644)
 	out.Reset()
-	err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path)
+	err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{})
 	if exitCode(err) != 1 || !strings.Contains(out.String(), `line 1 col 1: want "10" got "11"`) || !strings.Contains(out.String(), "1/2 AC") {
 		t.Fatalf("WA: code %d\n%s", exitCode(err), out.String())
 	}
@@ -89,17 +89,17 @@ func TestVerdTestCompileErrorAndCache(t *testing.T) {
 	}
 	cfg, path, cache, detail := setup(t, "int main(){ return nope; }", "main.cpp", sumDetail)
 	var out bytes.Buffer
-	err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path)
+	err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{})
 	if exitCode(err) != 1 || !strings.Contains(out.String(), "compile: FAILED") || !strings.Contains(out.String(), "nope") {
 		t.Fatalf("CE: code %d\n%s", exitCode(err), out.String())
 	}
 	os.WriteFile(path, []byte("#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<\"\\n\";}"), 0o644)
 	out.Reset()
-	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path); err != nil || !strings.Contains(out.String(), "compile: ok\n") {
+	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{}); err != nil || !strings.Contains(out.String(), "compile: ok\n") {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
 	out.Reset()
-	testCmd(context.Background(), &out, cfg, cache, detail, nil, path)
+	testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{})
 	if !strings.Contains(out.String(), "compile: ok (cached)") {
 		t.Fatalf("second run should be cached:\n%s", out.String())
 	}
@@ -111,14 +111,14 @@ func TestVerdTestRefusals(t *testing.T) {
 		return &scrape.Detail{Interactive: true}, nil
 	}
 	var out bytes.Buffer
-	if err := testCmd(context.Background(), &out, cfg, cache, inter, nil, path); exitCode(err) != 2 || !strings.Contains(err.Error(), "interactive") {
+	if err := testCmd(context.Background(), &out, cfg, cache, inter, nil, path, testOpts{}); exitCode(err) != 2 || !strings.Contains(err.Error(), "interactive") {
 		t.Fatalf("interactive: %v", err)
 	}
-	if err := testCmd(context.Background(), &out, cfg, cache, inter, nil, "/etc/hostname"); exitCode(err) != 2 {
+	if err := testCmd(context.Background(), &out, cfg, cache, inter, nil, "/etc/hostname", testOpts{}); exitCode(err) != 2 {
 		t.Fatalf("outside workspace: %v", err)
 	}
 	empty := func(context.Context, int, string) (*scrape.Detail, error) { return &scrape.Detail{}, nil }
-	if err := testCmd(context.Background(), &out, cfg, cache, empty, nil, path); exitCode(err) != 2 || !strings.Contains(err.Error(), "no tests") {
+	if err := testCmd(context.Background(), &out, cfg, cache, empty, nil, path, testOpts{}); exitCode(err) != 2 || !strings.Contains(err.Error(), "no tests") {
 		t.Fatalf("no tests: %v", err)
 	}
 }
@@ -132,13 +132,13 @@ func TestVerdTestHonorsSavedModeAndHint(t *testing.T) {
 	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
 	var out bytes.Buffer
 	// hint -> float: within eps, AC
-	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path); err != nil || !strings.Contains(out.String(), "float") {
+	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{}); err != nil || !strings.Contains(out.String(), "float") {
 		t.Fatalf("hint should select float: %v\n%s", err, out.String())
 	}
 	// saved mode beats the hint: tokens -> WA
 	out.Reset()
 	saved := func(int, string) string { return "tokens" }
-	if err := testCmd(context.Background(), &out, cfg, cache, detail, saved, path); exitCode(err) != 1 || !strings.Contains(out.String(), "tokens") {
+	if err := testCmd(context.Background(), &out, cfg, cache, detail, saved, path, testOpts{}); exitCode(err) != 1 || !strings.Contains(out.String(), "tokens") {
 		t.Fatalf("saved mode should win: %v\n%s", err, out.String())
 	}
 }
@@ -255,5 +255,37 @@ func TestPerLanguageMemoryOverride(t *testing.T) {
 	// sumDetail has MemoryLimitMB = 256, so with 2x multiplier should be 512
 	if spec.MemoryMB != 512 {
 		t.Fatalf("memory override not applied: expected 512, got %d", spec.MemoryMB)
+	}
+}
+
+func TestParseTestArgs(t *testing.T) {
+	f, o, ok := parseTestArgs([]string{"-v", "a.cpp", "-t", "sample-2"})
+	if !ok || f != "a.cpp" || !o.verbose || strings.Join(o.only, ",") != "sample-2" {
+		t.Fatalf("got %q %+v %v", f, o, ok)
+	}
+	for _, bad := range [][]string{{}, {"-t"}, {"a", "b"}, {"a", "-x"}} {
+		if _, _, ok := parseTestArgs(bad); ok {
+			t.Errorf("%v accepted", bad)
+		}
+	}
+}
+
+func TestReporterVerboseShowsAllSections(t *testing.T) {
+	var b bytes.Buffer
+	r := &reporter{out: &b, verbose: true}
+	r.event(runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "s1", Verdict: runner.AC, Input: "1 2\n", Expected: "3\n", Output: "dbg\n3\n", Stderr: "x = 1\n"}})
+	for _, w := range []string{"input:\n    1 2", "expected:\n    3", "stdout:\n    dbg\n    3", "stderr:\n    x = 1"} {
+		if !strings.Contains(b.String(), w) {
+			t.Errorf("missing %q in %q", w, b.String())
+		}
+	}
+}
+
+func TestReporterExplainsCrash(t *testing.T) {
+	var b bytes.Buffer
+	r := &reporter{out: &b}
+	r.event(runner.Event{Kind: runner.TestFinished, Result: runner.Result{Name: "s1", Verdict: runner.RE, ExitCode: -1, Signal: "SIGFPE"}})
+	if !strings.Contains(b.String(), "why: Arithmetic error") {
+		t.Errorf("no hint in %q", b.String())
 	}
 }

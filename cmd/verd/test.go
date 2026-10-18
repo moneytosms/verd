@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/moneytosms/verd/internal/config"
@@ -65,14 +66,45 @@ func prepareTest(ctx context.Context, cfg config.Config, cacheDir string, detail
 	return &testPrep{ref, spec, header}, nil
 }
 
+// testOpts are the `verd test` flags: -v prints every test's input, expected, stdout and stderr;
+// -t a,b runs only those tests.
+type testOpts struct {
+	verbose bool
+	only    []string
+}
+
+// parseTestArgs reads `verd test` arguments: one file plus -v and -t NAME in any order.
+func parseTestArgs(args []string) (file string, opts testOpts, ok bool) {
+	for i := 0; i < len(args); i++ {
+		switch a := args[i]; {
+		case a == "-v":
+			opts.verbose = true
+		case a == "-t" && i+1 < len(args):
+			i++
+			opts.only = strings.Split(args[i], ",")
+		case file == "" && !strings.HasPrefix(a, "-"):
+			file = a
+		default:
+			return "", opts, false
+		}
+	}
+	return file, opts, file != ""
+}
+
 // testCmd runs `verd test <file>` headless: samples to disk, compile (cached), run, print.
 // Exit 0 only if every test is AC.
-func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string) error {
+func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string, opts testOpts) error {
 	prep, err := prepareTest(ctx, cfg, cacheDir, detail, savedMode, path)
 	if err != nil {
 		return err
 	}
-	rep := &reporter{out: out}
+	for _, name := range opts.only {
+		if !slices.ContainsFunc(prep.spec.Tests, func(t workspace.Test) bool { return t.Name == name }) {
+			return &exitError{2, fmt.Sprintf("no test %q (see tests/ next to the Solution)", name)}
+		}
+	}
+	prep.spec.Only = opts.only
+	rep := &reporter{out: out, verbose: opts.verbose}
 	rep.header(prep.header)
 	for ev := range runner.Run(ctx, prep.spec) {
 		rep.event(ev)
@@ -83,6 +115,7 @@ func testCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir str
 // reporter prints a Test Run, whether it ran in-process or was streamed from a running TUI.
 type reporter struct {
 	out               io.Writer
+	verbose           bool
 	passed, total, ms int
 	mb                float64
 	overall           string
@@ -111,6 +144,16 @@ func (r *reporter) event(ev runner.Event) {
 		}
 		r.ms, r.mb = max(r.ms, res.TimeMS), max(r.mb, res.MemoryMB)
 		fmt.Fprintf(r.out, "%-10s %-3s %6d ms %7.1f MB%s\n", res.Name, res.Verdict, res.TimeMS, res.MemoryMB, detailOf(res))
+		if x := runner.Explain(res); x.Hint != "" {
+			fmt.Fprintf(r.out, "  why: %s\n", x.Hint)
+			if x.Loc != "" {
+				fmt.Fprintf(r.out, "  at:  %s\n", x.Loc)
+			}
+		}
+		if r.verbose {
+			r.sections(res)
+			break
+		}
 		if e := strings.TrimRight(res.Stderr, "\n"); e != "" && res.Verdict != runner.AC {
 			fmt.Fprintf(r.out, "  stderr:\n    %s\n", strings.ReplaceAll(e, "\n", "\n    "))
 		}
@@ -119,6 +162,17 @@ func (r *reporter) event(ev runner.Event) {
 		}
 	case runner.Done:
 		r.overall = ev.Verdict
+	}
+}
+
+// sections prints a test's input, expected, stdout and stderr, whatever its verdict.
+func (r *reporter) sections(res runner.Result) {
+	for _, sec := range []struct{ name, text string }{{"input", res.Input}, {"expected", res.Expected}, {"stdout", res.Output}, {"stderr", res.Stderr}} {
+		text := strings.TrimRight(sec.text, "\n")
+		if text == "" {
+			text = "(empty)"
+		}
+		fmt.Fprintf(r.out, "  %s:\n    %s\n", sec.name, strings.ReplaceAll(text, "\n", "\n    "))
 	}
 }
 
@@ -157,6 +211,9 @@ func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.
 	if _, err := os.Stat(ref.Path); err != nil {
 		return runner.Spec{}, fmt.Errorf("no Solution at %s", ref.Path)
 	}
+	if err := workspace.EnsureInclude(); err != nil {
+		return runner.Spec{}, err
+	}
 	if err := ws.WriteSamples(ref.Contest, ref.Index, d.Samples); err != nil {
 		return runner.Spec{}, err
 	}
@@ -181,8 +238,17 @@ func buildSpec(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.
 	if lang.MemoryMultiplier != 0 {
 		memoryMB *= lang.MemoryMultiplier
 	}
+	var checker []string
+	if c := filepath.Join(filepath.Dir(ref.Path), "checker."+lang.Ext); fileExists(c) {
+		if checker, _, err = runner.Build(context.Background(), lang, c, filepath.Join(cacheDir, "build")); err != nil {
+			return runner.Spec{}, fmt.Errorf("checker does not build: %w", err)
+		}
+	}
 	return runner.Spec{
+		Checker:  checker,
 		Solution: ref.Path, Lang: lang, CacheDir: filepath.Join(cacheDir, "build"), Tests: tests,
 		TimeLimitMS: d.TimeLimitMS, MemoryMB: int(memoryMB), Multiplier: timeMultiplier, Mode: mode, FloatEps: floatEps,
 	}, nil
 }
+
+func fileExists(p string) bool { _, err := os.Stat(p); return err == nil }

@@ -132,8 +132,8 @@ func TestKeyEditorFuzzySearchAndHintsFollowBindings(t *testing.T) {
 	}
 	m, _ = send(m, "enter") // done typing
 	m, _ = send(m, "enter") // rebind
-	m, _ = send(m, "ctrl+k")
-	if len(saved) != 2 || saved[0] != "problem.stress" || saved[1] != "ctrl+k" {
+	m, _ = send(m, "ctrl+y")
+	if len(saved) != 2 || saved[0] != "problem.stress" || saved[1] != "ctrl+y" {
 		t.Fatalf("saved %v", saved)
 	}
 	m, _ = send(m, "esc") // clears the filter
@@ -143,7 +143,7 @@ func TestKeyEditorFuzzySearchAndHintsFollowBindings(t *testing.T) {
 	m, _ = send(m, "esc")
 	m, _ = send(m, "1")
 	m, _ = send(m, "enter")
-	if m.open == nil || !strings.Contains(plain(m), "ctrl+k stress") {
+	if m.open == nil || !strings.Contains(plain(m), "ctrl+y stress") {
 		t.Fatalf("footer should show the new key:\n%s", plain(m))
 	}
 	if strings.Contains(plain(m), " S stress") {

@@ -4,9 +4,27 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) ((void)0)
+#define debugm(...) ((void)0)
+#define debugg(...) ((void)0)
+#endif
+
+using ll = long long;
+#define all(x) (x).begin(), (x).end()
+#define fors(i, n) for (int i = 0; i < (n); i++)
+
+void solve() {
+    {{cursor}}
+}
+
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
-    {{cursor}}
+    int T = 1;
+    cin >> T;
+    while (T--) solve();
     return 0;
 }

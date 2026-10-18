@@ -33,6 +33,7 @@ verd ships 35 snippets for C++, C and Python: input readers (`vecinput`, `matinp
 ### Use one
 
 - In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard. Paste it into your editor.
+- `ctrl+k` (the command palette) also lists every snippet as `Snippet: <name>`; `enter` copies it.
 - From the shell: 
 
 ```sh

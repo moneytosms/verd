@@ -263,7 +263,7 @@ func TestOnlyAndInput(t *testing.T) {
 	f := newFixture(t)
 	src := f.write("main.py", "a,b=map(int,input().split())\nprint(a+b)\n")
 	tests := []workspace.Test{f.test("a", "1 2\n", "3\n"), f.test("b", "2 2\n", "5\n")}
-	res, _ := f.run(src, "python", tests, func(s *Spec) { s.Only = "b" })
+	res, _ := f.run(src, "python", tests, func(s *Spec) { s.Only = []string{"b"} })
 	if len(res) != 1 || res[0].Name != "b" || res[0].Verdict != WA {
 		t.Fatalf("only b: %+v", res)
 	}
@@ -288,5 +288,41 @@ func TestLiveOutput(t *testing.T) {
 	}
 	if last := evs[len(evs)-1]; last.Kind != Done || last.Verdict != AC {
 		t.Fatalf("last %+v", last)
+	}
+}
+
+func TestSanitizerRerunExplainsOutOfBounds(t *testing.T) {
+	need(t, "g++")
+	f := newFixture(t)
+	src := f.write("oob.cpp", `#include <vector>
+#include <iostream>
+int main(){ std::vector<int> v(3); std::cout << v[5] << "\n"; }`)
+	res, _ := f.run(src, "cpp", []workspace.Test{f.test("sample-1", "", "1\n")}, nil)
+	if len(res) != 1 || !strings.Contains(res[0].Stderr, "rerun with sanitizers") {
+		t.Fatalf("want the sanitizer message, got %+v", res)
+	}
+	if x := Explain(res[0]); x.Hint == "" || !strings.Contains(x.Loc, "oob.cpp:3") {
+		t.Fatalf("explain %+v", x)
+	}
+}
+
+func TestCustomCheckerDecidesVerdict(t *testing.T) {
+	need(t, "python3")
+	f := newFixture(t)
+	src := f.write("a.py", "print(2)\n")
+	chk := f.write("check.py", "import sys\nsys.exit(0 if open(sys.argv[2]).read().strip() in ('1','2') else 1)\n")
+	res, _ := f.run(src, "python", []workspace.Test{f.test("sample-1", "", "1\n")}, func(s *Spec) { s.Checker = []string{"python3", chk} })
+	if res[0].Verdict != AC {
+		t.Fatalf("checker accepts any of 1 or 2: %+v", res[0])
+	}
+}
+
+func TestCustomTestWithoutAnswerIsUngraded(t *testing.T) {
+	need(t, "python3")
+	f := newFixture(t)
+	src := f.write("a.py", "print('hi')\n")
+	res, _ := f.run(src, "python", []workspace.Test{f.test("custom-1", "", "")}, nil)
+	if res[0].Verdict != Unk || res[0].Output != "hi\n" {
+		t.Fatalf("%+v", res[0])
 	}
 }

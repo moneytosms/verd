@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -52,8 +53,9 @@ type Spec struct {
 	FloatEps    float64 // default 1e-6
 	OutputCap   int     // bytes of stdout kept; default 64 MB
 
-	Only string // run just the test with this name (the compile cache is reused); "" = all
-	Live bool   // emit Output events with the partial stdout/stderr while a test runs
+	Only    []string // run just the tests with these names (the compile cache is reused); empty = all
+	Checker []string // argv of a custom checker: Checker in out ans; exit 0 = AC (replaces the Comparison Mode)
+	Live    bool     // emit Output events with the partial stdout/stderr while a test runs
 }
 
 type Result struct {
@@ -142,10 +144,10 @@ func Run(ctx context.Context, spec Spec) <-chan Event {
 			if ctx.Err() != nil {
 				break
 			}
-			if spec.Only != "" && t.Name != spec.Only {
+			if len(spec.Only) > 0 && !slices.Contains(spec.Only, t.Name) {
 				continue
 			}
-			res := r.runTest(t)
+			res := r.sanitize(t, r.runTest(t))
 			ch <- Event{Kind: TestFinished, Result: res}
 			if overall == AC && res.Verdict != AC {
 				overall = res.Verdict
@@ -161,6 +163,9 @@ type run struct {
 	ctx  context.Context
 	bin  string
 	live func(Result) // nil unless Spec.Live
+
+	dbg    *run // sanitizer build of the Solution, made on the first failure
+	dbgBad bool // it cannot be made
 }
 
 func expand(argv []string, vars map[string]string) []string {
@@ -175,7 +180,7 @@ func expand(argv []string, vars map[string]string) []string {
 }
 
 func (r *run) vars() map[string]string {
-	return map[string]string{"{src}": r.spec.Solution, "{bin}": r.bin, "{dir}": filepath.Dir(r.spec.Solution)}
+	return map[string]string{"{src}": r.spec.Solution, "{bin}": r.bin, "{dir}": filepath.Dir(r.spec.Solution), "{include}": config.IncludeDir()}
 }
 
 // compile builds the Solution unless an identical build (source + compile argv) is cached.
@@ -286,6 +291,8 @@ func (r *run) runTest(t workspace.Test) Result {
 	stdout := &capBuffer{max: outCap, onFull: func() { close(full) }}
 	stderr := &capBuffer{max: stderrCap}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
+	// LOCAL lets a Solution switch its debug output on (Python); the others make sanitizers print a stack on abort and UB
+	cmd.Env = append(os.Environ(), "LOCAL=1", "ASAN_OPTIONS=handle_abort=1", "UBSAN_OPTIONS=print_stacktrace=1")
 	prepare(cmd)
 
 	mult := r.spec.Multiplier
@@ -371,12 +378,92 @@ func (r *run) runTest(t workspace.Test) Result {
 		}
 		ok, mm := Compare(mode, res.Expected, res.Output, eps)
 		switch {
-		case mode == None:
+		case len(r.spec.Checker) > 0:
+			res.Verdict, res.Note = r.check(t, res.Output)
+		case mode == None, strings.HasPrefix(t.Name, "custom-") && strings.TrimSpace(res.Expected) == "": // no answer yet: just show the output
 			res.Verdict = Unk
 		case ok:
 			res.Verdict = AC
 		default:
 			res.Verdict, res.Mismatch = WA, mm
+		}
+	}
+	return res
+}
+
+// check runs the custom checker on a finished test: checker <input> <output> <answer>, exit 0 = AC.
+func (r *run) check(t workspace.Test, output string) (verdict, note string) {
+	f, err := os.CreateTemp("", "verd-out-*")
+	if err != nil {
+		return RE, err.Error()
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(output)
+	f.Close()
+	argv := append(slices.Clone(r.spec.Checker), t.In, f.Name(), t.Ans)
+	out, err := exec.CommandContext(r.ctx, argv[0], argv[1:]...).CombinedOutput()
+	if err == nil {
+		return AC, ""
+	}
+	msg := strings.TrimSpace(string(out))
+	if msg == "" {
+		msg = "checker rejected the output"
+	}
+	return WA, "checker: " + clipLine(msg)
+}
+
+func clipLine(s string) string {
+	s, _, _ = strings.Cut(s, "\n")
+	if r := []rune(s); len(r) > 200 {
+		return string(r[:200]) + "..."
+	}
+	return s
+}
+
+// sanitizerMarks are what a sanitizer or libstdc++ debug-mode abort prints.
+var sanitizerMarks = []string{"Sanitizer", "runtime error:", "Error: attempt to"}
+
+// debugArgv turns a gcc/clang compile line into one that finds memory errors: -g, address and
+// undefined-behavior sanitizers, bounds-checked std containers, -O1. nil if the compiler is not gcc-like.
+func debugArgv(compile []string) []string {
+	if len(compile) == 0 || !strings.Contains(filepath.Base(compile[0]), "g++") && !strings.Contains(filepath.Base(compile[0]), "gcc") {
+		return nil
+	}
+	out := []string{compile[0], "-g", "-fsanitize=address,undefined", "-fno-sanitize-recover=undefined"}
+	if strings.Contains(compile[0], "g++") {
+		out = append(out, "-D_GLIBCXX_DEBUG")
+	}
+	for _, a := range compile[1:] {
+		out = append(out, strings.Replace(a, "-O2", "-O1", 1))
+	}
+	return out
+}
+
+// sanitize reruns a failed (WA or RE) test on a sanitizer build. If that run reports a memory error
+// or undefined behavior, its message replaces the test's stderr: it names the line a bare SIGSEGV or a
+// silent wrong answer does not. The verdict is unchanged. Skipped when no such build is possible.
+func (r *run) sanitize(t workspace.Test, res Result) Result {
+	if res.Verdict != WA && res.Verdict != RE || r.ctx.Err() != nil {
+		return res
+	}
+	if r.dbg == nil {
+		spec := r.spec
+		spec.Lang.Compile = debugArgv(r.spec.Lang.Compile)
+		r.dbg = &run{spec: spec, ctx: r.ctx}
+		if spec.Lang.Compile == nil {
+			r.dbgBad = true
+		} else if _, err := r.dbg.compile(); err != nil {
+			r.dbgBad = true // missing libasan etc: carry on without
+		}
+	}
+	if r.dbgBad {
+		return res
+	}
+	d := r.dbg.runTest(t)
+	for _, m := range sanitizerMarks {
+		if strings.Contains(d.Stderr, m) {
+			res.Stderr = "[verd: rerun with sanitizers]\n" + d.Stderr
+			break
 		}
 	}
 	return res

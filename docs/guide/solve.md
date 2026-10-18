@@ -43,7 +43,7 @@ verd config set editor "code -w"       # any editor; extra arguments are allowed
 | `RE` | crashed or non-zero exit |
 | `CE` | the compiler failed; its output is shown |
 
-With `autotest` on (default) saving the file runs the tests. From the shell: `verd test main.cpp` (exit `0` only if everything is `AC`).
+With `autotest` on (default) saving the file runs the tests. From the shell: `verd test main.cpp` (exit `0` only if everything is `AC`). Add `-v` to print every test's input, expected, stdout and stderr (your debug prints), and `-t sample-2` to run one test.
 
 ### Looking at a failure
 

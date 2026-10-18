@@ -43,10 +43,10 @@ func listen(id int, ch <-chan runner.Event) tea.Cmd {
 }
 
 // startTests begins a Test Run (cancelling any previous one) and returns the cmd that streams its events.
-func (m Model) startTests() (Model, tea.Cmd) { return m.runTests("") }
+func (m Model) startTests() (Model, tea.Cmd) { return m.runTests(nil) }
 
-// runTests is startTests, or with only set a rerun of that test alone: the other results stay.
-func (m Model) runTests(only string) (Model, tea.Cmd) {
+// runTests is startTests, or with only set a rerun of just those tests: the other results stay.
+func (m Model) runTests(only []string) (Model, tea.Cmd) {
 	switch {
 	case m.deps.Tests == nil || m.detail == nil:
 		return m, nil
@@ -70,10 +70,10 @@ func (m Model) runTests(only string) (Model, tea.Cmd) {
 	}
 	m.errMsg = ""
 	var kept []runner.Result
-	if only != "" && m.run != nil {
+	if len(only) > 0 && m.run != nil {
 		kept = m.run.results
 	}
-	m.run = &testRun{id: id, cancel: cancel, running: true, only: only != "", results: kept}
+	m.run = &testRun{id: id, cancel: cancel, running: true, only: len(only) > 0, results: kept}
 	m = m.loadCases()
 	return m, listen(id, ch)
 }
@@ -202,6 +202,39 @@ func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	case "p":
 		m.tsel = max(0, m.tsel-1)
 		return m, nil, true
+	case "space":
+		if row, ok := m.selected(); ok && m.pane == paneTests {
+			if m.marks == nil {
+				m.marks = map[string]bool{}
+			}
+			m.marks[row.Name] = !m.marks[row.Name]
+			m.tsel = min(m.tsel+1, max(0, len(m.rows())-1))
+			return m, nil, true
+		}
+	case "R":
+		names := m.markedNames()
+		if row, ok := m.selected(); len(names) == 0 && ok {
+			names = []string{row.Name}
+		}
+		if len(names) > 0 {
+			nm, cmd := m.runTests(names)
+			return nm, cmd, true
+		}
+	case "F":
+		var failed []string
+		if r != nil {
+			for _, res := range r.results {
+				if res.Verdict != runner.AC {
+					failed = append(failed, res.Name)
+				}
+			}
+		}
+		if len(failed) == 0 {
+			m.Notice = "no failing tests to rerun"
+			return m, nil, true
+		}
+		nm, cmd := m.runTests(failed)
+		return nm, cmd, true
 	case "d":
 		if row, ok := m.selected(); ok && r != nil && row.Res != nil && row.Res.Verdict != runner.AC {
 			r.diff, r.diffInit = true, false
@@ -212,6 +245,24 @@ func (m Model) updateTests(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 		return m, nil, r != nil
 	}
 	return m, nil, false
+}
+
+// markedNames are the marked tests in list order.
+func (m Model) markedNames() (names []string) {
+	for _, row := range m.rows() {
+		if m.marks[row.Name] {
+			names = append(names, row.Name)
+		}
+	}
+	return
+}
+
+// markCol is the marker column of a test row: * if marked for a partial run.
+func (m Model) markCol(name string) string {
+	if m.marks[name] {
+		return "*"
+	}
+	return " "
 }
 
 // tag is "lang, mode" (just the mode when no language is configured).
@@ -257,7 +308,7 @@ func (m Model) testsPanel() []string {
 		if i == m.tsel {
 			cur = st.Accent.Render("> ")
 		}
-		line := fmt.Sprintf("%s%-10s %s %6d ms %7.1f MB", cur, res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
+		line := fmt.Sprintf("%s%s%-10s %s %6d ms %7.1f MB", cur, m.markCol(res.Name), res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
 		if res.Mismatch != nil {
 			line += fmt.Sprintf("  line %d col %d: want %q got %q", res.Mismatch.Line, res.Mismatch.Col, clean(clip(res.Mismatch.Want, 20)), clean(clip(res.Mismatch.Got, 20)))
 		} else if d := res.Detail(); d != "" {
@@ -272,7 +323,7 @@ func (m Model) testsPanel() []string {
 		}
 	}
 	if !r.running && len(r.results) > 0 {
-		lines = append(lines, st.Dim.Render(fmt.Sprintf("  %d/%d AC  max %d ms  max %.1f MB   n/p select  d diff", passed, len(r.results), maxMS, maxMB)))
+		lines = append(lines, st.Dim.Render(fmt.Sprintf("  %d/%d AC  max %d ms  max %.1f MB   n/p select  d diff  f full  space mark  R run marked  F rerun failed", passed, len(r.results), maxMS, maxMB)))
 	}
 	return lines
 }

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"embed"
 	"errors"
 	"fmt"
@@ -18,6 +19,41 @@ import (
 
 //go:embed templates/*
 var defaultTemplates embed.FS
+
+//go:embed include/*
+var includeFiles embed.FS
+
+// EnsureInclude writes the shipped headers (debug.h) into config.IncludeDir, replacing stale copies.
+func EnsureInclude() error {
+	dir := config.IncludeDir()
+	ents, _ := includeFiles.ReadDir("include")
+	for _, e := range ents {
+		b, _ := includeFiles.ReadFile("include/" + e.Name())
+		if cur, err := os.ReadFile(filepath.Join(dir, e.Name())); err == nil && bytes.Equal(cur, b) {
+			continue
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, e.Name()), b, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EnsureEditorFlags writes <root>/compile_flags.txt so clangd resolves #include "debug.h" and sees LOCAL.
+func (w Workspace) EnsureEditorFlags() error {
+	want := []byte("-std=c++20\n-DLOCAL\n-I" + config.IncludeDir() + "\n")
+	path := filepath.Join(w.Root, "compile_flags.txt")
+	if cur, err := os.ReadFile(path); err == nil && (bytes.Equal(cur, want) || !bytes.Contains(cur, []byte("-DLOCAL"))) {
+		return nil // current, or the user's own file
+	}
+	if err := os.MkdirAll(w.Root, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, want, 0o644)
+}
 
 // TemplateVars are the values available to a Template.
 type TemplateVars struct {
@@ -118,6 +154,9 @@ func InitTemplates(dir string, langs map[string]config.Lang, force bool) ([]stri
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
+	if err := EnsureInclude(); err != nil {
+		return nil, err
+	}
 	var keys []string
 	for k := range langs {
 		keys = append(keys, k)
@@ -149,6 +188,12 @@ func InitTemplates(dir string, langs map[string]config.Lang, force bool) ([]stri
 func (w Workspace) Ensure(contest int, index, langKey string, l config.Lang, tmpl string, v TemplateVars) (path string, cursorLine int, created bool, err error) {
 	dir := w.Dir(contest, index)
 	path = filepath.Join(dir, "main."+l.Ext)
+	if err := EnsureInclude(); err != nil {
+		return "", 0, false, err
+	}
+	if err := w.EnsureEditorFlags(); err != nil {
+		return "", 0, false, err
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", 0, false, err
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -25,6 +26,7 @@ type Program struct {
 
 type Spec struct {
 	Gen, Solution, Brute Program
+	Validator            Program // optional: reads an input on stdin, exits non-zero if it breaks the Problem's constraints
 	CacheDir             string
 	Mode                 runner.Mode
 	FloatEps             float64
@@ -63,6 +65,10 @@ type Event struct {
 	Result     Result
 }
 
+// sizeFor is the SIZE gen sees for a seed: it grows 1, 2, ... 10 over the first 300 seeds, so the first
+// counterexample found is usually a small one.
+func sizeFor(seed int) int { return min(1+(seed-1)/30, 10) }
+
 // Run loops seeds 1, 2, ... and streams events until a stop condition. The channel closes after Done.
 func Run(ctx context.Context, spec Spec) <-chan Event {
 	ch := make(chan Event, 16)
@@ -79,12 +85,15 @@ func Run(ctx context.Context, spec Spec) <-chan Event {
 	return ch
 }
 
-func exec1(ctx context.Context, argv []string, stdin string, limit time.Duration) (out, errOut string, code int, tle bool) {
+func exec1(ctx context.Context, argv []string, stdin string, limit time.Duration, env ...string) (out, errOut string, code int, tle bool) {
 	c, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	cmd := exec.CommandContext(c, argv[0], argv[1:]...)
 	var o, e bytes.Buffer
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = bytes.NewReader([]byte(stdin)), &o, &e
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	err := cmd.Run()
 	if c.Err() == context.DeadlineExceeded {
 		return o.String(), e.String(), -1, true
@@ -117,8 +126,11 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 	if mode == "" {
 		mode = runner.Tokens
 	}
-	var argv [3][]string
-	for i, p := range []Program{spec.Gen, spec.Solution, spec.Brute} {
+	var argv [4][]string
+	for i, p := range []Program{spec.Gen, spec.Solution, spec.Brute, spec.Validator} {
+		if p.Path == "" {
+			continue
+		}
 		a, _, err := runner.Build(ctx, p.Lang, p.Path, spec.CacheDir)
 		if err != nil {
 			return Result{Kind: Error, Err: fmt.Sprintf("building %s: %v", p.Path, err)}
@@ -137,9 +149,9 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		cases []string
 		err   string
 	}
-	genCase := func(wctx context.Context, i int) (in, errOut string, ok bool) {
+	genRaw := func(wctx context.Context, i int) (in, errOut string, ok bool) {
 		if spec.Batch <= 1 {
-			in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit)
+			in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit, "SIZE="+strconv.Itoa(sizeFor(i)))
 			return in, ge, gc == 0 && !gtle
 		}
 		n, k := (i-1)/spec.Batch, (i-1)%spec.Batch
@@ -147,7 +159,7 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		ck := c.(*chunk)
 		ck.once.Do(func() {
 			first := n*spec.Batch + 1
-			out, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(first), strconv.Itoa(spec.Batch)), "", 10*limit)
+			out, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(first), strconv.Itoa(spec.Batch)), "", 10*limit, "SIZE="+strconv.Itoa(sizeFor(first)))
 			if wctx.Err() != nil {
 				return
 			}
@@ -163,6 +175,16 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 			return "", ck.err, false
 		}
 		return ck.cases[k], "", true
+	}
+	genCase := func(wctx context.Context, i int) (in, errOut string, ok bool) {
+		in, errOut, ok = genRaw(wctx, i)
+		if ok && argv[3] != nil {
+			_, ve, vc, vtle := exec1(wctx, argv[3], in, limit)
+			if (vc != 0 || vtle) && wctx.Err() == nil {
+				return in, "validator rejected the generated input: " + strings.TrimSpace(ve), false
+			}
+		}
+		return
 	}
 	// iterate runs one seed; nil means it passed. ok is false if ctx was cancelled mid-run.
 	iterate := func(wctx context.Context, i int) (r *Result, ok bool) {

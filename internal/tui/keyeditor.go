@@ -34,9 +34,13 @@ func editableActions() []keyAction {
 }
 
 // keRows are the actions that match the filter: all in group order, or best match first.
-func (m Model) keRows() []keyAction {
+func (m Model) keRows() []keyAction { return m.matchActions(m.ke.q) }
+
+// matchActions are the actions whose group, description, id or keys fuzzy-match every word of q,
+// best first; all of them in group order when q is empty.
+func (m Model) matchActions(q string) []keyAction {
 	all := editableActions()
-	if m.ke.q == "" {
+	if strings.TrimSpace(q) == "" {
 		return all
 	}
 	type hit struct {
@@ -47,7 +51,7 @@ func (m Model) keRows() []keyAction {
 	for _, a := range all {
 		hay := keyGroupTitle[a.ctx] + " " + a.desc + " " + actionID(a) + " " + strings.Join(m.km.keys(a), " ")
 		total, ok := 0, true
-		for _, w := range strings.Fields(m.ke.q) { // every word must match
+		for _, w := range strings.Fields(q) { // every word must match
 			s, hit := fuzzyScore(w, hay)
 			total, ok = total+s, ok && hit
 		}

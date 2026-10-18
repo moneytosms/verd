@@ -298,9 +298,9 @@ func (m Model) testsLines(w, h int) ([]string, string, []int) {
 		if row.Custom {
 			kind = st.Warn.Render("custom")
 		}
-		line := fmt.Sprintf("%s%-10s %s", cur, row.Name, kind)
+		line := fmt.Sprintf("%s%s%-10s %s", cur, m.markCol(row.Name), row.Name, kind)
 		if row.Res != nil {
-			line = fmt.Sprintf("%s%-10s %s %5d ms %6.1f MB", cur, row.Name, m.verdictStyle(row.Res.Verdict), row.Res.TimeMS, row.Res.MemoryMB)
+			line = fmt.Sprintf("%s%s%-10s %s %5d ms %6.1f MB", cur, m.markCol(row.Name), row.Name, m.verdictStyle(row.Res.Verdict), row.Res.TimeMS, row.Res.MemoryMB)
 			if row.Res.Verdict == runner.AC {
 				passed++
 			}

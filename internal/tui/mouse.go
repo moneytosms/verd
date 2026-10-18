@@ -23,7 +23,7 @@ func (m Model) modalRect() (x, y, w, h int, ok bool) {
 
 // closeModal dismisses whichever modal is open.
 func (m Model) closeModal() Model {
-	m.tm, m.fm, m.sp, m.edv, m.ke, m.help, m.subModal, m.full, m.sessSum = nil, nil, nil, nil, nil, false, false, false, false
+	m.pal, m.tm, m.fm, m.sp, m.edv, m.ke, m.help, m.subModal, m.full, m.sessSum = nil, nil, nil, nil, nil, nil, false, false, false, false
 	if m.run != nil {
 		m.run.diff = false
 	}

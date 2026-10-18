@@ -244,6 +244,13 @@ var helpDocs = []cmdDoc{
 		See:   []string{"version"},
 	},
 	{
+		Name: "uninstall", Group: "Maintenance", Summary: "remove verd, optionally keeping or backing up its data",
+		Usage: []string{"verd uninstall [--all | --keep | --backup DIR] [--yes]"},
+		About: "Removes the verd binary and, as you choose, its config, data (problem cache, solved marks) and build cache. With no flag it asks. Your Solutions in the Workspace are never touched.",
+		Flags: []opt{{"--all", "remove binary, config, data and cache"}, {"--keep", "remove the binary only"}, {"--backup DIR", "archive config and data into DIR, then remove everything"}, {"--yes", "skip the confirmation"}},
+		See:   []string{"update"},
+	},
+	{
 		Name: "completions", Group: "Maintenance", Summary: "print a shell completion script",
 		Usage:    []string{"verd completions bash|zsh|fish"},
 		About:    "Prints a completion script for commands, config keys, key actions and themes. Source it from your shell's startup file.",

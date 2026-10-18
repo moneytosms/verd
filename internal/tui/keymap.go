@@ -20,6 +20,7 @@ func ks(k ...string) []string { return k }
 
 var keyActions = []keyAction{
 	{"common", "help", "toggle help", ks("?")},
+	{"common", "palette", "command palette: fuzzy-run any action, setting or snippet", ks("ctrl+k")},
 	{"common", "dismiss_toast", "dismiss a notification", ks("x")},
 	{"tabs", "tab_1", "switch tab: Problems", ks("1")},
 	{"tabs", "tab_2", "switch tab: Contests", ks("2")},
@@ -75,6 +76,7 @@ var keyActions = []keyAction{
 	{"picker", "weak_topics", "weak-topics preset", ks("w")},
 
 	{"settings", "quit", "quit", ks("q")},
+	{"settings", "search", "fuzzy-find a setting", ks("/")},
 	{"settings", "down", "move down", ks("j", "down")},
 	{"settings", "up", "move up", ks("k", "up")},
 	{"settings", "top", "first setting", ks("home", "g")},
@@ -113,6 +115,9 @@ var keyActions = []keyAction{
 	{"problem", "cycle_mode", "cycle Comparison Mode", ks("c")},
 	{"problem", "next_test", "select next test", ks("n")},
 	{"problem", "prev_test", "select previous test", ks("p")},
+	{"problem", "mark_test", "mark or unmark the selected test for a partial run", ks("space")},
+	{"problem", "run_marked", "run only the marked tests (or the selected one if none is marked)", ks("R")},
+	{"problem", "run_failed", "rerun only the tests that did not pass", ks("F")},
 	{"problem", "fullview", "full-screen view of the selected test: input, expected, stdout, stderr", ks("f")},
 	{"problem", "diff", "diff the selected failing test", ks("d")},
 	{"problem", "refetch", "refetch statement", ks("r")},
@@ -164,6 +169,7 @@ var keyActions = []keyAction{
 	{"submission", "close", "close the Submission modal", ks("q", "esc", "enter")},
 
 	{"help", "close", "close help", ks("q", "esc")},
+	{"help", "search", "fuzzy-search every shortcut", ks("/")},
 	{"help", "page_next", "next page", ks("right", "l", "tab")},
 	{"help", "page_prev", "previous page", ks("left", "h", "shift+tab")},
 	{"help", "scroll_down", "scroll down", ks("j", "down")},
@@ -310,6 +316,8 @@ func CheckKeys(user map[string][]string) error {
 // keyCtx is the context a key press lands in right now; "" means a text field has the keys.
 func (m Model) keyCtx() string {
 	switch {
+	case m.pal != nil:
+		return ""
 	case m.edv != nil:
 		return "editorial"
 	case m.sp != nil, m.sessSum:
@@ -324,6 +332,9 @@ func (m Model) keyCtx() string {
 	case m.subModal:
 		return "submission"
 	case m.help:
+		if m.helpFind {
+			return ""
+		}
 		return "help"
 	case m.viewing():
 		switch {
@@ -335,7 +346,7 @@ func (m Model) keyCtx() string {
 		return "problem"
 	case m.input != nil:
 		return ""
-	case m.tab == 4 && m.setEdit != nil:
+	case m.tab == 4 && (m.setEdit != nil || m.setFind):
 		return ""
 	}
 	return m.screenCtx()

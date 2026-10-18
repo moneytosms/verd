@@ -12,6 +12,8 @@ import (
 // Modals close with q or esc and sit on top of the screen they were opened from.
 func (m Model) modalBox() []string {
 	switch {
+	case m.pal != nil:
+		return m.paletteBox()
 	case m.ke != nil:
 		return m.keyEditorBox()
 	case m.edv != nil:
@@ -55,6 +57,12 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 	switch res.Verdict {
 	case runner.RE, runner.TLE, runner.MLE:
 		body := []string{res.Detail(), ""}
+		if x := runner.Explain(res); x.Hint != "" {
+			body = append([]string{res.Detail(), "", "why: " + x.Hint}, "")
+			if x.Loc != "" {
+				body = append(body[:len(body)-1], "at:  "+x.Loc, "")
+			}
+		}
 		if strings.TrimSpace(res.Stderr) == "" {
 			body = append(body, "(stderr empty)")
 		} else {

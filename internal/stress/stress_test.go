@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,5 +147,28 @@ func TestMulti(t *testing.T) {
 	r, n := final(Run(context.Background(), s))
 	if r.Kind != Limit || r.Iterations != 20 || n != 20 {
 		t.Fatalf("%+v events=%d", r, n)
+	}
+}
+
+func TestValidatorRejectsBadGeneratedInput(t *testing.T) {
+	s := setup(t, good, good)
+	p := filepath.Join(filepath.Dir(s.Gen.Path), "validator.py")
+	os.WriteFile(p, []byte("import sys\nsys.exit(0 if int(input()) <= 50 else 1)\n"), 0o644)
+	s.Validator = Program{Path: p, Lang: s.Gen.Lang}
+	s.MaxIter = 1000
+	r, _ := final(Run(context.Background(), s))
+	if r.Kind != Error || !strings.Contains(r.Err, "validator rejected") {
+		t.Fatalf("%+v", r)
+	}
+}
+
+func TestGenSeesGrowingSize(t *testing.T) {
+	s := setup(t, "n=int(input())\nprint(n*2 if n<=3 else 0)\n", good)
+	s.Gen.Path = filepath.Join(filepath.Dir(s.Gen.Path), "gen2.py")
+	os.WriteFile(s.Gen.Path, []byte("import os\nprint(int(os.environ['SIZE']))\n"), 0o644)
+	s.MaxIter = 1000
+	r, _ := final(Run(context.Background(), s))
+	if r.Kind != Mismatch || r.Input != "4\n" || r.Seed != 91 { // SIZE is 4 for seeds 91..120
+		t.Fatalf("%+v", r)
 	}
 }

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -19,19 +20,36 @@ type snippetPicker struct {
 	items []Snippet
 }
 
-// matches are the snippets whose name or description contains the query, name matches first.
+// matches are the snippets whose name or description fuzzy-matches the query, best first
+// (a name match counts double).
 func (p *snippetPicker) matches() []Snippet {
-	q := strings.ToLower(strings.TrimSpace(p.query))
-	var byName, byDesc []Snippet
+	q := strings.TrimSpace(p.query)
+	if q == "" {
+		return p.items
+	}
+	type hit struct {
+		s     Snippet
+		score int
+	}
+	var hits []hit
 	for _, s := range p.items {
-		switch {
-		case q == "" || strings.Contains(strings.ToLower(s.Name), q):
-			byName = append(byName, s)
-		case strings.Contains(strings.ToLower(s.Desc), q):
-			byDesc = append(byDesc, s)
+		best, ok := 0, false
+		if sc, hitName := fuzzyScore(q, s.Name); hitName {
+			best, ok = sc*2+20, true
+		}
+		if sc, hitDesc := fuzzyScore(q, s.Desc); hitDesc && (!ok || sc > best) {
+			best, ok = sc, true
+		}
+		if ok {
+			hits = append(hits, hit{s, best})
 		}
 	}
-	return append(byName, byDesc...)
+	sort.SliceStable(hits, func(i, j int) bool { return hits[i].score > hits[j].score })
+	out := make([]Snippet, len(hits))
+	for i, h := range hits {
+		out[i] = h.s
+	}
+	return out
 }
 
 func (m Model) openSnippets(lang string) Model {

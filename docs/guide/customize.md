@@ -52,6 +52,8 @@ verd keys preset vim
 
 A rebound action stops answering to its old key, and two actions on one key within a screen are refused. `ctrl+c` always quits. In the TUI: Settings > **Keyboard shortcuts** (`/` searches, `enter` rebinds, `a` adds a second key, `backspace` resets). The full table is [Keys](../keys.md).
 
+**Command palette.** `ctrl+k` (action `common.palette`) opens one fuzzy box over every action on the current screen, every setting and every snippet. `enter` runs the action (using your own binding), jumps to the setting, or copies the snippet. Settings: `/` filters; `?` then `/` searches all shortcuts.
+
 ## Reading
 
 How statements look:

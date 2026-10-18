@@ -1,6 +1,7 @@
 package tui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"context"
 	"os/exec"
 	"strings"
@@ -71,7 +72,8 @@ func TestFullViewPanAndSections(t *testing.T) {
 	close(ch)
 	m, _ = send(m, "f")
 	out := plain(m)
-	for _, want := range []string{"7 ms", "2.5 MB", "first difference: line 1 col 1", "! 0123456789", "(empty)"} {
+	t.Log(out)
+	for _, want := range []string{"7 ms", "2.5 MB", "first difference: line 1 col 1", "! 0123456789", "(empty)", "1/1 lines differ"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}
@@ -98,7 +100,7 @@ func TestFullViewRerunsOnlyThatTest(t *testing.T) {
 	})
 	only, orig := "unset", m.deps.Tests
 	m.deps.Tests = func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error) {
-		only = o.Only
+		only = strings.Join(o.Only, ",")
 		return orig(ctx, p, d, o)
 	}
 	m, cmd := send(m, "t")
@@ -198,5 +200,110 @@ func TestRuntimeErrorShowsInput(t *testing.T) {
 	m, _ = send(m, "d")
 	if out := plain(m); !strings.Contains(out, "input:") || !strings.Contains(out, "INPUT-42") {
 		t.Fatalf("input missing:\n%s", out)
+	}
+}
+
+func TestPartialRuns(t *testing.T) {
+	m, _ := openWithTests(t, []runner.Event{
+		{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-1", Verdict: runner.WA}},
+		{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-2", Verdict: runner.AC}},
+		{Kind: runner.Done, Verdict: runner.WA},
+	})
+	var only string
+	orig := m.deps.Tests
+	m.deps.Tests = func(ctx context.Context, p cf.Problem, d *scrape.Detail, o RunOpts) (<-chan runner.Event, error) {
+		only = strings.Join(o.Only, ",")
+		return orig(ctx, p, d, o)
+	}
+	m, cmd := send(m, "t")
+	for i := 0; i < 3; i++ {
+		m, cmd = step(t, m, cmd)
+	}
+	m, _ = send(m, "F")
+	if only != "sample-1" {
+		t.Fatalf("F should rerun the failing test only, got %q", only)
+	}
+	m.pane = paneTests
+	nm, _ := m.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	m = nm.(Model)
+	if !m.marks["sample-1"] || m.tsel != 1 {
+		t.Fatalf("space should mark the selected test and move down: %v tsel=%d", m.marks, m.tsel)
+	}
+	m, _ = send(m, "R")
+	if only != "sample-1" {
+		t.Fatalf("R should run the marked tests, got %q", only)
+	}
+}
+
+func TestFuzzySnippetsHelpAndSettings(t *testing.T) {
+	p := &snippetPicker{items: []Snippet{{Name: "dijkstra", Desc: "shortest paths"}, {Name: "modpow", Desc: "fast power"}, {Name: "dsu", Desc: "union find"}}}
+	p.query = "djk"
+	if ms := p.matches(); len(ms) != 1 || ms[0].Name != "dijkstra" {
+		t.Fatalf("fuzzy name: %+v", ms)
+	}
+	p.query = "unfi"
+	if ms := p.matches(); len(ms) != 1 || ms[0].Name != "dsu" {
+		t.Fatalf("fuzzy description: %+v", ms)
+	}
+
+	m := New(nil, "", Deps{})
+	m.setQ = "thm"
+	vis := m.settingIdxs()
+	if len(vis) == 0 || settingDefs[vis[0]].key != "theme" {
+		t.Fatalf("settings filter: %v", vis)
+	}
+	m.helpQ = "run tests"
+	acts := m.matchActions(m.helpQ)
+	if len(acts) == 0 || acts[0].id != "run_tests" {
+		t.Fatalf("help search: %+v", acts)
+	}
+}
+
+func TestKeyPressRoundTripsEveryDefaultKey(t *testing.T) {
+	for _, a := range keyActions {
+		for _, k := range a.def {
+			if msg, ok := keyPress(k); !ok || msg.String() != k {
+				t.Errorf("%s: %q -> %q ok=%v", actionID(a), k, msg.String(), ok)
+			}
+		}
+	}
+}
+
+func TestPaletteRunsActionAndJumpsToSetting(t *testing.T) {
+	m, _ := openWithTests(t, []runner.Event{{Kind: runner.Done, Verdict: runner.AC}})
+	nm0, _ := m.Update(tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl})
+	m = nm0.(Model)
+	if m.pal == nil {
+		t.Fatal("ctrl+k should open the palette")
+	}
+	for _, r := range "run tests" {
+		nm, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+		m = nm.(Model)
+	}
+	if ms := m.palMatches(); len(ms) == 0 || ms[0].key != "t" {
+		t.Fatalf("matches: %+v", ms)
+	}
+	nm, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = nm.(Model)
+	if m.pal != nil || m.run == nil {
+		t.Fatalf("enter should close the palette and press t: pal=%v run=%v", m.pal, m.run)
+	}
+
+	m2 := New(nil, "", Deps{})
+	m2 = m2.openPalette()
+	m2.pal.q = "theme"
+	nm, _ = m2.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m2 = nm.(Model)
+	if m2.tab != 4 || settingDefs[m2.setSel].key != "theme" {
+		t.Fatalf("setting jump: tab=%d sel=%d", m2.tab, m2.setSel)
+	}
+
+	m3 := New(nil, "", Deps{Snippets: func(string) []Snippet { return []Snippet{{"segtree", "range sums", "CODE"}} }})
+	m3 = m3.openPalette()
+	m3.pal.q = "segtree"
+	nm, cmd := m3.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m3 = nm.(Model)
+	if m3.pal != nil || cmd == nil || !strings.Contains(m3.Notice, "segtree") {
+		t.Fatalf("snippet pick: pal=%v cmd=%v notice=%q", m3.pal, cmd, m3.Notice)
 	}
 }

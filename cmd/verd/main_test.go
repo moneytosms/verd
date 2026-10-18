@@ -138,7 +138,7 @@ func TestAddCustomAndLangHelpers(t *testing.T) {
 	if b, _ := os.ReadFile(cppPath); string(b) != "cpp work" {
 		t.Fatal("cpp Solution touched")
 	}
-	if b, _ := os.ReadFile(pyPath); !strings.Contains(string(b), "def main") {
+	if b, _ := os.ReadFile(pyPath); !strings.Contains(string(b), "def solve") {
 		t.Fatalf("python template not used: %q", b)
 	}
 }
@@ -263,7 +263,7 @@ func TestKeysImportExportRoundTrip(t *testing.T) {
 	if out, err := do("keys", "import", file); err != nil || !strings.Contains(out, "imported 1") {
 		t.Fatalf("%q %v", out, err)
 	}
-	if out, _ := do("keys", "--json"); strings.Contains(out, "ctrl+s") || !strings.Contains(out, "ctrl+t") {
+	if out, _ := do("keys", "--json"); strings.Contains(out, `"ctrl+s"`) || !strings.Contains(out, "ctrl+t") {
 		t.Fatalf("import should replace:\n%s", out)
 	}
 	bad := filepath.Join(t.TempDir(), "bad.toml")

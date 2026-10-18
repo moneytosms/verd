@@ -142,11 +142,19 @@ func run(args []string, out io.Writer) error {
 		return setupCmd(out, os.Stdin, path, credStore())
 	case "update":
 		return updateCmd(out, slices.Contains(args[1:], "--check"))
+	case "uninstall":
+		exe, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		cfg, _ := loadConfig(path)
+		return uninstallCmd(out, os.Stdin, args[1:], uninstallPaths{exe: exe, config: config.Dir(), data: config.DataDir(), cache: config.CacheDir(), workspace: workspace.New(cfg.Workspace).Root})
 	case "setup":
 		return setupCmd(out, os.Stdin, path, credStore())
 	case "test":
-		if len(args) != 2 {
-			return &exitError{2, "usage: verd test <file>"}
+		file, opts, ok := parseTestArgs(args[1:])
+		if !ok {
+			return &exitError{2, "usage: verd test <file> [-v] [-t a,b]"}
 		}
 		cfg, err := loadConfig(path)
 		if err != nil {
@@ -166,10 +174,12 @@ func run(args []string, out io.Writer) error {
 			return st.Mode
 		}
 		// A running TUI shows the run in its pane; otherwise run headless.
-		if handled, err := delegateTest(context.Background(), out, socketPath(), args[1]); handled {
-			return err
+		if !opts.verbose && len(opts.only) == 0 {
+			if handled, err := delegateTest(context.Background(), out, socketPath(), file); handled {
+				return err
+			}
 		}
-		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, args[1])
+		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, file, opts)
 	case "submit":
 		if len(args) != 2 {
 			return &exitError{2, "usage: verd submit <file>"}

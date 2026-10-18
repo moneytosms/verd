@@ -240,18 +240,55 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.setFind { // typing into the filter
+		switch msg.String() {
+		case "esc":
+			m.setFind, m.setQ = false, ""
+		case "enter", "down":
+			m.setFind = false
+		case "backspace":
+			if r := []rune(m.setQ); len(r) > 0 {
+				m.setQ = string(r[:len(r)-1])
+			}
+		case "ctrl+u":
+			m.setQ = ""
+		case "ctrl+c":
+			return m, tea.Quit
+		default:
+			if msg.Text != "" {
+				m.setQ += clean(msg.Text)
+			}
+		}
+		return m.keepSettingVisible(), nil
+	}
+	if m.setQ != "" && msg.String() == "esc" { // first esc clears the filter
+		m.setQ = ""
+		return m, nil
+	}
 	d := settingDefs[m.setSel]
+	vis := m.settingIdxs()
+	pos := slices.Index(vis, m.setSel)
 	switch msg.String() {
+	case "/":
+		m.setFind = true
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "j", "down":
-		m.setSel = min(m.setSel+1, len(settingDefs)-1)
+		if pos+1 < len(vis) {
+			m.setSel = vis[pos+1]
+		}
 	case "k", "up":
-		m.setSel = max(0, m.setSel-1)
+		if pos > 0 {
+			m.setSel = vis[pos-1]
+		}
 	case "g", "home":
-		m.setSel = 0
+		if len(vis) > 0 {
+			m.setSel = vis[0]
+		}
 	case "G", "end":
-		m.setSel = len(settingDefs) - 1
+		if len(vis) > 0 {
+			m.setSel = vis[len(vis)-1]
+		}
 	case "right", "l", " ", "space":
 		m = m.step(d, 1)
 		if d.kind == "text" && msg.String() != " " && msg.String() != "space" {
@@ -331,6 +368,33 @@ func mapsEqual(a, b map[string][]string) bool {
 	return true
 }
 
+// settingIdxs are the settings that fuzzy-match the filter (all when it is empty), in list order.
+// There is always at least one: with no match the filter shows the first setting.
+func (m Model) settingIdxs() []int {
+	var out []int
+	for i, d := range settingDefs {
+		hay := d.group + " " + d.label + " " + d.key + " " + d.desc
+		ok := true
+		for _, w := range strings.Fields(m.setQ) {
+			if _, hit := fuzzyScore(w, hay); !hit {
+				ok = false
+			}
+		}
+		if ok {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// keepSettingVisible moves the selection onto a setting the filter still shows.
+func (m Model) keepSettingVisible() Model {
+	if vis := m.settingIdxs(); len(vis) > 0 && !slices.Contains(vis, m.setSel) {
+		m.setSel = vis[0]
+	}
+	return m
+}
+
 // settingLine is one row of the settings list; idx is -1 for a group heading.
 type settingLine struct {
 	text string
@@ -341,7 +405,11 @@ func (m Model) settingLines(w int) []settingLine {
 	st := m.styles()
 	var out []settingLine
 	group := ""
+	shown := m.settingIdxs()
 	for i, d := range settingDefs {
+		if !slices.Contains(shown, i) {
+			continue
+		}
 		if d.group != group {
 			group = d.group
 			if len(out) > 0 {
@@ -414,7 +482,17 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			body = append(body, " "+l.text)
 		}
 	}
-	left := box("Settings", body, "", lw, h, true, st, m.borderStyle())
+	title := "Settings"
+	if m.setQ != "" || m.setFind {
+		title += "  / " + m.setQ
+		if m.setFind {
+			title += "▏"
+		}
+		if len(lines) == 0 {
+			body = append(body, st.Dim.Render(" no setting matches"))
+		}
+	}
+	left := box(title, body, "", lw, h, true, st, m.borderStyle())
 
 	d := settingDefs[m.setSel]
 	var info []string

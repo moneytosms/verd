@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -110,5 +111,31 @@ func TestTimeVars(t *testing.T) {
 	text, _, err := RenderTemplate("{{.Date}} {{.Time}} | {{.DateTime}} | {{.Contest}}{{.Index}}", v)
 	if err != nil || text != "2026-10-05 09:07 | 2026-10-05 09:07 | 1900A" {
 		t.Fatalf("%q %v", text, err)
+	}
+}
+
+func TestDefaultCppTemplateBuildsWithDebugHeader(t *testing.T) {
+	gxx, err := exec.LookPath("g++")
+	if err != nil {
+		t.Skip("no g++")
+	}
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	if err := EnsureInclude(); err != nil {
+		t.Fatal(err)
+	}
+	tmpl, _ := LoadTemplate(t.TempDir(), "cpp", config.Default().Lang["cpp"])
+	text, _, err := RenderTemplate(tmpl, vars())
+	if err != nil {
+		t.Fatal(err)
+	}
+	text = strings.Replace(text, "\n}\n\nint main", "\n    vector<int> v{1, 2};\n    debug(v);\n}\n\nint main", 1)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "main.cpp")
+	os.WriteFile(src, []byte(text), 0o644)
+	for _, flags := range [][]string{{"-DLOCAL", "-I" + config.IncludeDir()}, {}} { // local and Codeforces-style
+		args := append(append([]string{"-std=c++20", "-Wall", "-Werror"}, flags...), "-o", filepath.Join(dir, "a"), src)
+		if out, err := exec.Command(gxx, args...).CombinedOutput(); err != nil {
+			t.Fatalf("%v: %v\n%s", flags, err, out)
+		}
 	}
 }

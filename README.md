@@ -77,7 +77,7 @@ verd --here                     # same, but keep Solutions in the current direct
 5. **Stress.** Press `S`. The first time, verd creates `gen.cpp` and `brute.cpp` and opens them; fill them in and press `S` again. It runs until it finds a counterexample, and `w` saves it as a Custom Test.
 6. **Submit.** Press `s`. The Solution is copied, the submit page opens, and the Verdict streams into the pane.
 
-Press `?` on any screen for its key list. The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
+Press `ctrl+k` for the command palette: fuzzy-find any action, setting or snippet and run it. Press `?` on any screen for its key list (`/` there searches it). The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
 
 ## Run it from Neovim
 
@@ -121,6 +121,7 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>` | Search for a counterexample. Exit `0` only if none was found. `--batch N` runs gen as `gen <seed> <N>` and expects N cases separated by `---` lines. `--multi N` runs N cases per Solution/brute process: both must read `t` then `t` cases, and gen prints one case without `t`. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
 | `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |
+| `verd uninstall [--all\|--keep\|--backup DIR]` | Remove verd; delete, back up or keep its config and data. Solutions are never touched. |
 | `verd daily` | Today's pick: an unsolved Codeforces Problem near your rating, from your weak topics when you have any. Same all day. |
 | `verd sync [cses]` | Pull your solved CSES tasks into verd as marks. Asks for your CSES login the first time; the password is never stored. |
 | `verd login` / `verd logout [cses]` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |

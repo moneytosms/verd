@@ -131,7 +131,7 @@ type ProblemState struct{ Lang, Mode string }
 type RunOpts struct {
 	Lang string
 	Mode runner.Mode
-	Only string // Tests: run just the test with this name
+	Only []string // Tests: run just the tests with these names; empty = all
 }
 
 // Data is everything the UI renders from the cache.
@@ -209,9 +209,10 @@ type Model struct {
 	run         *testRun
 	editorOpen  bool // a split-pane editor is open; a tick is polling it
 	open        *cf.Problem
-	cases       []Case // Sample Tests then Custom Tests of the open Problem
-	tsel        int    // selected row of the Tests pane
-	pane        int    // focused pane of the split Problem view
+	marks       map[string]bool // tests marked for a partial run
+	cases       []Case          // Sample Tests then Custom Tests of the open Problem
+	tsel        int             // selected row of the Tests pane
+	pane        int             // focused pane of the split Problem view
 	detScroll   int
 	full        bool // full-screen test view open
 	fullOff     int
@@ -239,6 +240,11 @@ type Model struct {
 	sortBy      string            // "", "rating", "-rating", "solved", "id"
 	cfgVals     map[string]string // current config values shown in Settings
 	setSel      int
+	pal         *palette // command palette
+	setQ        string   // fuzzy filter over the settings list
+	setFind     bool     // keys go into setQ
+	helpQ       string   // fuzzy search over every shortcut
+	helpFind    bool
 	km          *keymap    // shortcut bindings
 	ke          *keyEditor // the shortcut editor modal, when open
 	openTab     int        // the tab the open Problem lives on; other tabs hide it until you come back
@@ -838,6 +844,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.sessSum {
 			return m.updateSessSummary(msg)
 		}
+		if m.pal != nil {
+			return m.updatePalette(msg)
+		}
 		if m.sp != nil {
 			return m.updateSnippets(msg)
 		}
@@ -862,6 +871,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "x" && m.toast != nil && m.input == nil {
 			m.toast = nil
 			return m, nil
+		}
+		if msg.String() == "ctrl+k" && m.input == nil {
+			return m.openPalette(), nil
 		}
 		if msg.String() == "?" && m.input == nil {
 			m.help, m.helpPage, m.helpScroll = true, 0, 0
@@ -998,6 +1010,7 @@ func (m Model) closeProblem() Model {
 	}
 	m.pending = nil
 	m.open, m.detail, m.body, m.errMsg, m.loading = nil, nil, nil, "", false
+	m.marks = nil
 	return m
 }
 

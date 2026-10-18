@@ -103,8 +103,8 @@ func Default() Config {
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
-			"c":      {Ext: "c", Compile: []string{gnu(runtime.GOOS, "gcc", exec.LookPath), "-std=c11", "-O2", "-Wall", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
-			"cpp":    {Ext: "cpp", Compile: []string{gnu(runtime.GOOS, "g++", exec.LookPath), "-std=c++20", "-O2", "-Wall", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
+			"c":      {Ext: "c", Compile: []string{gnu(runtime.GOOS, "gcc", exec.LookPath), "-std=c11", "-O2", "-Wall", "-DLOCAL", "-I{include}", "-o", "{bin}", "{src}", "-lm"}, Run: []string{"{bin}"}, CFCompilerID: 43},
+			"cpp":    {Ext: "cpp", Compile: []string{gnu(runtime.GOOS, "g++", exec.LookPath), "-std=c++20", "-O2", "-Wall", "-DLOCAL", "-I{include}", "-o", "{bin}", "{src}"}, Run: []string{"{bin}"}, CFCompilerID: 89},
 			"python": {Ext: "py", Run: []string{"python3", "{src}"}, CFCompilerID: 31},
 		},
 	}
@@ -146,6 +146,9 @@ func Dir() string { return xdg("XDG_CONFIG_HOME", ".config") }
 
 // DataDir returns $XDG_DATA_HOME/verd, falling back to ~/.local/share/verd.
 func DataDir() string { return xdg("XDG_DATA_HOME", filepath.Join(".local", "share")) }
+
+// IncludeDir holds the headers verd ships (debug.h); local builds get -I{include} pointing here.
+func IncludeDir() string { return filepath.Join(DataDir(), "include") }
 
 // CacheDir returns $XDG_CACHE_HOME/verd, falling back to ~/.cache/verd.
 func CacheDir() string { return xdg("XDG_CACHE_HOME", ".cache") }

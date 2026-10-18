@@ -24,7 +24,7 @@ This makes the commands usable in scripts, git hooks and editor jobs.
 
 | Command | Does | Example |
 | --- | --- | --- |
-| `verd test <file>` | run Sample and Custom Tests | `verd test ~/verd/1900/A/main.cpp` |
+| `verd test <file> [-v] [-t NAME]` | run Sample and Custom Tests; `-v` full detail, `-t` one test | `verd test ~/verd/1900/A/main.cpp` |
 | `verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>` | search for a counterexample | `verd stress --iter 5000 main.cpp` |
 | `verd submit <file>` | submit and track the verdict | `verd submit main.cpp` |
 | `verd editorial [--reveal N \| --all] <file\|contest/index>` | read the editorial, hints withheld | `verd editorial --reveal 1 1900/A` |
@@ -41,6 +41,7 @@ This makes the commands usable in scripts, git hooks and editor jobs.
 | `verd setup` | guided setup for handle, workspace, language, theme, editor split, submit mode; safe to re-run |
 | `verd doctor` | check config, handle, workspace, compilers, editor, tmux/herdr, terminal |
 | `verd update [--check]` | replace verd with the latest release (checksum verified) |
+| `verd uninstall [--all\|--keep\|--backup DIR]` | remove verd; keep, back up or delete config and data |
 | `verd version`, `verd --version` | print the version and commit |
 
 ## Configuration

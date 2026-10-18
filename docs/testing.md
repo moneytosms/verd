@@ -65,3 +65,29 @@ Iterations run in parallel (`--jobs N`, default CPU count, max 16). Two opt-in f
 - `--multi N`: for multi-test problems. Solution and brute read `t` then `t` cases, `gen` prints one case without `t`, and N cases go through one process pair. If a batch disagrees or fails, verd reruns its seeds one by one (input `1` then the case) to report the exact seed.
 
 Trivial C++ programs, 16 threads: ~3.8k iterations/s default, ~5.4k with `--batch 100`, ~290k with `--batch 100 --multi 100` (`go test ./internal/stress -bench .`).
+
+## Debugging
+
+- `f` in the TUI opens a test full-screen: input, expected, stdout and stderr, for any verdict. `verd test <file> -v` prints the same for every test; `-t sample-2` runs one test.
+- Failures get a `why:` line in plain English (segfault, division by zero, `std::out_of_range`, Python `IndexError`, ...) and an `at:` source location when stderr has one.
+- New C++ files include `debug.h` under `#ifdef LOCAL`. `debug(a, b)` prints `[L12] a = 5, b = [1, 2, 3]` to stderr for any value (containers, nested, pairs, tuples, maps, queues). Local test builds define `LOCAL`; on Codeforces `debug` compiles to nothing, so there is nothing to strip. C has `debug("%d", x)`; Python has `debug(f"{x=}", y)` (runs set the `LOCAL` environment variable).
+- `debugm(grid)` prints a matrix one row per line; `debugg(adj)` prints an adjacency list as `u: v v v` (weighted `v(w)`; vectors and maps both work).
+- verd writes `debug.h` into `~/.local/share/verd/include` and a `compile_flags.txt` into the Workspace root so clangd finds it. Re-run `verd init --force` to refresh your Templates (existing ones are never overwritten otherwise).
+
+### Partial runs and failures
+
+- `space` marks a test, `R` runs only the marked tests (or the selected one if none is marked), `F` reruns only the tests that did not pass. `verd test <file> -t sample-1,custom-2` does the same from the shell.
+- When a test ends `WA` or `RE` and the compiler is `g++`/`gcc`, verd rebuilds the Solution once with `-fsanitize=address,undefined` and `-D_GLIBCXX_DEBUG` and reruns that test. If this finds a memory error, undefined behavior or an out-of-range container access, its message replaces stderr (marked `[verd: rerun with sanitizers]`) and the `why:` / `at:` lines point at your line. Verdicts are never changed by it. If the sanitizer build fails, verd carries on without it.
+- A Custom Test whose `.ans` is empty is not judged: it shows `??` and the output, so it doubles as a scratch run.
+- A failing line in the full view shows `want: ...` under it, and the header counts how many lines differ.
+
+### Checker and validator (optional)
+
+Drop a file next to the Solution in the same language and verd picks it up. Nothing to configure.
+
+| File | Used by | Contract |
+| --- | --- | --- |
+| `checker.<ext>` | tests | run as `checker <input> <output> <answer>`; exit 0 accepts. Replaces the Comparison Mode, for problems with many valid answers. |
+| `validator.<ext>` | stress | reads the generated input on stdin; non-zero exit stops the run with "validator rejected the generated input". |
+
+`gen` also sees an environment variable `SIZE` that grows from 1 to 10 over the first 300 seeds, so the first counterexample is usually small. The default `gen` templates use it.

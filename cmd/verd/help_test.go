@@ -7,7 +7,7 @@ import (
 )
 
 // every command run() dispatches on
-var allCommands = []string{"init", "setup", "doctor", "config", "test", "stress", "submit", "snippet", "editorial", "daily", "sync", "login", "logout", "keys", "themes", "update", "completions", "schema", "version", "help"}
+var allCommands = []string{"init", "setup", "doctor", "config", "test", "stress", "submit", "snippet", "editorial", "daily", "sync", "login", "logout", "keys", "themes", "update", "uninstall", "completions", "schema", "version", "help"}
 
 func TestEveryCommandHasDetailedHelp(t *testing.T) {
 	for _, name := range allCommands {

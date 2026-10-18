@@ -22,6 +22,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `?` | `help` | toggle help |
+| `ctrl+k` | `palette` | command palette: fuzzy-run any action, setting or snippet |
 | `x` | `dismiss_toast` | dismiss a notification |
 
 ## Tabs
@@ -111,6 +112,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q` | `quit` | quit |
+| `/` | `search` | fuzzy-find a setting |
 | `j`, `down` | `down` | move down |
 | `k`, `up` | `up` | move up |
 | `home`, `g` | `top` | first setting |
@@ -153,6 +155,9 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `c` | `cycle_mode` | cycle Comparison Mode |
 | `n` | `next_test` | select next test |
 | `p` | `prev_test` | select previous test |
+| `space` | `mark_test` | mark or unmark the selected test for a partial run |
+| `R` | `run_marked` | run only the marked tests (or the selected one if none is marked) |
+| `F` | `run_failed` | rerun only the tests that did not pass |
 | `f` | `fullview` | full-screen view of the selected test: input, expected, stdout, stderr |
 | `d` | `diff` | diff the selected failing test |
 | `r` | `refetch` | refetch statement |
@@ -225,6 +230,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `q`, `esc` | `close` | close help |
+| `/` | `search` | fuzzy-search every shortcut |
 | `right`, `l`, `tab` | `page_next` | next page |
 | `left`, `h`, `shift+tab` | `page_prev` | previous page |
 | `j`, `down` | `scroll_down` | scroll down |

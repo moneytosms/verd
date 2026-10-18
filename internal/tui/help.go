@@ -59,6 +59,7 @@ var guide = []string{
 	"   Snippets {problem.snippets} opens the snippet library: type to filter, enter copies (bfs, dijkstra, modpow, ...).",
 	"   Contests Contests tab, enter on a contest: s session (virtual, or live for a running one), p practice. See docs/contests.md.",
 	"7  Tune     Settings (5) changes theme, language, editor and submit mode without editing files.",
+	"8  Find     {common.palette} opens the command palette: fuzzy-run any action, setting or snippet. ? then / searches every shortcut.",
 	"",
 	"Docs: docs/keys.md, docs/config.md, docs/testing.md, docs/contests.md, docs/submit.md",
 }
@@ -112,6 +113,13 @@ func (m Model) helpBox() []string {
 	}
 	body := []string{strings.Join(tabsRow, " "), ""}
 	lines := m.helpLines(m.helpPage)
+	if m.helpFind || m.helpQ != "" {
+		body = []string{st.Accent.Render("/ ") + m.helpQ, ""}
+		if m.helpFind {
+			body[0] += st.Dim.Render("▏")
+		}
+		lines = m.helpSearchLines()
+	}
 	room := max(3, h-2-len(body))
 	off := min(m.helpScroll, max(0, len(lines)-room))
 	body = append(body, lines[off:min(len(lines), off+room)]...)
@@ -122,10 +130,51 @@ func (m Model) helpBox() []string {
 	return box("Keys: "+screen, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
+// helpSearchLines are the shortcuts of every screen that fuzzy-match the help query.
+func (m Model) helpSearchLines() []string {
+	st := m.styles()
+	acts := m.matchActions(m.helpQ)
+	if len(acts) == 0 {
+		return []string{st.Dim.Render("no shortcut matches")}
+	}
+	out := make([]string, len(acts))
+	for i, a := range acts {
+		out[i] = st.Chip.Render(" "+fit(strings.Join(m.km.keys(a), " "), 12)+" ") + " " + st.Dim.Render(fit(keyGroupTitle[a.ctx], 10)) + " " + a.desc
+	}
+	return out
+}
+
 func (m Model) updateHelp(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.helpFind { // typing into the search
+		switch k := msg.String(); k {
+		case "esc":
+			m.helpFind, m.helpQ, m.helpScroll = false, "", 0
+		case "enter", "down":
+			m.helpFind = false
+		case "backspace":
+			if r := []rune(m.helpQ); len(r) > 0 {
+				m.helpQ, m.helpScroll = string(r[:len(r)-1]), 0
+			}
+		case "ctrl+u":
+			m.helpQ, m.helpScroll = "", 0
+		case "ctrl+c":
+			return m, tea.Quit
+		default:
+			if msg.Text != "" {
+				m.helpQ, m.helpScroll = m.helpQ+clean(msg.Text), 0
+			}
+		}
+		return m, nil
+	}
+	if m.helpQ != "" && msg.String() == "esc" { // first esc clears the search
+		m.helpQ, m.helpScroll = "", 0
+		return m, nil
+	}
 	switch msg.String() {
+	case "/":
+		m.helpFind, m.helpScroll = true, 0
 	case "?", "esc", "q":
-		m.help = false
+		m.help, m.helpQ = false, ""
 	case "ctrl+c":
 		return m, tea.Quit
 	case "right", "l", "tab":

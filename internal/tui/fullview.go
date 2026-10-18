@@ -12,6 +12,7 @@ import (
 type fullRow struct {
 	text      string
 	bad, head bool
+	note      bool // an inline hint under a wrong line (what was expected)
 }
 
 var fullSecs = [4]string{"Input", "Expected", "Output", "Stderr (never compared)"}
@@ -88,6 +89,14 @@ func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts 
 				rows = append(rows, fullRow{text: string(r[:n]), bad: b})
 				r = r[n:]
 			}
+			if b && s == 2 {
+				w := cleanLines(row.Want)
+				hint := "(not in expected)"
+				if i < len(w) {
+					hint = "want: " + w[i]
+				}
+				rows = append(rows, fullRow{text: "  " + hint, note: true})
+			}
 		}
 	}
 	return
@@ -111,12 +120,25 @@ func (m Model) fullBox() []string {
 		switch {
 		case res.Mismatch != nil:
 			mm := res.Mismatch
-			head = append(head, st.Bad.Render(fmt.Sprintf("first difference: line %d col %d: want %q got %q", mm.Line, mm.Col, clip(clean(mm.Want), 30), clip(clean(mm.Got), 30))))
+			_, bg := diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
+			n := 0
+			for _, b := range bg {
+				if b {
+					n++
+				}
+			}
+			head = append(head, st.Bad.Render(fmt.Sprintf("first difference: line %d col %d (%d/%d lines differ): want %q got %q", mm.Line, mm.Col, n, len(bg), clip(clean(mm.Want), 30), clip(clean(mm.Got), 30))))
 		case res.Note != "":
 			head = append(head, st.Warn.Render(clean(res.Note)))
 		}
 		if d := res.Detail(); d != "" {
 			head = append(head, st.Bad.Render(clean(d)))
+		}
+		if x := runner.Explain(*res); x.Hint != "" {
+			head = append(head, st.Warn.Render("why: "+clean(x.Hint)))
+			if x.Loc != "" {
+				head = append(head, st.Warn.Render("at:  "+clean(x.Loc)))
+			}
 		}
 	}
 	if m.run != nil && m.run.running {
@@ -144,6 +166,8 @@ func (m Model) fullBox() []string {
 			body = append(body, st.Accent.Render(string(t)))
 		case r.bad:
 			body = append(body, st.Bad.Render("! "+string(t)))
+		case r.note:
+			body = append(body, st.Dim.Render("  "+string(t)))
 		default:
 			body = append(body, "  "+string(t))
 		}
@@ -216,7 +240,7 @@ func (m Model) updateFull(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.SetClipboard(strings.TrimRight(text, "\n") + "\n")
 	case "r": // just this test; the other results stay
 		if row, ok := m.selected(); ok {
-			return m.runTests(row.Name)
+			return m.runTests([]string{row.Name})
 		}
 	case "ctrl+c":
 		return m.stopTests(), tea.Quit

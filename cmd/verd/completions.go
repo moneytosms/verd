@@ -89,7 +89,10 @@ _verd_complete() {
             ;;
         *)
             if [[ "$cword" -eq 1 ]]; then
-                echo -e "init\nsetup\nconfig\ntest\nstress\nsnippet\neditorial\nhelp\nsubmit\nupdate\ndaily\nsync\nlogin\nlogout\nkeys\nthemes\ndoctor\ncompletions\nversion"
+                echo -e "init\nsetup\nconfig\ntest\nstress\nsnippet\neditorial\nhelp\nsubmit
+update
+uninstall
+daily\nsync\nlogin\nlogout\nkeys\nthemes\ndoctor\ncompletions\nversion"
             fi
             ;;
     esac
@@ -120,7 +123,7 @@ _verd() {
                 "editorial:read an editorial"
                 "help:show help for a command"
                 "submit:submit solution"
-                "update:update verd"
+                "update:update verd"                "uninstall:remove verd"
                 "daily:daily pick"
                 "sync:sync solved marks"
                 "login:save browser session"
@@ -214,6 +217,7 @@ complete -c verd -n "__fish_use_subcommand_only" -a "editorial" -d "read an edit
 complete -c verd -n "__fish_use_subcommand_only" -a "help" -d "show help for a command"
 complete -c verd -n "__fish_use_subcommand_only" -a "submit" -d "submit solution"
 complete -c verd -n "__fish_use_subcommand_only" -a "update" -d "update verd"
+complete -c verd -n "__fish_use_subcommand_only" -a "uninstall" -d "remove verd"
 complete -c verd -n "__fish_use_subcommand_only" -a "daily" -d "daily pick"
 complete -c verd -n "__fish_use_subcommand_only" -a "sync" -d "sync solved marks"
 complete -c verd -n "__fish_use_subcommand_only" -a "login" -d "save browser session"

@@ -78,7 +78,11 @@ func buildStress(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrap
 	if mode == "" {
 		mode = runner.Mode(d.DefaultMode())
 	}
-	return stress.Spec{Gen: progs[0], Solution: stress.Program{Path: ref.Path, Lang: l}, Brute: progs[1],
+	var validator stress.Program
+	if v := filepath.Join(ws.Dir(ref.Contest, ref.Index), "validator."+l.Ext); fileExists(v) {
+		validator = stress.Program{Path: v, Lang: l}
+	}
+	return stress.Spec{Validator: validator, Gen: progs[0], Solution: stress.Program{Path: ref.Path, Lang: l}, Brute: progs[1],
 		CacheDir: filepath.Join(cacheDir, "build"), Mode: mode, FloatEps: cfg.FloatEps,
 		TimeLimitMS: int(float64(d.TimeLimitMS) * cfg.TimeMultiplier), MaxIter: iter, Timeout: limit, Jobs: jobs, Batch: batch, Multi: multi}, nil
 }

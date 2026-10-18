@@ -40,7 +40,7 @@ func TestDelegatedMatchesHeadless(t *testing.T) {
 	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
 
 	var headless bytes.Buffer
-	hErr := testCmd(context.Background(), &headless, cfg, cache, detail, nil, path)
+	hErr := testCmd(context.Background(), &headless, cfg, cache, detail, nil, path, testOpts{})
 
 	sock := shortSock(t)
 	srv, err := ipc.Listen(sock)
