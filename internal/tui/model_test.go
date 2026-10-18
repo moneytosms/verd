@@ -1522,3 +1522,11 @@ func TestShortPaths(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestSubmitStatusOverrideForSourcesWithoutVerdictFeed(t *testing.T) {
+	m := New(nil, "", Deps{})
+	m, _ = m.beginTracking(cf.Problem{ContestID: 1068, Index: cf.SourceCSES}, SubmitStart{Status: "copied: submit it on CSES"})
+	if out := plain(m); !strings.Contains(out, "copied: submit it on CSES") || strings.Contains(out, "on Codeforces") {
+		t.Fatalf("status override:\n%s", out)
+	}
+}

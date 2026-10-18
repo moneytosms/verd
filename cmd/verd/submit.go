@@ -72,7 +72,8 @@ type Started struct {
 	Problem cf.Problem
 	Text    string
 	Notes   []string
-	Direct  bool // sent straight to Codeforces; nothing was copied or opened
+	Status  string // overrides the modal's status line (sources with no Verdict feed)
+	Direct  bool   // sent straight to Codeforces; nothing was copied or opened
 	Updates <-chan submit.Update
 }
 
@@ -92,7 +93,8 @@ func (s *submitter) begin(ctx context.Context, p cf.Problem, lang string) (*Star
 		// No Verdict feed without a login: hand the Solution over, and the user marks it solved (m).
 		st := &Started{Problem: p, Text: string(src)}
 		s.handoff(st, src, submit.URL(p.ContestID, p.Index))
-		st.Notes = append(st.Notes, "verd cannot see the verdict here: press m on the Problem to mark it solved")
+		st.Status = "copied: submit it on " + cf.SourceName(p.Source()) + ", then press m on the Problem to mark it solved"
+		st.Notes = append(st.Notes, "verd cannot see the verdict here")
 		done := make(chan submit.Update)
 		close(done)
 		st.Updates = done

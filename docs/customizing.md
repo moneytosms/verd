@@ -212,6 +212,7 @@ Font family and size belong to your terminal emulator; verd cannot change them. 
 
 | Key | Values | Effect |
 | --- | --- | --- |
+| `reading_size` | `compact`, `normal`, `large` | One switch for how roomy statements feel. `large` is a narrower column with a wider margin. verd cannot change the terminal font: use your terminal's own zoom (ctrl+plus / ctrl+minus). The keys below override it. |
 | `reading_width` | `0` or `40`-`200` | Cap the statement's line length (0 = the whole pane). Narrow columns read faster. |
 | `reading_margin` | `0`-`8` | Left margin in columns. |
 | `reading_spacing` | `compact`, `normal`, `relaxed` | Blank lines between paragraphs. |

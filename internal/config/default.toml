@@ -82,6 +82,10 @@
 # zoom = "alt+z"
 
 # Reading preferences: how statements are laid out and styled.
+# reading_size = "normal"
+#   One switch for how roomy statements feel: compact | normal | large.
+#   large: a narrower column and wider margin (verd cannot change your terminal's
+#   font size; ctrl+plus / ctrl+minus in your terminal does). reading_width and the others below override it.
 # reading_width = 0
 #   Max width for statement text in columns (0 = use the whole pane; 40-200 to cap it).
 #   Text is left-aligned inside the pane at the given width.

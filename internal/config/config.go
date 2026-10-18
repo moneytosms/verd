@@ -36,6 +36,7 @@ type Config struct {
 	EmbedSide       string   `toml:"embed_side"`
 	EmbedZoom       bool     `toml:"embed_zoom"`
 	SubmitMode      string   `toml:"submit_mode"`
+	ReadingSize     string   `toml:"reading_size"`
 	ReadingWidth    int      `toml:"reading_width"`
 	ReadingMargin   int      `toml:"reading_margin"`
 	ReadingSpacing  string   `toml:"reading_spacing"`
@@ -99,7 +100,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
-		ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
+		ReadingSize: "normal", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
@@ -229,6 +230,9 @@ func Load(path string) (Config, error) {
 	if c.ReadingWidth != 0 && (c.ReadingWidth < 40 || c.ReadingWidth > 200) {
 		return c, fmt.Errorf("reading_width: %d is outside 40 to 200", c.ReadingWidth)
 	}
+	if c.ReadingSize != "" && c.ReadingSize != "compact" && c.ReadingSize != "normal" && c.ReadingSize != "large" {
+		return c, fmt.Errorf("reading_size %q: want compact, normal or large", c.ReadingSize)
+	}
 	if c.ReadingMargin < 0 || c.ReadingMargin > 8 {
 		return c, fmt.Errorf("reading_margin: %d is outside 0 to 8", c.ReadingMargin)
 	}
@@ -288,7 +292,7 @@ func (c Config) Get(key string) (string, bool) {
 		"embed_side": c.EmbedSide, "embed_zoom": c.EmbedZoom, "submit_mode": c.SubmitMode, "time_multiplier": c.TimeMultiplier,
 		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest,
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
-		"reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
+		"reading_size": c.ReadingSize, "reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
 		"header": c.Header, "footer": c.Footer, "tabs": strings.Join(c.Tabs, ","), "mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,
 	}

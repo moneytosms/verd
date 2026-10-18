@@ -179,3 +179,16 @@ func TestRenderEmphasisOff(t *testing.T) {
 		t.Errorf("emphasis SGR codes found when emphasis is off: %q", out)
 	}
 }
+
+func TestImageLinksAreAbsolute(t *testing.T) {
+	for src, want := range map[string]string{
+		"/file/abc":                       "https://cses.fi/file/abc",
+		"//espresso.codeforces.com/x.png": "https://espresso.codeforces.com/x.png",
+		"/predownloaded/a/b.png":          "https://codeforces.com/predownloaded/a/b.png",
+		"https://x.org/i.png":             "https://x.org/i.png",
+	} {
+		if got := absImage(src); got != want {
+			t.Errorf("%s: %s", src, got)
+		}
+	}
+}

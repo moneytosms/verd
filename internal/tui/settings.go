@@ -40,6 +40,7 @@ var settingDefs = []settingDef{
 	{"Editor", "embed_side", "Embedded side", "Which column the embedded editor takes: left or right. {editor.focus_left} / {editor.focus_right} move the keyboard to the left / right column.", "enum", true},
 	{"Editor", "embed_zoom", "Start zoomed", "Start the editor zoomed (fullscreen) when it opens.", "bool", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
+	{"Reading", "reading_size", "Text size", "compact, normal or large. large is a narrower column with a wider margin, easier on the eyes. verd cannot change the terminal font: use your terminal's ctrl+plus / ctrl+minus for that. The settings below override it.", "enum", true},
 	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
 	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
 	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},
@@ -171,7 +172,7 @@ func (m Model) applyLive(key, value string) Model {
 		}
 		m.cursor, m.pickInit, m.pickExpr, m.pickPreset = 0, false, "", "" // the Picker redraws under the new sources
 		m = m.refilter()
-	case "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
+	case "reading_size", "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
 		// Invalidate bodyW to force re-render with new reading preferences
 		if m.detail != nil {
 			m.bodyW = 0

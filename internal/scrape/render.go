@@ -121,7 +121,7 @@ func Render(statementHTML string, width int, style string, o Options) (string, e
 	// Images can't render in a terminal: replace with alt text + OSC 8 link.
 	st.Find("img").Each(func(_ int, s *goquery.Selection) {
 		src, _ := s.Attr("src")
-		s.ReplaceWithHtml("<a href=\"" + src + "\">[image]</a>")
+		s.ReplaceWithHtml("<a href=\"" + html.EscapeString(absImage(src)) + "\">[image]</a>")
 	})
 	body, err := st.Html()
 	if err != nil {
@@ -229,4 +229,18 @@ func centerText(text string, paneWidth int, contentWidth int, margin int) string
 		}
 	}
 	return strings.Join(out, "\n")
+}
+
+// absImage makes an image address usable outside the page: statements store them as the site wrote
+// them ("//espresso.codeforces.com/x.png", "/predownloaded/x.png", CSES "/file/<hash>").
+func absImage(src string) string {
+	switch {
+	case strings.HasPrefix(src, "//"):
+		return "https:" + src
+	case strings.HasPrefix(src, "/file/"):
+		return "https://cses.fi" + src
+	case strings.HasPrefix(src, "/"):
+		return "https://codeforces.com" + src
+	}
+	return src
 }

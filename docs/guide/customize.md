@@ -59,6 +59,7 @@ A rebound action stops answering to its old key, and two actions on one key with
 How statements look:
 
 ```sh
+verd config set reading_size large     # compact | normal | large: a narrower, roomier column
 verd config set reading_width 90         # cap the line length (0 = the whole pane)
 verd config set reading_spacing relaxed  # compact | normal | relaxed
 verd config set reading_headings bar     # plain | bold | bar | underline

@@ -352,7 +352,7 @@ func buildSettings(cfg config.Config) map[string]string {
 		"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
 		"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
 		"embed_side": cfg.EmbedSide, "embed_zoom": fmt.Sprint(cfg.EmbedZoom), "border": cfg.Border, "submit_mode": cfg.SubmitMode,
-		"reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
+		"reading_size": cfg.ReadingSize, "reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
 		"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
 		"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
 		"header": fmt.Sprint(cfg.Header), "footer": fmt.Sprint(cfg.Footer), "tabs": strings.Join(cfg.Tabs, ","),
@@ -411,7 +411,7 @@ func runTUI(path string) error {
 			if err != nil {
 				return tui.SubmitStart{}, err
 			}
-			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Updates: st.Updates}, nil
+			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Status: st.Status, Updates: st.Updates}, nil
 		},
 		Reload: func() (tui.Data, error) { return loadData(s, cfg.Handle) },
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
