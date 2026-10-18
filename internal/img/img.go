@@ -19,6 +19,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -119,16 +120,35 @@ func allowed(raw string) error {
 	return nil
 }
 
-// publicOnly is a dialer control that refuses loopback, private, link-local and unspecified
-// addresses, checked on the address actually dialled (so DNS tricks and redirects cannot get past it).
+// special are address ranges that are global-unicast by the Go definition but are not the public
+// internet (IANA special-purpose registry): shared/CGNAT space, benchmarking, protocol assignments,
+// documentation, reserved, and the IPv6 transition ranges that can embed a private IPv4 address.
+var special = func() []netip.Prefix {
+	var out []netip.Prefix
+	for _, p := range []string{"0.0.0.0/8", "100.64.0.0/10", "192.0.0.0/24", "192.0.2.0/24", "192.88.99.0/24", "198.18.0.0/15",
+		"198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4", "64:ff9b::/96", "64:ff9b:1::/48", "100::/64", "2001::/23",
+		"2001:db8::/32", "2002::/16", "fc00::/7", "fec0::/10"} {
+		out = append(out, netip.MustParsePrefix(p))
+	}
+	return out
+}()
+
+// publicOnly is a dialer control that allows only addresses on the public internet: global unicast,
+// not private, and outside every special-purpose range. It checks the address actually dialled, so
+// DNS tricks and redirects cannot get past it.
 func publicOnly(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
+	ap, err := netip.ParseAddrPort(address)
 	if err != nil {
 		return err
 	}
-	ip := net.ParseIP(host)
-	if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
-		return fmt.Errorf("refusing non-public address %s", host)
+	ip := ap.Addr().Unmap() // ::ffff:10.0.0.1 is 10.0.0.1
+	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() {
+		return fmt.Errorf("refusing non-public address %s", ip)
+	}
+	for _, p := range special {
+		if p.Contains(ip) {
+			return fmt.Errorf("refusing special-purpose address %s", ip)
+		}
 	}
 	return nil
 }
