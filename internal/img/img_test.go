@@ -136,7 +136,7 @@ func TestPrivateAddressesAreRefused(t *testing.T) {
 	for addr, ok := range map[string]bool{
 		"127.0.0.1:443": false, "10.0.0.5:443": false, "192.168.1.1:443": false, "169.254.169.254:80": false,
 		"[::1]:443": false, "0.0.0.0:443": false, "100.64.0.1:443": false, "198.18.0.1:443": false, "240.0.0.1:443": false,
-		"[::ffff:10.0.0.1]:443": false, "[64:ff9b::a00:1]:443": false, "[2002:a00:1::]:443": false, "[fd00::1]:443": false, "[fec0::1]:443": false, "8.8.8.8:443": true, "[2606:4700::1111]:443": true,
+		"[::ffff:10.0.0.1]:443": false, "[::a00:1]:443": false, "[::7f00:1]:443": false, "[64:ff9b::a00:1]:443": false, "[2002:a00:1::]:443": false, "[fd00::1]:443": false, "[fec0::1]:443": false, "8.8.8.8:443": true, "[2606:4700::1111]:443": true,
 	} {
 		if err := publicOnly("tcp", addr, nil); (err == nil) != ok {
 			t.Errorf("%s: %v", addr, err)
