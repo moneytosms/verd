@@ -77,7 +77,8 @@ func TestCppACWACached(t *testing.T) {
 	if last := evs[len(evs)-1]; last.Kind != Done || last.Verdict != WA {
 		t.Fatalf("overall should be first failure: %+v", last)
 	}
-	if res[0].MemoryMB <= 0 || res[0].TimeMS < 0 {
+	// memory is sampled while the child runs, so a process that exits at once may read 0: only reject nonsense
+	if res[0].MemoryMB < 0 || res[0].TimeMS < 0 {
 		t.Fatalf("stats not measured: %+v", res[0])
 	}
 
