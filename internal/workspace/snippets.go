@@ -25,14 +25,52 @@ type Snippet struct {
 // libraryDir is where a language's snippet files live under the snippets dir.
 func libraryDir(dir, langKey string) string { return filepath.Join(dir, "library", langKey) }
 
-func newSnippet(name string, b []byte) Snippet {
+// commentMarker starts a line comment in a language's files ("#" for Python, "//" for C and C++).
+func commentMarker(l config.Lang) string {
+	if l.Ext == "py" {
+		return "#"
+	}
+	return "//"
+}
+
+func newSnippet(name string, l config.Lang, b []byte) Snippet {
 	code := string(b)
 	first, _, _ := strings.Cut(code, "\n")
-	desc := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(first), "//"))
-	if strings.HasPrefix(strings.TrimSpace(first), "#") {
-		desc = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(first), "#"))
+	first = strings.TrimSpace(first)
+	desc := ""
+	if m := commentMarker(l); strings.HasPrefix(first, m) && !strings.HasPrefix(first, "#include") {
+		desc = strings.TrimSpace(strings.TrimPrefix(first, m))
 	}
 	return Snippet{Name: name, Desc: desc, Code: code}
+}
+
+// SnippetPath is where the user's file for a snippet lives (it may not exist yet).
+func SnippetPath(dir, langKey string, l config.Lang, name string) string {
+	return filepath.Join(libraryDir(dir, langKey), name+"."+l.Ext)
+}
+
+// LibraryRoot is the folder holding every language's snippet files.
+func LibraryRoot(dir string) string { return filepath.Join(dir, "library") }
+
+// WithDescription makes code start with a one-line comment: desc if given, else the name when the
+// first line is not already a comment.
+func WithDescription(code, name, desc string, l config.Lang) string {
+	m := commentMarker(l)
+	first, _, _ := strings.Cut(code, "\n")
+	first = strings.TrimSpace(first)
+	hasComment := strings.HasPrefix(first, m) && !strings.HasPrefix(first, "#include")
+	switch {
+	case desc != "":
+		return m + " " + desc + "\n" + code
+	case hasComment:
+		return code
+	}
+	return m + " " + name + "\n" + code
+}
+
+// RemoveSnippet deletes the user's file for a snippet; a built-in of that name comes back.
+func RemoveSnippet(dir, langKey string, l config.Lang, name string) error {
+	return os.Remove(SnippetPath(dir, langKey, l, name))
 }
 
 // ListSnippets returns the library for a language sorted by name: the embedded defaults, with
@@ -48,7 +86,7 @@ func ListSnippets(dir, langKey string, l config.Lang) []Snippet {
 			}
 			if b, err := fs.ReadFile(fsys, path.Join(root, e.Name())); err == nil {
 				name := strings.TrimSuffix(e.Name(), ext)
-				byName[name] = newSnippet(name, b)
+				byName[name] = newSnippet(name, l, b)
 			}
 		}
 	}

@@ -333,3 +333,92 @@ func TestSnippetExport(t *testing.T) {
 		t.Fatal("debug snippet missing")
 	}
 }
+
+func TestSnippetManage(t *testing.T) {
+	cfgHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgHome)
+	dir := filepath.Join(cfgHome, "verd", "snippets")
+	rec := filepath.Join(t.TempDir(), "editor.log")
+	ed := filepath.Join(t.TempDir(), "fakeed")
+	os.WriteFile(ed, []byte("#!/bin/sh\necho \"$@\" >> '"+rec+"'\n"), 0o755)
+	os.MkdirAll(filepath.Join(cfgHome, "verd"), 0o755)
+	os.WriteFile(filepath.Join(cfgHome, "verd", "config.toml"), []byte("editor = '"+ed+"'\n"), 0o644)
+	var out bytes.Buffer
+	do := func(args ...string) error { out.Reset(); return run(append([]string{"snippet"}, args...), &out) }
+
+	// add from a file: gets a description line, shows up in the library
+	src := filepath.Join(t.TempDir(), "mine.cpp")
+	os.WriteFile(src, []byte("int twice(int x) { return 2 * x; }"), 0o644)
+	if err := do("add", "--desc", "double it", "twice", src); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "twice.cpp")); string(b) != "// double it\nint twice(int x) { return 2 * x; }\n" {
+		t.Fatalf("added file: %q", b)
+	}
+	if err := do("--list"); err != nil || !strings.Contains(out.String(), "double it") {
+		t.Fatalf("list: %v %q", err, out.String())
+	}
+	if err := do("add", "twice", src); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("duplicate add: %v", err)
+	}
+	if err := do("add", "dsu", src); err == nil {
+		t.Fatal("adding over a built-in needs --force")
+	}
+	if err := do("add", "bad name", src); err == nil {
+		t.Fatal("bad name")
+	}
+	// python gets a # description
+	pysrc := filepath.Join(t.TempDir(), "p.py")
+	os.WriteFile(pysrc, []byte("x = 1\n"), 0o644)
+	if err := do("add", "--lang", "python", "xone", pysrc); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "python", "xone.py")); string(b) != "# xone\nx = 1\n" {
+		t.Fatalf("python add: %q", b)
+	}
+
+	// edit a built-in: writes an editable copy and opens it
+	if err := do("edit", "modpow"); err != nil {
+		t.Fatal(err)
+	}
+	mp := filepath.Join(dir, "library", "cpp", "modpow.cpp")
+	if _, err := os.Stat(mp); err != nil {
+		t.Fatal("edit should write the built-in's copy")
+	}
+	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), mp) {
+		t.Fatalf("editor not run on %s: %q", mp, log)
+	}
+	// add with no source: stub + editor
+	if err := do("add", "--desc", "mine", "stub"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "stub.cpp")); string(b) != "// mine\n" {
+		t.Fatalf("stub: %q", b)
+	}
+	// rm: user file goes, built-in stays
+	if err := do("rm", "twice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := do("rm", "twice"); err == nil {
+		t.Fatal("second rm should fail")
+	}
+	if err := do("rm", "modpow"); err != nil {
+		t.Fatal(err)
+	}
+	if err := do("modpow"); err != nil || !strings.Contains(out.String(), "modular exponentiation") {
+		t.Fatalf("built-in must remain after rm: %v %q", err, out.String())
+	}
+	// open: populates and opens the library folder; path prints the dir
+	if err := do("open"); err != nil {
+		t.Fatal(err)
+	}
+	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), filepath.Join(dir, "library")) {
+		t.Fatalf("open: %q", log)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "library", "python", "dsu.py")); err != nil {
+		t.Fatal("open should populate the library")
+	}
+	if err := do("path"); err != nil || strings.TrimSpace(out.String()) != dir {
+		t.Fatalf("path: %v %q", err, out.String())
+	}
+}

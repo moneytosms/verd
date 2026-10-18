@@ -124,3 +124,22 @@ func TestShippedSnippetsBuild(t *testing.T) {
 		}
 	}
 }
+
+func TestSnippetDescriptionByLanguage(t *testing.T) {
+	c, py := config.Default().Lang["c"], config.Default().Lang["python"]
+	if s := newSnippet("x", c, []byte("#include <stdio.h>\nint x;\n")); s.Desc != "" {
+		t.Fatalf("a C preprocessor line is not a description: %q", s.Desc)
+	}
+	if s := newSnippet("x", py, []byte("# hi there\nx = 1\n")); s.Desc != "hi there" {
+		t.Fatalf("%q", s.Desc)
+	}
+	if got := WithDescription("int x;\n", "x", "", c); got != "// x\nint x;\n" {
+		t.Fatalf("%q", got)
+	}
+	if got := WithDescription("// have\nint x;\n", "x", "", c); got != "// have\nint x;\n" {
+		t.Fatalf("%q", got)
+	}
+	if got := WithDescription("#include <a.h>\n", "x", "", c); got != "// x\n#include <a.h>\n" {
+		t.Fatalf("%q", got)
+	}
+}

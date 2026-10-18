@@ -85,6 +85,7 @@ Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `
 
 `verd init` also copies the built-in snippet library to `<snippets_dir>/library/<lang>/<name>.<ext>` (C++, C and Python: bfs, dfs, dijkstra, dsu, segment tree, modpow, sieve, prefix sums, vector input, and more). Edit them or add your own: the file name is the snippet name and a comment on the first line is its description. A file with a built-in's name replaces it; verd also works without running `init` (the built-ins are embedded).
 
+- Manage your own: `verd snippet add [--lang L] [--desc D] <name> [file|-]` adds one from a file or stdin (with no source it creates a stub and opens your editor); `verd snippet edit <name>` edits one (a built-in gets an editable copy first); `verd snippet rm <name>` removes your file (a built-in of that name comes back); `verd snippet open` opens the library folder in your editor; `verd snippet path` prints the snippets dir. A first-line comment is the description; `add` writes one for you (`--desc`, else the name) when the code has none. In Neovim: `:'<,'>w !verd snippet add mysnip -` saves the selection.
 - In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard.
 - `verd snippet --list [--lang python]` lists them; `verd snippet dijkstra` prints one (`--copy` puts it on the clipboard). In Neovim: `:r !verd snippet dijkstra`.
 - C snippets for graphs (`bfs`, `dfs`, `dijkstra`, `topo_sort`) build on `graphinput`; paste that first. Everything else is self-contained.

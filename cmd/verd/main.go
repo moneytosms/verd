@@ -295,6 +295,11 @@ usage: verd [--here] [command]
                                   search for a counterexample
   snippet [--lang L] --list | --export | [--copy] <name>
                                   print, copy or export (VSCode JSON) library snippets
+  snippet add [--lang L] [--desc D] <name> [file|-]
+                                  add a snippet from a file or stdin (no source: edit a new one)
+  snippet edit|rm [--lang L] <name>
+                                  edit (built-ins get an editable copy) | remove your snippet
+  snippet open | path             open the library folder in your editor | print the snippets dir
   submit <file>                   submit and track the Verdict
   update [--check]                update verd
   daily                           today's unsolved pick, weak topics first

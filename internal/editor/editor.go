@@ -132,6 +132,9 @@ func (c *Controller) foreground(dir string, args []string) *exec.Cmd {
 	return cmd
 }
 
+// Command is the editor as a foreground command opening args in dir, for use outside the TUI.
+func (c *Controller) Command(dir string, args ...string) *exec.Cmd { return c.foreground(dir, args) }
+
 // OpenPair opens two files side by side (a Custom Test's .in and .ans), with the same
 // pane / suspend behavior as Open.
 func (c *Controller) OpenPair(left, right string) (*exec.Cmd, error) {
