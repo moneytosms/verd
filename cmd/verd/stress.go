@@ -47,12 +47,17 @@ func stressCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir s
 		return err
 	}
 	var r stress.Result
+	start := time.Now()
 	for e := range stress.Run(ctx, spec) {
 		if e.Done {
 			r = e.Result
 		}
 	}
-	return printStress(out, r)
+	err = printStress(out, r)
+	if r.Kind == stress.Limit {
+		fmt.Fprintf(out, "%.0f iterations/s\n", float64(r.Iterations)/time.Since(start).Seconds())
+	}
+	return err
 }
 
 // buildStress creates the gen and brute helpers from Templates if missing and assembles the spec.
