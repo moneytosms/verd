@@ -26,10 +26,13 @@ var ErrRunning = errors.New("verd is already running")
 const maxPath = 100
 
 type Request struct {
-	Cmd  string `json:"cmd"` // "test" | "submit" | "stress"
-	File string `json:"file"`
-	Iter int    `json:"iter,omitempty"` // stress: max iterations
-	Secs int    `json:"secs,omitempty"` // stress: time limit in seconds
+	Cmd   string `json:"cmd"` // "test" | "submit" | "stress"
+	File  string `json:"file"`
+	Iter  int    `json:"iter,omitempty"`  // stress: max iterations
+	Secs  int    `json:"secs,omitempty"`  // stress: time limit in seconds
+	Jobs  int    `json:"jobs,omitempty"`  // stress: parallel iterations
+	Batch int    `json:"batch,omitempty"` // stress: cases per gen run
+	Multi int    `json:"multi,omitempty"` // stress: cases per Solution/brute run
 }
 
 // Message is one streamed event. Kind: header | compile | test | done | submit | stress | error.

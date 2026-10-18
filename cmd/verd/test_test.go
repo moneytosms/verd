@@ -155,13 +155,13 @@ func TestStressCmd(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "brute.py"), []byte("print(int(input()))\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "gen.py"), []byte("import sys,random\nprint(random.Random(int(sys.argv[1])).randint(1,10))\n"), 0o644)
 	var out bytes.Buffer
-	err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 500, 20*time.Second)
+	err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 500, 20*time.Second, 0, 0, 0)
 	if exitCode(err) != 1 || !strings.Contains(out.String(), "MISMATCH at seed") {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
 	os.WriteFile(path, []byte("print(int(input()))\n"), 0o644)
 	out.Reset()
-	if err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 20, 20*time.Second); err != nil || !strings.Contains(out.String(), "no counterexample in 20") {
+	if err := stressCmd(context.Background(), &out, cfg, cache, detail, nil, path, 20, 20*time.Second, 0, 0, 0); err != nil || !strings.Contains(out.String(), "no counterexample in 20") {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
 }
@@ -177,7 +177,7 @@ func TestStressDelegatedMatchesHeadless(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "brute.py"), []byte("n=int(input())\nprint(n*2 if n!=5 else 0)\n"), 0o644)
 
 	var headless bytes.Buffer
-	hErr := stressCmd(context.Background(), &headless, cfg, cache, detail, nil, path, 20, 20*time.Second)
+	hErr := stressCmd(context.Background(), &headless, cfg, cache, detail, nil, path, 20, 20*time.Second, 0, 0, 0)
 
 	sock := shortSock(t)
 	srv, err := ipc.Listen(sock)
@@ -189,7 +189,7 @@ func TestStressDelegatedMatchesHeadless(t *testing.T) {
 	go srv.Serve(stressHandler(cfg, cache, detail, nil, func(r tui.ExternalRun) { attached <- r }))
 
 	var delegated bytes.Buffer
-	handled, dErr := delegateStress(context.Background(), &delegated, sock, path, 20, 20*time.Second)
+	handled, dErr := delegateStress(context.Background(), &delegated, sock, path, 20, 20*time.Second, 0, 0, 0)
 	if !handled || exitCode(hErr) != 1 || exitCode(dErr) != 1 {
 		t.Fatalf("handled=%v headless=%v delegated=%v", handled, hErr, dErr)
 	}

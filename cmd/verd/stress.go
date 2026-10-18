@@ -16,7 +16,7 @@ import (
 )
 
 // prepareStress resolves path to a Problem and builds its stress spec. Errors are *exitError code 2.
-func prepareStress(ctx context.Context, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string, iter int, limit time.Duration) (workspace.Ref, stress.Spec, error) {
+func prepareStress(ctx context.Context, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string, iter int, limit time.Duration, jobs, batch, multi int) (workspace.Ref, stress.Spec, error) {
 	ref, err := workspace.New(cfg.Workspace).Resolve(path, cfg.Lang)
 	if err != nil {
 		return ref, stress.Spec{}, &exitError{2, err.Error()}
@@ -32,7 +32,7 @@ func prepareStress(ctx context.Context, cfg config.Config, cacheDir string, deta
 	if savedMode != nil {
 		mode = savedMode(ref.Contest, ref.Index)
 	}
-	spec, err := buildStress(cfg, cacheDir, ref, d, runner.Mode(mode), iter, limit)
+	spec, err := buildStress(cfg, cacheDir, ref, d, runner.Mode(mode), iter, limit, jobs, batch, multi)
 	if err != nil {
 		return ref, spec, &exitError{2, err.Error()}
 	}
@@ -41,8 +41,8 @@ func prepareStress(ctx context.Context, cfg config.Config, cacheDir string, deta
 
 // stressCmd runs `verd stress <file>`: gen + brute helpers are created from Templates if missing.
 // Exit 0 only if no counterexample was found within the limits.
-func stressCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string, iter int, limit time.Duration) error {
-	_, spec, err := prepareStress(ctx, cfg, cacheDir, detail, savedMode, path, iter, limit)
+func stressCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, path string, iter int, limit time.Duration, jobs, batch, multi int) error {
+	_, spec, err := prepareStress(ctx, cfg, cacheDir, detail, savedMode, path, iter, limit, jobs, batch, multi)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func stressCmd(ctx context.Context, out io.Writer, cfg config.Config, cacheDir s
 
 // buildStress creates the gen and brute helpers from Templates if missing and assembles the spec.
 // mode "" means the Problem's default Comparison Mode.
-func buildStress(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail, mode runner.Mode, iter int, limit time.Duration) (stress.Spec, error) {
+func buildStress(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrape.Detail, mode runner.Mode, iter int, limit time.Duration, jobs, batch, multi int) (stress.Spec, error) {
 	ws := workspace.New(cfg.Workspace)
 	l := cfg.Lang[ref.Lang]
 	tdir := filepath.Join(config.Dir(), "templates")
@@ -80,7 +80,7 @@ func buildStress(cfg config.Config, cacheDir string, ref workspace.Ref, d *scrap
 	}
 	return stress.Spec{Gen: progs[0], Solution: stress.Program{Path: ref.Path, Lang: l}, Brute: progs[1],
 		CacheDir: filepath.Join(cacheDir, "build"), Mode: mode, FloatEps: cfg.FloatEps,
-		TimeLimitMS: int(float64(d.TimeLimitMS) * cfg.TimeMultiplier), MaxIter: iter, Timeout: limit}, nil
+		TimeLimitMS: int(float64(d.TimeLimitMS) * cfg.TimeMultiplier), MaxIter: iter, Timeout: limit, Jobs: jobs, Batch: batch, Multi: multi}, nil
 }
 
 // printStress reports a finished stress run. Only "no counterexample" returns nil.

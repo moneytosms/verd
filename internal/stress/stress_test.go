@@ -102,3 +102,49 @@ func TestSolutionRETLEAndCancel(t *testing.T) {
 		t.Fatalf("%+v", r)
 	}
 }
+
+// Batch gen: one run prints N cases; seeds, Iterations and the lowest failing seed match the per-seed path.
+func TestBatchGen(t *testing.T) {
+	s := setup(t, "n=int(input())\nprint(n*2+(1 if n==37 else 0))\n", good)
+	s.Gen.Path = filepath.Join(filepath.Dir(s.Gen.Path), "batch.py")
+	os.WriteFile(s.Gen.Path, []byte("import sys\ns,n=int(sys.argv[1]),int(sys.argv[2])\nfor i in range(s,s+n): print(i); print('---')\n"), 0o644)
+	s.Batch, s.MaxIter = 8, 100
+	r, _ := final(Run(context.Background(), s))
+	if r.Kind != Mismatch || r.Seed != 37 || r.Input != "37\n" {
+		t.Fatalf("%+v", r)
+	}
+	s.MaxIter = 20
+	if r, _ := final(Run(context.Background(), s)); r.Kind != Limit || r.Iterations != 20 {
+		t.Fatalf("%+v", r)
+	}
+	s.Batch = 5 // gen still prints 5 per 5: fine; a wrong count is an Error
+	s.Gen.Path = filepath.Join(filepath.Dir(s.Gen.Path), "short.py")
+	os.WriteFile(s.Gen.Path, []byte("print(1)\n"), 0o644)
+	if r, _ := final(Run(context.Background(), s)); r.Kind != Error || r.Err == "" {
+		t.Fatalf("%+v", r)
+	}
+}
+
+// Multi: Solution and brute read t then t cases; failures fall back to per-seed runs so the seed is exact.
+func TestMulti(t *testing.T) {
+	multi := func(f string) string {
+		return "t=int(input())\nfor _ in range(t):\n    n=int(input())\n    print(" + f + ")\n"
+	}
+	s := setup(t, multi("n*2+(1 if n==37 else 0)"), multi("n*2"))
+	s.Gen.Path = filepath.Join(filepath.Dir(s.Gen.Path), "seed.py")
+	os.WriteFile(s.Gen.Path, []byte("import sys\nprint(sys.argv[1])\n"), 0o644)
+	s.Multi, s.MaxIter, s.Jobs = 8, 100, 4
+	for range 3 {
+		r, _ := final(Run(context.Background(), s))
+		if r.Kind != Mismatch || r.Seed != 37 || r.Iterations != 37 || r.Input != "1\n37\n" {
+			t.Fatalf("%+v", r)
+		}
+	}
+	s.Solution.Path = filepath.Join(filepath.Dir(s.Gen.Path), "ok.py")
+	os.WriteFile(s.Solution.Path, []byte(multi("n*2")), 0o644)
+	s.MaxIter = 20 // not a multiple of Multi
+	r, n := final(Run(context.Background(), s))
+	if r.Kind != Limit || r.Iterations != 20 || n != 20 {
+		t.Fatalf("%+v events=%d", r, n)
+	}
+}

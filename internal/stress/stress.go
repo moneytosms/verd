@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,6 +32,8 @@ type Spec struct {
 	MaxIter              int           // default 1000
 	Timeout              time.Duration // default 30 s
 	Jobs                 int           // parallel iterations; 0 = NumCPU (max 16)
+	Batch                int           // >1: gen runs as "gen <first seed> <Batch>" and prints Batch cases split by "---" lines
+	Multi                int           // >1: Solution and brute are multi-test programs (read t, loop); gen prints one case without t; Multi cases run per process pair
 }
 
 // Outcome kinds.
@@ -127,13 +130,50 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		jobs = min(runtime.NumCPU(), 16)
 	}
 	jobs = min(jobs, spec.MaxIter)
+	// genCase returns the Input for seed i. With Batch, one gen run serves a chunk of seeds.
+	var chunks sync.Map // chunk number -> *chunk
+	type chunk struct {
+		once  sync.Once
+		cases []string
+		err   string
+	}
+	genCase := func(wctx context.Context, i int) (in, errOut string, ok bool) {
+		if spec.Batch <= 1 {
+			in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit)
+			return in, ge, gc == 0 && !gtle
+		}
+		n, k := (i-1)/spec.Batch, (i-1)%spec.Batch
+		c, _ := chunks.LoadOrStore(n, &chunk{})
+		ck := c.(*chunk)
+		ck.once.Do(func() {
+			first := n*spec.Batch + 1
+			out, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(first), strconv.Itoa(spec.Batch)), "", 10*limit)
+			if wctx.Err() != nil {
+				return
+			}
+			if gc != 0 || gtle {
+				ck.err = ge
+				return
+			}
+			if ck.cases = splitCases(out); len(ck.cases) != spec.Batch {
+				ck.err = fmt.Sprintf("batch gen printed %d cases, want %d (separate cases with a --- line)", len(ck.cases), spec.Batch)
+			}
+		})
+		if ck.err != "" || k >= len(ck.cases) {
+			return "", ck.err, false
+		}
+		return ck.cases[k], "", true
+	}
 	// iterate runs one seed; nil means it passed. ok is false if ctx was cancelled mid-run.
 	iterate := func(wctx context.Context, i int) (r *Result, ok bool) {
-		in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit)
+		in, ge, gok := genCase(wctx, i)
 		if wctx.Err() != nil {
 			return nil, false
 		}
-		if gc != 0 || gtle {
+		if spec.Multi > 1 {
+			in = "1\n" + in
+		}
+		if !gok {
 			return &Result{Kind: Error, Iterations: i, Seed: i, Err: "gen failed: " + ge}, true
 		}
 		got, se, sc, stle := exec1(wctx, argv[1], in, limit)
@@ -158,11 +198,48 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		return nil, true
 	}
 
+	step := max(spec.Multi, 1) // seeds per unit of work
+	// fast runs seeds lo..hi as one multi-test input; true means all passed. Anything else falls back to per-seed runs.
+	fast := func(wctx context.Context, lo, hi int) bool {
+		var b strings.Builder
+		b.WriteString(strconv.Itoa(hi-lo+1) + "\n")
+		for i := lo; i <= hi; i++ {
+			in, _, ok := genCase(wctx, i)
+			if !ok {
+				return false
+			}
+			b.WriteString(in)
+		}
+		n := time.Duration(hi - lo + 1)
+		got, _, sc, stle := exec1(wctx, argv[1], b.String(), limit*n)
+		if sc != 0 || stle {
+			return false
+		}
+		want, _, bc, btle := exec1(wctx, argv[2], b.String(), 10*limit*n)
+		if bc != 0 || btle {
+			return false
+		}
+		ok, _ := runner.Compare(mode, want, got, eps)
+		return ok
+	}
+	// unit runs seeds lo..hi; nil means all passed.
+	unit := func(wctx context.Context, lo, hi int) (r *Result, ok bool) {
+		if step > 1 && fast(wctx, lo, hi) {
+			return nil, wctx.Err() == nil
+		}
+		for i := lo; i <= hi; i++ {
+			if r, ok = iterate(wctx, i); r != nil || !ok {
+				return
+			}
+		}
+		return nil, true
+	}
+
 	// Workers claim seeds in increasing order; results are consumed in seed order so the
 	// lowest failing seed wins and stop conditions match the sequential loop.
 	type done struct {
-		seed int
-		r    *Result
+		lo, hi int
+		r      *Result
 	}
 	wctx, stop := context.WithCancel(ctx)
 	defer stop()
@@ -177,20 +254,21 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		go func() {
 			defer wg.Done()
 			for {
-				i := int(next.Add(1))
-				if i > spec.MaxIter || int64(i) > minFail.Load() || time.Now().After(deadline) || wctx.Err() != nil {
+				lo := int(next.Add(1)-1)*step + 1
+				hi := min(lo+step-1, spec.MaxIter)
+				if lo > spec.MaxIter || int64(lo) > minFail.Load() || time.Now().After(deadline) || wctx.Err() != nil {
 					return
 				}
-				r, ok := iterate(wctx, i)
+				r, ok := unit(wctx, lo, hi)
 				if !ok {
 					return
 				}
 				if r != nil {
-					for m := minFail.Load(); int64(i) < m && !minFail.CompareAndSwap(m, int64(i)); m = minFail.Load() {
+					for m := minFail.Load(); int64(r.Seed) < m && !minFail.CompareAndSwap(m, int64(r.Seed)); m = minFail.Load() {
 					}
 				}
 				select {
-				case results <- done{i, r}:
+				case results <- done{lo, hi, r}:
 				case <-wctx.Done():
 					return
 				}
@@ -202,18 +280,38 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 	pending := map[int]*done{}
 	emit := 1 // next seed to report
 	for d := range results {
-		pending[d.seed] = &d
+		pending[d.lo] = &d
 		for p := pending[emit]; p != nil; p = pending[emit] {
 			if p.r != nil {
 				return *p.r
 			}
-			progress(emit, emit)
+			for i := p.lo; i <= p.hi; i++ {
+				progress(i, i)
+			}
 			delete(pending, emit)
-			emit++
+			emit = p.hi + 1
 		}
 	}
 	if ctx.Err() != nil {
 		return Result{Kind: Cancelled, Iterations: emit - 1}
 	}
 	return Result{Kind: Limit, Iterations: emit - 1}
+}
+
+// splitCases splits batch gen output on lines that are exactly "---"; a trailing separator is allowed.
+func splitCases(out string) []string {
+	var cases []string
+	var cur strings.Builder
+	for _, l := range strings.SplitAfter(out, "\n") {
+		if strings.TrimRight(l, "\r\n") == "---" {
+			cases = append(cases, cur.String())
+			cur.Reset()
+			continue
+		}
+		cur.WriteString(l)
+	}
+	if cur.Len() > 0 {
+		cases = append(cases, cur.String())
+	}
+	return cases
 }

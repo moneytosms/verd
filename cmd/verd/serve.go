@@ -164,7 +164,7 @@ func delegateSubmit(ctx context.Context, out io.Writer, sock, file string) (hand
 // sends the client only the final Result.
 func stressHandler(cfg config.Config, cacheDir string, detail detailFunc, savedMode modeFunc, attach func(tui.ExternalRun)) ipc.Handler {
 	return func(ctx context.Context, req ipc.Request, emit func(ipc.Message)) error {
-		ref, spec, err := prepareStress(ctx, cfg, cacheDir, detail, savedMode, req.File, req.Iter, time.Duration(req.Secs)*time.Second)
+		ref, spec, err := prepareStress(ctx, cfg, cacheDir, detail, savedMode, req.File, req.Iter, time.Duration(req.Secs)*time.Second, req.Jobs, req.Batch, req.Multi)
 		if err != nil {
 			return err
 		}
@@ -190,14 +190,14 @@ func stressHandler(cfg config.Config, cacheDir string, detail detailFunc, savedM
 }
 
 // delegateStress runs `verd stress` through a running TUI. handled=false: nobody listening.
-func delegateStress(ctx context.Context, out io.Writer, sock, file string, iter int, limit time.Duration) (handled bool, err error) {
+func delegateStress(ctx context.Context, out io.Writer, sock, file string, iter int, limit time.Duration, jobs, batch, multi int) (handled bool, err error) {
 	abs, err := filepath.Abs(file)
 	if err != nil {
 		return true, err
 	}
 	var srvErr string
 	var res *stress.Result
-	dialed, err := ipc.Call(ctx, sock, ipc.Request{Cmd: "stress", File: abs, Iter: iter, Secs: int(limit.Seconds())}, func(m ipc.Message) {
+	dialed, err := ipc.Call(ctx, sock, ipc.Request{Cmd: "stress", File: abs, Iter: iter, Secs: int(limit.Seconds()), Jobs: jobs, Batch: batch, Multi: multi}, func(m ipc.Message) {
 		switch m.Kind {
 		case "error":
 			srvErr = m.Text

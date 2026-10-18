@@ -161,8 +161,11 @@ func run(args []string, out io.Writer) error {
 		fs := flag.NewFlagSet("stress", flag.ContinueOnError)
 		iter := fs.Int("iter", 1000, "max iterations")
 		secs := fs.Int("time", 30, "max seconds")
+		jobs := fs.Int("jobs", 0, "parallel iterations (0 = CPU count, max 16)")
+		multi := fs.Int("multi", 0, "cases per Solution/brute run; both read t then t cases, gen prints one case without t")
+		batch := fs.Int("batch", 0, "cases per gen run; gen gets \"<seed> <N>\" and prints N cases split by --- lines")
 		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 1 {
-			return &exitError{2, "usage: verd stress [--iter N] [--time S] <file>"}
+			return &exitError{2, "usage: verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>"}
 		}
 		cfg, err := loadConfig(path)
 		if err != nil {
@@ -181,10 +184,10 @@ func run(args []string, out io.Writer) error {
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()
 		limit := time.Duration(*secs) * time.Second
-		if handled, err := delegateStress(ctx, out, socketPath(), fs.Arg(0), *iter, limit); handled {
+		if handled, err := delegateStress(ctx, out, socketPath(), fs.Arg(0), *iter, limit, *jobs, *batch, *multi); handled {
 			return err
 		}
-		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, limit)
+		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, limit, *jobs, *batch, *multi)
 	case "login":
 		return loginCmd(out, os.Stdin, credStore())
 	case "logout":
@@ -272,7 +275,7 @@ usage: verd [--here] [command]
                                   apply presets, export or import shortcuts
   themes [show <name>]            list themes | print an editable [themes.*] block
   test <file>                     run Sample and Custom Tests
-  stress [--iter N] [--time S] <file>
+  stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>
                                   search for a counterexample
   submit <file>                   submit and track the Verdict
   update [--check]                update verd
@@ -460,7 +463,7 @@ func runTUI(path string) error {
 				return nil, fmt.Errorf("no Solution yet (press {problem.edit} to create one)")
 			}
 			gen, brute, missing := stressHelpers(cfg, ref)
-			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0)
+			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0, 0, 0, 0)
 			if err != nil {
 				return nil, err
 			}

@@ -56,3 +56,40 @@ func BenchmarkSpawn(b *testing.B) {
 		exec1(context.Background(), argv, "5\n", 10*time.Second)
 	}
 }
+
+// BenchmarkOpts reports iters/s with --batch and --multi on trivial C++ programs.
+func BenchmarkOpts(b *testing.B) {
+	s := cppSpec(b, 2000)
+	dir := filepath.Dir(s.Gen.Path)
+	l := s.Gen.Lang
+	w := func(n, c string) Program {
+		p := filepath.Join(dir, n)
+		os.WriteFile(p, []byte(c), 0o644)
+		return Program{Path: p, Lang: l}
+	}
+	const multi = "#include <cstdio>\nint main(){int t,n;scanf(\"%d\",&t);while(t--){scanf(\"%d\",&n);printf(\"%d\\n\",n*2);}}\n"
+	batchGen := w("bgen.cpp", "#include <cstdio>\n#include <cstdlib>\nint main(int c,char**v){int s=atoi(v[1]),n=atoi(v[2]);for(int i=s;i<s+n;i++)printf(\"%d\\n---\\n\",i%100);}\n")
+	for _, c := range []struct {
+		name string
+		s    Spec
+	}{
+		{"batch", func() Spec { x := s; x.Gen, x.Batch = batchGen, 100; return x }()},
+		{"batch+multi", func() Spec {
+			x := s
+			x.Gen, x.Batch, x.Multi = batchGen, 100, 100
+			x.Solution, x.Brute = w("m.cpp", multi), w("mb.cpp", multi)
+			return x
+		}()},
+	} {
+		b.Run(c.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				start := time.Now()
+				r, _ := final(Run(context.Background(), c.s))
+				if r.Kind != Limit {
+					b.Fatalf("%+v", r)
+				}
+				b.ReportMetric(float64(r.Iterations)/time.Since(start).Seconds(), "iters/s")
+			}
+		})
+	}
+}

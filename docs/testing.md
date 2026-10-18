@@ -56,3 +56,12 @@ A stress test generates random inputs until your Solution and a brute force disa
 Seeds are deterministic, so the same buggy Solution reports the same counterexample every time.
 
 `verd stress` exits `0` only if no counterexample was found.
+
+### Going faster
+
+Iterations run in parallel (`--jobs N`, default CPU count, max 16). Two opt-in flags cut process spawns further; the reported seed and verdicts are unchanged.
+
+- `--batch N`: `gen` runs once per N seeds as `gen <first seed> <N>` and prints N cases, each followed by a line `---`.
+- `--multi N`: for multi-test problems. Solution and brute read `t` then `t` cases, `gen` prints one case without `t`, and N cases go through one process pair. If a batch disagrees or fails, verd reruns its seeds one by one (input `1` then the case) to report the exact seed.
+
+Trivial C++ programs, 16 threads: ~3.8k iterations/s default, ~5.4k with `--batch 100`, ~290k with `--batch 100 --multi 100` (`go test ./internal/stress -bench .`).
