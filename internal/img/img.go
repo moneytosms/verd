@@ -13,12 +13,12 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,17 +63,20 @@ func Resolve(setting string, getenv func(string) string) Mode {
 const maxBytes = 10 << 20
 
 // Fetch downloads an image (cached on disk under dir) and decodes it.
-func Fetch(url, dir string) (image.Image, error) {
-	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
-		return nil, errors.New("not an http(s) address")
+func Fetch(addr, dir string) (image.Image, error) {
+	if err := allowed(addr); err != nil {
+		return nil, err
 	}
-	sum := sha256.Sum256([]byte(url))
+	sum := sha256.Sum256([]byte(addr))
 	file := filepath.Join(dir, hex.EncodeToString(sum[:]))
 	data, err := os.ReadFile(file)
 	if err != nil {
-		req, _ := http.NewRequest("GET", url, nil)
+		req, _ := http.NewRequest("GET", addr, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-		resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+		client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(r *http.Request, _ []*http.Request) error {
+			return allowed(r.URL.String()) // a redirect must not leave the allowed sites either
+		}}
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -88,8 +91,36 @@ func Fetch(url, dir string) (image.Image, error) {
 			os.WriteFile(file, data, 0o644) // a cache miss next time is fine
 		}
 	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data)) // size first: a small file can claim a huge picture
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > maxPixels {
+		return nil, fmt.Errorf("image is %dx%d, too large", cfg.Width, cfg.Height)
+	}
 	m, _, err := image.Decode(bytes.NewReader(data))
 	return m, err
+}
+
+// maxPixels bounds a decoded picture (16 megapixels).
+const maxPixels = 16 << 20
+
+// hosts statement images may come from: the judges and their subdomains (CDNs included). A
+// statement is third-party content, so it cannot make verd fetch arbitrary or internal addresses.
+var hosts = []string{"codeforces.com", "codeforces.org", "cses.fi"}
+
+func allowed(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" {
+		return errors.New("only https images are fetched")
+	}
+	h := strings.ToLower(u.Hostname())
+	for _, ok := range hosts {
+		if h == ok || strings.HasSuffix(h, "."+ok) {
+			return nil
+		}
+	}
+	return fmt.Errorf("image host %q is not allowed", h)
 }
 
 // Fit is the cell size of an image of w x h pixels: at most maxCols x maxRows, keeping the shape
@@ -111,23 +142,20 @@ func Fit(w, h, maxCols, maxRows int) (cols, rows int) {
 // diagrams are drawn for a white page).
 func Scale(src image.Image, w, h int) *image.RGBA {
 	b := src.Bounds()
-	flat := image.NewRGBA(b)
-	draw.Draw(flat, b, image.NewUniform(color.White), image.Point{}, draw.Src)
-	draw.Draw(flat, b, src, b.Min, draw.Over)
 	out := image.NewRGBA(image.Rect(0, 0, w, h))
 	sw, sh := b.Dx(), b.Dy()
 	for y := 0; y < h; y++ {
 		y0, y1 := y*sh/h, max(y*sh/h+1, (y+1)*sh/h)
 		for x := 0; x < w; x++ {
 			x0, x1 := x*sw/w, max(x*sw/w+1, (x+1)*sw/w)
-			var r, g, bl, n int
+			var r, g, bl, n uint64
 			for yy := y0; yy < y1; yy++ {
 				for xx := x0; xx < x1; xx++ {
-					c := flat.RGBAAt(b.Min.X+xx, b.Min.Y+yy)
-					r, g, bl, n = r+int(c.R), g+int(c.G), bl+int(c.B), n+1
+					cr, cg, cb, ca := src.At(b.Min.X+xx, b.Min.Y+yy).RGBA() // 16-bit, premultiplied
+					r, g, bl, n = r+uint64(cr)+uint64(0xffff-ca), g+uint64(cg)+uint64(0xffff-ca), bl+uint64(cb)+uint64(0xffff-ca), n+1
 				}
 			}
-			out.SetRGBA(x, y, color.RGBA{uint8(r / n), uint8(g / n), uint8(bl / n), 255})
+			out.SetRGBA(x, y, color.RGBA{uint8(r / n >> 8), uint8(g / n >> 8), uint8(bl / n >> 8), 255})
 		}
 	}
 	return out

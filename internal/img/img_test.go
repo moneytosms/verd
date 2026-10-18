@@ -1,11 +1,14 @@
 package img
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"image"
 	"image/color"
 	"image/png"
-	"net/http"
-	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -98,24 +101,45 @@ func TestKittySequences(t *testing.T) {
 	}
 }
 
-func TestFetchCachesAndRejectsBadAddresses(t *testing.T) {
-	hits := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits++
-		png.Encode(w, solid(3, 3, color.Black))
-	}))
-	defer srv.Close()
-	dir := t.TempDir()
-	for i := 0; i < 2; i++ {
-		m, err := Fetch(srv.URL+"/a.png", dir)
-		if err != nil || m.Bounds().Dx() != 3 {
-			t.Fatalf("fetch: %v", err)
+func cache(t *testing.T, dir, addr string, m image.Image) {
+	t.Helper()
+	var buf bytes.Buffer
+	png.Encode(&buf, m)
+	sum := sha256.Sum256([]byte(addr))
+	os.WriteFile(filepath.Join(dir, hex.EncodeToString(sum[:])), buf.Bytes(), 0o644)
+}
+
+func TestFetchReadsTheCache(t *testing.T) {
+	dir, addr := t.TempDir(), "https://cses.fi/file/abc"
+	cache(t, dir, addr, solid(3, 3, color.Black))
+	m, err := Fetch(addr, dir) // served from disk: no network in this test
+	if err != nil || m.Bounds().Dx() != 3 {
+		t.Fatalf("fetch: %v", err)
+	}
+}
+
+func TestOnlyJudgeHostsOverHTTPS(t *testing.T) {
+	for addr, ok := range map[string]bool{
+		"https://cses.fi/file/x":                 true,
+		"https://espresso.codeforces.com/a.png":  true,
+		"https://codeforces.com/predownloaded/a": true,
+		"http://cses.fi/file/x":                  false,
+		"https://evil.example/x.png":             false,
+		"https://cses.fi.evil.example/x":         false,
+		"https://127.0.0.1/x":                    false,
+		"file:///etc/passwd":                     false,
+		"https://notcodeforces.com/x":            false,
+	} {
+		if err := allowed(addr); (err == nil) != ok {
+			t.Errorf("%s: %v", addr, err)
 		}
 	}
-	if hits != 1 {
-		t.Fatalf("second fetch should come from the cache: %d hits", hits)
-	}
-	if _, err := Fetch("file:///etc/passwd", dir); err == nil {
-		t.Fatal("only http(s) addresses are fetched")
+}
+
+func TestHugePicturesAreRefused(t *testing.T) {
+	dir, addr := t.TempDir(), "https://cses.fi/file/big"
+	cache(t, dir, addr, image.NewGray(image.Rect(0, 0, 5000, 5000))) // 25 MP: compresses to almost nothing
+	if _, err := Fetch(addr, dir); err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("want too large, got %v", err)
 	}
 }
