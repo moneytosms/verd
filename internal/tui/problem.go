@@ -134,6 +134,9 @@ func (m Model) splitGeom() (splitGeom, bool) {
 	h := m.paneHeight()
 	info := m.infoLines(rw - 4)
 	infoH := min(len(info)+2, max(5, h/3))
+	if m.zen {
+		infoH = 0
+	}
 	testsH := min(max(len(m.rows())+3+m.compileLines(), 5), max(5, (h-infoH)/2))
 	testsH = max(5, min(testsH+m.hAdj, h-infoH-4)) // user resize
 	detH := h - infoH - testsH
@@ -163,7 +166,9 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	left := box(title, m.highlight(paneStatement, off, body[off:end]), note, lw, h, m.pane == paneStatement, st, m.borderStyle())
 
 	var right []string
-	right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st, m.borderStyle())...)
+	if g.infoH > 0 {
+		right = append(right, box("Problem", m.infoLines(rw-4), "", rw, g.infoH, false, st, m.borderStyle())...)
+	}
 	tl, tnote, _ := m.testsLines(rw-4, g.testsH-2)
 	right = append(right, box("Tests ["+m.tag()+"]", tl, tnote, rw, g.testsH, m.pane == paneTests, st, m.borderStyle())...)
 	if g.detH > 0 {

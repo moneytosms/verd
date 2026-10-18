@@ -77,7 +77,7 @@ verd --here                     # same, but keep Solutions in the current direct
 5. **Stress.** Press `S`. The first time, verd creates `gen.cpp` and `brute.cpp` and opens them; fill them in and press `S` again. It runs until it finds a counterexample, and `w` saves it as a Custom Test.
 6. **Submit.** Press `s`. The Solution is copied, the submit page opens, and the Verdict streams into the pane.
 
-Press `ctrl+k` for the command palette: fuzzy-find any action, setting or snippet and run it. Press `?` on any screen for its key list (`/` there searches it). The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
+Press `ctrl+k` for the command palette: fuzzy-find any action or setting and run it (yes/no settings like the footer flip in place). `Z` is zen mode: only the statement and tests. Press `?` on any screen for its key list (`/` there searches it). The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
 
 ## Run it from Neovim
 

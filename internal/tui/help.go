@@ -59,7 +59,7 @@ var guide = []string{
 	"   Snippets {problem.snippets} opens the snippet library: type to filter, enter copies (bfs, dijkstra, modpow, ...).",
 	"   Contests Contests tab, enter on a contest: s session (virtual, or live for a running one), p practice. See docs/contests.md.",
 	"7  Tune     Settings (5) changes theme, language, editor and submit mode without editing files.",
-	"8  Find     {common.palette} opens the command palette: fuzzy-run any action, setting or snippet. ? then / searches every shortcut.",
+	"8  Find     {common.palette} opens the command palette: fuzzy-run any action or setting; {common.zen} toggles zen mode (just the statement and tests). ? then / searches every shortcut.",
 	"",
 	"Docs: docs/keys.md, docs/config.md, docs/testing.md, docs/contests.md, docs/submit.md",
 }

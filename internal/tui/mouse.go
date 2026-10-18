@@ -15,7 +15,7 @@ func (m Model) modalRect() (x, y, w, h int, ok bool) {
 		w = max(w, xansi.StringWidth(l))
 	}
 	modalCenter := m.height - 3
-	if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+	if !m.ftrOn() {
 		modalCenter = m.height
 	}
 	return max(0, (m.width-w)/2), max(0, (modalCenter-len(bx))/2), w, len(bx), true

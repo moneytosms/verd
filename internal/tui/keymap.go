@@ -20,7 +20,8 @@ func ks(k ...string) []string { return k }
 
 var keyActions = []keyAction{
 	{"common", "help", "toggle help", ks("?")},
-	{"common", "palette", "command palette: fuzzy-run any action, setting or snippet", ks("ctrl+k")},
+	{"common", "palette", "command palette: fuzzy-run any action or setting", ks("ctrl+k")},
+	{"common", "zen", "zen mode: hide everything but the statement and tests", ks("Z")},
 	{"common", "dismiss_toast", "dismiss a notification", ks("x")},
 	{"tabs", "tab_1", "switch tab: Problems", ks("1")},
 	{"tabs", "tab_2", "switch tab: Contests", ks("2")},

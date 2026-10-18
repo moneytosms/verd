@@ -299,13 +299,24 @@ func TestPaletteRunsActionAndJumpsToSetting(t *testing.T) {
 		t.Fatalf("setting jump: tab=%d sel=%d", m2.tab, m2.setSel)
 	}
 
-	m3 := New(nil, "", Deps{Snippets: func(string) []Snippet { return []Snippet{{"segtree", "range sums", "CODE"}} }})
+	// a yes/no setting flips in place, from the palette
+	m3 := New(nil, "", Deps{})
 	m3 = m3.openPalette()
-	m3.pal.q = "segtree"
-	nm, cmd := m3.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m3.pal.q = "show footer"
+	nm, _ = m3.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m3 = nm.(Model)
-	if m3.pal != nil || cmd == nil || !strings.Contains(m3.Notice, "segtree") {
-		t.Fatalf("snippet pick: pal=%v cmd=%v notice=%q", m3.pal, cmd, m3.Notice)
+	if m3.pal != nil || m3.cfgVals["footer"] != "true" && m3.cfgVals["footer"] != "false" {
+		t.Fatalf("toggle: pal=%v footer=%q", m3.pal, m3.cfgVals["footer"])
+	}
+	// zen hides the header and footer for the session
+	nm, _ = m3.Update(tea.KeyPressMsg{Code: 'Z', Text: "Z"})
+	z := nm.(Model)
+	if !z.zen || z.hdrOn() || z.ftrOn() {
+		t.Fatalf("zen should hide header and footer: %+v", z.zen)
+	}
+	nm, _ = z.Update(tea.KeyPressMsg{Code: 'Z', Text: "Z"})
+	if nm.(Model).zen {
+		t.Fatal("Z again should leave zen")
 	}
 }
 

@@ -22,7 +22,8 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | Key(s) | Action | What it does |
 | --- | --- | --- |
 | `?` | `help` | toggle help |
-| `ctrl+k` | `palette` | command palette: fuzzy-run any action, setting or snippet |
+| `ctrl+k` | `palette` | command palette: fuzzy-run any action or setting |
+| `Z` | `zen` | zen mode: hide everything but the statement and tests |
 | `x` | `dismiss_toast` | dismiss a notification |
 
 ## Tabs

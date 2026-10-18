@@ -175,6 +175,7 @@ type Model struct {
 	Problems []cf.Problem
 	Notice   string // transient note shown in the footer; fades after a few seconds
 	noticeID int
+	zen      bool // session-only: hide the header, footer and Problem info; keep the statement and tests
 	deps     Deps
 	status   map[string]store.Status
 
@@ -891,6 +892,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+k" && m.input == nil {
 			return m.openPalette(), nil
 		}
+		if msg.String() == "Z" && m.input == nil && !m.setFind && m.setEdit == nil && m.ke == nil {
+			return m.toggleZen(), nil
+		}
 		if msg.String() == "?" && m.input == nil {
 			m.help, m.helpPage, m.helpScroll = true, 0, 0
 			return m, nil
@@ -1321,15 +1325,22 @@ func cleanLines(s string) []string {
 	return ls
 }
 
+// hdrOn and ftrOn: whether the header and footer are drawn (zen mode hides both for the session).
+func (m Model) hdrOn() bool { return !m.zen && m.cfgVals["header"] != "false" }
+func (m Model) ftrOn() bool { return !m.zen && m.cfgVals["footer"] != "false" }
+
 func (m Model) contentTop() int {
-	if v, ok := m.cfgVals["header"]; ok && v == "false" {
+	if !m.hdrOn() {
 		return 0
 	}
 	return 2 // header + rule
 }
 
 func (m Model) footerSize() int {
-	if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+	if !m.ftrOn() {
+		if m.zen && m.Notice != "" {
+			return 1 // zen shows a notice (e.g. how to leave) and nothing else
+		}
 		return 0
 	}
 	return 2 // badges + hint bar
@@ -1397,7 +1408,7 @@ func (m Model) tabPosFromID(id int) int {
 func (m Model) screen() string {
 	st := m.styles()
 	var b strings.Builder
-	if v, ok := m.cfgVals["header"]; !ok || v != "false" {
+	if m.hdrOn() {
 		b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
 	}
 	footer := ""
@@ -1442,7 +1453,10 @@ func (m Model) screen() string {
 	if len(badges) > 0 {
 		footerContent += "\n" + strings.Join(badges, " ")
 	}
-	if v, ok := m.cfgVals["footer"]; !ok || v != "false" {
+	if m.zen && m.Notice != "" {
+		b.WriteString("\n" + st.Dim.Render(clean(m.Notice)))
+	}
+	if m.ftrOn() {
 		// Footer is shown
 		if t := m.viewToast(); t != "" {
 			b.WriteString("\n" + t)
@@ -1460,7 +1474,7 @@ func (m Model) screen() string {
 			lines[i] = st.Dim.Render(xansi.Strip(l))
 		}
 		modalY := m.height - 3
-		if v, ok := m.cfgVals["footer"]; ok && v == "false" {
+		if !m.ftrOn() {
 			modalY = m.height // no footer means more space for the modal
 		}
 		lines = overlay(lines, bx, m.width, modalY)

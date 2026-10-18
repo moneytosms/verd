@@ -24,6 +24,8 @@ int main() {
 }
 ```
 
+The default Templates (`verd init --force` refreshes yours) are tourist-style. C++ has `debug(...)` (a no-op `42` off `LOCAL`), `ll`, `ull`, `pii`, `vi`, `all(x)`, `sz(x)`, `pb`, `F`/`S`, `fors(i, n)`, `cin >> v` and `cout << v` for a whole vector, `YES(b)`/`NO(b)`, fast IO and `while (T--) solve()`. C has `ll`, `ull`, `fors`, `min`/`max`, `read_int`, `read_ll` and `YES`. Python has `input`, `debug`, `INF`, `MOD`, `inp()`, `ints()`, `YES()` and a raised recursion limit. Delete what you do not use.
+
 Edit one from Settings (`5`) > **Snippets**, or open the file yourself. `gen.<lang>.<ext>` and `brute.<lang>.<ext>` are the [stress](./stress.md) helpers' Templates. A language's `template = "/path"` in `[lang.*]` overrides all of this.
 
 ## The snippet library
@@ -33,7 +35,6 @@ verd ships 35 snippets for C++, C and Python: input readers (`vecinput`, `matinp
 ### Use one
 
 - In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard. Paste it into your editor.
-- `ctrl+k` (the command palette) also lists every snippet as `Snippet: <name>`; `enter` copies it.
 - From the shell: 
 
 ```sh

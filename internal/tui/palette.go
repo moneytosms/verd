@@ -9,21 +9,19 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// palette is the command palette: one fuzzy box over every action available right now, every
-// setting and the snippet library. Picking an action presses its key; a setting jumps to it; a
-// snippet is copied.
+// palette is the command palette: one fuzzy box over every action available right now and every
+// setting. Picking an action presses its key; a yes/no setting flips; any other setting is opened.
 type palette struct {
 	q   string
 	sel int
 	ctx string
 }
 
-// palItem is one line of the palette: an action (key set), a setting (setting >= 0) or a snippet.
+// palItem is one line of the palette: an action (key set) or a setting (setting >= 0).
 type palItem struct {
 	title, group, keys string
 	key                string // the key that runs the action
 	setting            int    // index into settingDefs, or -1
-	snip               *Snippet
 }
 
 // noisy actions are plain navigation: pressing them from a palette is pointless.
@@ -45,14 +43,12 @@ func (m Model) palItems(ctx string) []palItem {
 		}
 		out = append(out, palItem{title: a.desc, group: keyGroupTitle[a.ctx], keys: strings.Join(keys, " "), key: keys[0], setting: -1})
 	}
-	if !m.viewing() {
-		for i, d := range settingDefs {
+	for i, d := range settingDefs {
+		switch {
+		case d.kind == "bool": // flips in place, from any screen
+			out = append(out, palItem{title: "Toggle: " + d.label + " (" + m.boolWord(d) + ")", group: d.group, setting: i})
+		case !m.viewing(): // the rest open in the Settings tab
 			out = append(out, palItem{title: "Setting: " + d.label, group: d.group, setting: i})
-		}
-	}
-	if m.deps.Snippets != nil {
-		for _, sn := range m.deps.Snippets(m.lang()) {
-			out = append(out, palItem{title: "Snippet: " + sn.Name, group: sn.Desc, setting: -1, snip: &sn})
 		}
 	}
 	return out
@@ -120,9 +116,10 @@ func (m Model) updatePalette(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		it := ms[p.sel]
 		m.pal = nil
-		if it.snip != nil {
-			m.Notice = fmt.Sprintf("copied snippet %s (%s)", it.snip.Name, m.lang())
-			return m, tea.SetClipboard(it.snip.Code)
+		if d := settingDefs[max(it.setting, 0)]; it.setting >= 0 && d.kind == "bool" {
+			m = m.step(d, 1)
+			m.Notice = d.label + ": " + m.boolWord(d)
+			return m, nil
 		}
 		if it.setting >= 0 {
 			m.tab, m.setQ, m.setFind, m.setSel = 4, "", false, it.setting
@@ -208,4 +205,23 @@ func keyPress(key string) (tea.KeyPressMsg, bool) {
 		msg.Text = ""
 	}
 	return msg, true
+}
+
+// toggleZen hides the chrome (header, footer, Problem info) for this session; the note says how to leave.
+func (m Model) toggleZen() Model {
+	m.zen = !m.zen
+	if m.zen {
+		m.Notice = m.kx("zen mode: {common.zen} or ctrl+k to leave")
+	} else {
+		m.Notice = "zen mode off"
+	}
+	return m
+}
+
+// boolWord is "on" or "off" for a yes/no setting, as the Settings tab shows it.
+func (m Model) boolWord(d settingDef) string {
+	if m.setting(d.key) == "true" {
+		return "on"
+	}
+	return "off"
 }

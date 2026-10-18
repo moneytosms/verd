@@ -12,7 +12,14 @@
 #endif
 
 typedef long long ll;
+typedef unsigned long long ull;
 #define fors(i, n) for (int i = 0; i < (n); i++)
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
+int read_int(void) { int x; scanf("%d", &x); return x; }
+ll read_ll(void) { ll x; scanf("%lld", &x); return x; }
+void YES(int b) { puts(b ? "YES" : "NO"); }
 
 void solve(void) {
     {{cursor}}

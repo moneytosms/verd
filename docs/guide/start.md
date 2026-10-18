@@ -41,7 +41,7 @@ The first start downloads the problem list, then works offline from its cache. F
 | `4` Picker | a random unsolved problem in your rating band |
 | `5` Settings | every option, live |
 
-Press `?` on any screen for its keys, or `ctrl+k` to fuzzy-find and run any action, setting or snippet.
+Press `?` on any screen for its keys, or `ctrl+k` to fuzzy-find and run any action or setting. `Z` toggles zen mode (just the statement and tests).
 
 ## 4. Solve one problem
 
