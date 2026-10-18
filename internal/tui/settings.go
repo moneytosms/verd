@@ -269,6 +269,10 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	vis := m.settingIdxs()
 	pos := slices.Index(vis, m.setSel)
 	switch msg.String() {
+	case "j", "down", "k", "up", "g", "home", "G", "end":
+		m.setNote = "" // a note belongs to the setting it was written for
+	}
+	switch msg.String() {
 	case "/":
 		m.setFind = true
 	case "q", "ctrl+c":

@@ -126,6 +126,7 @@ func (m Model) updatePalette(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		if it.setting >= 0 {
 			m.tab, m.setQ, m.setFind, m.setSel = 4, "", false, it.setting
+			m.setNote = ""
 			return m.onTab(), nil
 		}
 		press, ok := keyPress(it.key)
