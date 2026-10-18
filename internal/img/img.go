@@ -17,11 +17,13 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/charmbracelet/x/ansi/kitty"
@@ -73,10 +75,11 @@ func Fetch(addr, dir string) (image.Image, error) {
 	if err != nil {
 		req, _ := http.NewRequest("GET", addr, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-		client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(r *http.Request, _ []*http.Request) error {
-			return allowed(r.URL.String()) // a redirect must not leave the allowed sites either
-		}}
-		resp, err := client.Do(req)
+		req.Header.Set("Accept", "image/png,image/jpeg,image/gif,image/*;q=0.8")
+		if h := hostOf(addr); strings.HasSuffix(h, "codeforces.com") || strings.HasSuffix(h, "cses.fi") {
+			req.Header.Set("Referer", "https://"+h+"/") // the judges' CDNs can refuse hotlinking
+		}
+		resp, err := newClient().Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -105,22 +108,43 @@ func Fetch(addr, dir string) (image.Image, error) {
 // maxPixels bounds a decoded picture (16 megapixels).
 const maxPixels = 16 << 20
 
-// hosts statement images may come from: the judges and their subdomains (CDNs included). A
-// statement is third-party content, so it cannot make verd fetch arbitrary or internal addresses.
-var hosts = []string{"codeforces.com", "codeforces.org", "cses.fi"}
-
+// allowed accepts https addresses only. Any public host is fine (authors host statement images on
+// imgur and the like); what must not happen is a statement steering verd at a private address, so
+// the connection itself refuses those (see publicOnly).
 func allowed(raw string) error {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" {
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" {
 		return errors.New("only https images are fetched")
 	}
-	h := strings.ToLower(u.Hostname())
-	for _, ok := range hosts {
-		if h == ok || strings.HasSuffix(h, "."+ok) {
-			return nil
-		}
+	return nil
+}
+
+// publicOnly is a dialer control that refuses loopback, private, link-local and unspecified
+// addresses, checked on the address actually dialled (so DNS tricks and redirects cannot get past it).
+func publicOnly(_, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("image host %q is not allowed", h)
+	ip := net.ParseIP(host)
+	if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+		return fmt.Errorf("refusing non-public address %s", host)
+	}
+	return nil
+}
+
+func newClient() *http.Client {
+	d := &net.Dialer{Timeout: 10 * time.Second, Control: publicOnly}
+	return &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: &http.Transport{DialContext: d.DialContext, TLSHandshakeTimeout: 10 * time.Second},
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			if len(via) > 5 {
+				return errors.New("too many redirects")
+			}
+			return allowed(r.URL.String())
+		},
+	}
 }
 
 // Fit is the cell size of an image of w x h pixels: at most maxCols x maxRows, keeping the shape
@@ -235,4 +259,12 @@ func Placeholders(id uint32, cols, rows int) []string {
 		lines[r] = sb.String()
 	}
 	return lines
+}
+
+func hostOf(addr string) string {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(u.Hostname())
 }

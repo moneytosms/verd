@@ -178,6 +178,7 @@ type Model struct {
 	Notice   string // transient note shown in the footer; fades after a few seconds
 	noticeID int
 	imgs     map[string]image.Image // statement images by address (nil = could not be loaded)
+	imgErr   map[string]string      // why an image could not be loaded
 	imgSent  map[string]bool        // Kitty uploads and placements already written
 	imgWant  bool                   // the statement just loaded: fetch its images
 	rawOut   string                 // terminal escape sequences to write after this update

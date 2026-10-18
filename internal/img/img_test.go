@@ -118,19 +118,26 @@ func TestFetchReadsTheCache(t *testing.T) {
 	}
 }
 
-func TestOnlyJudgeHostsOverHTTPS(t *testing.T) {
+func TestHTTPSOnly(t *testing.T) {
 	for addr, ok := range map[string]bool{
-		"https://cses.fi/file/x":                 true,
-		"https://espresso.codeforces.com/a.png":  true,
-		"https://codeforces.com/predownloaded/a": true,
-		"http://cses.fi/file/x":                  false,
-		"https://evil.example/x.png":             false,
-		"https://cses.fi.evil.example/x":         false,
-		"https://127.0.0.1/x":                    false,
-		"file:///etc/passwd":                     false,
-		"https://notcodeforces.com/x":            false,
+		"https://cses.fi/file/x":    true,
+		"https://i.imgur.com/a.png": true,
+		"http://cses.fi/file/x":     false,
+		"file:///etc/passwd":        false,
+		"https:///nohost":           false,
 	} {
 		if err := allowed(addr); (err == nil) != ok {
+			t.Errorf("%s: %v", addr, err)
+		}
+	}
+}
+
+func TestPrivateAddressesAreRefused(t *testing.T) {
+	for addr, ok := range map[string]bool{
+		"127.0.0.1:443": false, "10.0.0.5:443": false, "192.168.1.1:443": false, "169.254.169.254:80": false,
+		"[::1]:443": false, "0.0.0.0:443": false, "8.8.8.8:443": true, "[2606:4700::1111]:443": true,
+	} {
+		if err := publicOnly("tcp", addr, nil); (err == nil) != ok {
 			t.Errorf("%s: %v", addr, err)
 		}
 	}

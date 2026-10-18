@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"math/rand"
@@ -127,5 +128,20 @@ func TestStatementImagesAreDrawn(t *testing.T) {
 	m, cmd = send(m, "enter")
 	if out := plain(drain(t, m, cmd)); strings.Contains(out, "▀") || !strings.Contains(out, "[image]") {
 		t.Fatalf("images off should leave a link:\n%s", out)
+	}
+}
+
+func TestFailedImageSaysWhy(t *testing.T) {
+	deps := Deps{
+		Load: func(cf.Problem, bool) (*scrape.Detail, error) {
+			return &scrape.Detail{Statement: `<div class="problem-statement"><p><img src="https://i.imgur.com/x.png"></p></div>`}, nil
+		},
+		FetchImage: func(string) (image.Image, error) { return nil, errors.New("image: HTTP 403") },
+	}
+	m := New([]cf.Problem{{ContestID: 1, Index: "A", Name: "N"}}, "", deps)
+	m.cfgVals["images"] = "blocks"
+	m, cmd := send(m, "enter")
+	if out := plain(drain(t, m, cmd)); !strings.Contains(out, "could not load: image: HTTP 403") {
+		t.Fatalf("the reason should show:\n%s", out)
 	}
 }

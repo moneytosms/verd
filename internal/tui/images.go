@@ -23,6 +23,7 @@ type imagesMsg struct {
 	p   cf.Problem
 	url string
 	m   image.Image
+	err error // why it could not be loaded
 }
 
 // imgMode is how images are drawn, from the images setting and the terminal.
@@ -49,7 +50,7 @@ func (m Model) fetchImages() []tea.Cmd {
 			if err != nil {
 				pic = nil
 			}
-			return imagesMsg{p: p, url: u, m: pic}
+			return imagesMsg{p: p, url: u, m: pic, err: err}
 		})
 	}
 	return cmds
@@ -61,6 +62,12 @@ func (m Model) onImages(msg imagesMsg) Model {
 		m.imgs = map[string]image.Image{}
 	}
 	m.imgs[msg.url] = msg.m
+	if msg.err != nil {
+		if m.imgErr == nil {
+			m.imgErr = map[string]string{}
+		}
+		m.imgErr[msg.url] = clean(msg.err.Error())
+	}
 	if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
 		return m
 	}
@@ -112,7 +119,11 @@ func (m Model) withImages(lines []string, w int) ([]string, string) {
 			pic = m.imgs[urls[i]]
 		}
 		if pic == nil {
-			out = append(out, strings.Replace(plain, tm[0], "[image]", 1))
+			note := "[image]"
+			if i < len(urls) && m.imgErr[urls[i]] != "" {
+				note += " (could not load: " + m.imgErr[urls[i]] + ")"
+			}
+			out = append(out, strings.Replace(plain, tm[0], note, 1))
 			continue
 		}
 		margin := len(plain) - len(strings.TrimLeft(plain, " "))
