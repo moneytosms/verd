@@ -21,6 +21,10 @@ Each key asks to be pressed twice, the first press tells you what will happen. O
 - The contest's [editorial](./editorials.md) is hidden.
 - Submit as usual. Scoring updates as soon as the verdict lands.
 
+## Contest mode
+
+While a session runs, verd shows the contest's Problems on a rail at the left. `alt+n` / `alt+p` move between them, `alt+1` to `alt+9` jump to one, `alt+b` cycles the rail (full, compact, hidden) and `alt+x` opens the summary. Each session also writes a Markdown report to the workspace when it ends. Details: [Contest sessions](../contests.md).
+
 ## Scoring
 
 **Virtual and practice** are scored locally, ICPC style: a solve costs its minute plus 20 minutes per wrong attempt before it. Compile errors and attempts after the first accepted one are free. It is an approximation of Codeforces' own scoring.

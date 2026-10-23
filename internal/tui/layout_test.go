@@ -110,3 +110,15 @@ func TestBoxIsExactlyWideForEveryBorder(t *testing.T) {
 		}
 	}
 }
+
+func TestZenPanesFillTheWindow(t *testing.T) {
+	m := listModel()
+	m.zen, m.Notice = true, ""
+	if got := m.paneHeight(); got != m.height {
+		t.Errorf("zen without a notice: panes %d tall, window %d", got, m.height)
+	}
+	m.Notice = "zen mode: Z to leave"
+	if got := m.paneHeight(); got != m.height-1 {
+		t.Errorf("zen with a notice: panes %d tall, want %d", got, m.height-1)
+	}
+}

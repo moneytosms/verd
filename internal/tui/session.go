@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/session"
 	"github.com/moneytosms/verd/internal/store"
@@ -36,7 +37,11 @@ func (m Model) solvedText(p cf.Problem) string {
 func (m Model) applySession(d Data) Model {
 	m.sess, m.sessResult = d.Session, session.Result{}
 	if m.sess == nil {
+		m.cm = cmState{rail: m.cm.rail}
 		return m
+	}
+	if m.cm.stats == nil {
+		m.cm.stats = d.SessionStats
 	}
 	var idx []string
 	ps := make([]cf.Problem, len(d.Problems))
@@ -183,11 +188,23 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 	m.standing, m.standAt, m.standErr = nil, time.Time{}, ""
 	m = m.WithData(m.raw)
 	m.contestNote, m.cpCursor = "", 0
-	return m, sessTick()
+	m.cm = cmState{rail: m.cm.rail, stats: session.Stats{}}
+	m, cmd := m.cmEnsure()
+	return m, tea.Batch(sessTick(), cmd)
 }
 
-// endSession forgets the session and shows everything again.
+// endSession saves the session's report, forgets the session and shows everything again.
 func (m Model) endSession() Model {
+	m = m.cmSave()
+	note := ""
+	if m.deps.SaveReport != nil && m.sess != nil {
+		md := session.Report(*m.sess, m.cmProblemsForReport(), m.sessResult, m.cm.stats, m.sessScore(), m.clock())
+		if path, err := m.deps.SaveReport(*m.sess, md); err != nil {
+			note = "report not saved: " + clean(err.Error())
+		} else {
+			note = "session report saved to " + path
+		}
+	}
 	if m.deps.EndSession != nil {
 		if err := m.deps.EndSession(); err != nil {
 			m.errMsg = "end session: " + clean(err.Error())
@@ -195,7 +212,9 @@ func (m Model) endSession() Model {
 		}
 	}
 	m.raw.Session, m.sessSum, m.standing = nil, false, nil
-	return m.WithData(m.raw)
+	m = m.WithData(m.raw)
+	m.Notice = note
+	return m
 }
 
 type standingMsg struct {
@@ -263,11 +282,13 @@ func (m Model) onSessTick() (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	m = m.cmTick()
+	m, ecmd := m.cmEnsure()
 	if m.sess.Mode == session.Live {
 		nm, cmd := m.liveTick()
-		return nm, tea.Batch(cmd, sessTick())
+		return nm, tea.Batch(cmd, ecmd, sessTick())
 	}
-	return m, sessTick()
+	return m, tea.Batch(ecmd, sessTick())
 }
 
 func (m Model) updateSessSummary(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -275,11 +296,8 @@ func (m Model) updateSessSummary(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc", "q":
-		m.sessSum = false
-		if m.sess != nil && m.sess.Over(m.clock()) {
-			return m, nil
-		}
-		return m, sessTick()
+		m.sessSum = false // the tick chain kept running under the summary
+		return m, nil
 	case "e", "enter":
 		return m.endSession(), nil
 	}
@@ -296,17 +314,26 @@ func (m Model) sessSummaryBox() []string {
 	if over {
 		head = "time is up"
 	}
-	body := []string{st.Accent.Render(clean(s.Name)), st.Dim.Render(s.Mode + ", " + head), ""}
+	body := []string{st.Accent.Render(clean(s.Name)), st.Dim.Render(s.Mode + ", " + head), "",
+		st.Dim.Render(fmt.Sprintf("      %-10s %8s  %s", "result", "time", "test runs"))}
 	var upsolve []string
+	var spent int64
 	for _, r := range m.sessResult.Rows {
-		switch {
-		case r.Solved:
-			body = append(body, fmt.Sprintf("  %s %-3s %s", st.Good.Render("✓"), r.Index, m.resultCell(r)))
-		default:
+		mark := st.Good.Render("✓")
+		if !r.Solved {
+			mark = st.Dim.Render("·")
 			upsolve = append(upsolve, r.Index)
-			body = append(body, fmt.Sprintf("  %s %-3s %s", st.Dim.Render("·"), r.Index, m.resultCell(r)))
 		}
+		ps := m.cm.stats[r.Index]
+		if ps == nil {
+			ps = &session.ProblemStats{}
+		}
+		spent += ps.Seconds
+		cell := m.resultCell(r)
+		cell += strings.Repeat(" ", max(0, 10-xansi.StringWidth(cell)))
+		body = append(body, fmt.Sprintf("  %s %-3s%s %8s  %d (%d passing)", mark, r.Index, cell, clockText(time.Duration(ps.Seconds)*time.Second), ps.Runs, ps.Green))
 	}
+	body = append(body, "", st.Dim.Render("time on problems "+clockText(time.Duration(spent)*time.Second)))
 	body = append(body, "", m.sessScore())
 	if row := m.liveRow(); row != nil {
 		body = append(body, st.Dim.Render("results can change after system testing"))
@@ -317,7 +344,7 @@ func (m Model) sessSummaryBox() []string {
 	if len(upsolve) > 0 {
 		body = append(body, "", st.Dim.Render("upsolve: "+strings.Join(upsolve, " ")))
 	}
-	return box("Session summary", body, m.kx("{contest.end_session}/enter end the session  esc keep it"), w, len(body)+2, true, st, m.borderStyle())
+	return box("Session summary", body, m.kx("{contest.end_session}/enter end the session and save its report  esc keep it"), w, len(body)+2, true, st, m.borderStyle())
 }
 
 // resultCell is "12m +1" for a solve (minute, wrong attempts before it) or "-2" for attempts so far.

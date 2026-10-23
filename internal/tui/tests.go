@@ -143,6 +143,7 @@ func (m Model) onTestEvent(msg testEventMsg) (Model, tea.Cmd) {
 				}
 			}
 		}
+		m = m.cmCountRun(r.overall)
 	}
 	return m, listen(msg.id, msg.ch)
 }

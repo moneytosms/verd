@@ -182,6 +182,27 @@ func (s *Store) SourceSyncedAt(source string) (time.Time, error) {
 	return s.syncedAt(source + "_synced_at")
 }
 
+// ClearCache drops everything fetched from the network (Problems, contests, statements, Submissions,
+// editorials, sync times) so the next refresh refetches it. Hand-made marks, per-Problem state and
+// the contest session stay.
+func (s *Store) ClearCache() error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, t := range []string{"problems", "contests", "problem_details", "sample_tests", "submissions", "rating_changes", "contest_materials", "blog_entries", "meta"} {
+		if _, err := tx.Exec("DELETE FROM " + t); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	_, err = s.db.Exec("VACUUM")
+	return err
+}
+
 // SetMark marks a Problem solved by hand (sources without a Submission feed); on=false clears it.
 func (s *Store) SetMark(contest int, idx string, on bool) error {
 	if !on {
@@ -520,6 +541,30 @@ func (s *Store) Session() (*session.Session, error) {
 func (s *Store) SaveSession(x session.Session) error {
 	_, err := s.db.Exec(`INSERT OR REPLACE INTO session(id, contest_id, name, mode, start_at, end_at) VALUES(1,?,?,?,?,?)`,
 		x.ContestID, x.Name, x.Mode, x.Start, x.End)
+	return err
+}
+
+// SessionStats returns what verd recorded about the running session (empty if none).
+func (s *Store) SessionStats() (session.Stats, error) {
+	var raw string
+	err := s.db.QueryRow("SELECT stats FROM session WHERE id = 1").Scan(&raw)
+	st := session.Stats{}
+	if errors.Is(err, sql.ErrNoRows) || raw == "" {
+		return st, nil
+	}
+	if err != nil {
+		return st, err
+	}
+	return st, json.Unmarshal([]byte(raw), &st)
+}
+
+// SaveSessionStats records the running session's stats; without a session it does nothing.
+func (s *Store) SaveSessionStats(st session.Stats) error {
+	b, err := json.Marshal(st)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec("UPDATE session SET stats = ? WHERE id = 1", string(b))
 	return err
 }
 

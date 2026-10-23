@@ -11,9 +11,28 @@ Finished contests are replayed:
 
 Each key asks you to press it again to confirm. The first press tells you what will be hidden.
 
+## Contest mode
+
+Starting a session, of any kind, switches verd into contest mode, and it stays there (across restarts too) until the session ends:
+
+- The tabs are hidden. The header shows the contest, its clock and the score.
+- The contest's Problems sit on a rail at the left with each result (`✓ 12m +1`, `-2`); the open one is marked `▸`. Problem A opens first, and every statement is downloaded in the background so switching is instant.
+- `alt+n` / `alt+p` go to the next / previous Problem, `alt+1` to `alt+9` jump straight to one, and a click on the rail does the same. These work even while the embedded editor has the keyboard, and an open editor pane follows to the new Problem's Solution. Each Problem keeps its scroll, selected test and last Test Run, so switching back loses nothing.
+- `alt+b` cycles the rail: full (name, clock, score, problems, standings), compact (letters and results only) and hidden. Until you pick one it is compact next to an embedded editor or in a window under 140 columns, full otherwise. Zen mode hides it. The choice is remembered.
+- For a live contest the rail adds a standings panel: your rank out of everyone (`rank 512/18034`), the top three, and the two rows above and below yours, with your handle highlighted. A virtual or practice session has no live standings; its score is verd's own.
+- `alt+x` opens the session summary at any time: `e` ends the session there, `esc` goes back to it.
+
+All of these keys can be rebound under `[keys.contest_mode]`.
+
+### Session stats and report
+
+While a session runs, verd records for each Problem when you first opened it, how long it was the open Problem and how many Test Runs you made (and how many passed). The summary shows them next to each result.
+
+Ending the session writes a Markdown report to `<workspace>/<contest>/<mode>-<date>.md` (for example `~/verd/500/virtual-2026-10-22-1500.md`): the date and length, the score, a table with each Problem's result, wrong attempts, time spent, first open and Test Runs, the totals, and links to what is left to upsolve. The footer says where it went.
+
 While a session runs:
 
-- The header shows `virtual  1:12:03 left  solved 2/6  penalty 47` on every tab; the contest's row in the Contests tab is marked `● session`.
+- The header shows `virtual  1:12:03 left  solved 2/6  penalty 47`; the contest's row in the Contests tab is marked `● session`.
 - That contest's ratings, tags and solved counts are hidden everywhere, and your old solved marks for it are ignored. Only Submissions made after the start count, so replaying a contest you solved before starts clean. Other contests are unaffected.
 - The contest modal lists the problems with `12m +1` (solved at minute 12 after one wrong attempt) or `-2` (two wrong attempts, still open).
 - Submit as usual (`s` in the Problem view, `verd submit`). verd tracks the Verdict and rescoring happens as soon as it lands.

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -75,5 +76,20 @@ func TestLiveSession(t *testing.T) {
 	r := Score(s, []string{"A"}, []cf.Submission{sub(7, "A", "WRONG_ANSWER", 1060), sub(7, "A", "OK", 1600)})
 	if r.Solved != 1 || r.Penalty != 10+PenaltyMinutes {
 		t.Fatalf("a live fallback score has a penalty: %+v", r)
+	}
+}
+
+func TestReport(t *testing.T) {
+	s := Session{ContestID: 500, Name: "Good Bye 2014", Mode: Virtual, Start: 1000, End: 1000 + 7200}
+	res := Result{Rows: []Row{{Index: "A", Solved: true, Minute: 12, Wrong: 1}, {Index: "B", Wrong: 2}}, Solved: 1, Penalty: 32}
+	st := Stats{"A": {FirstOpen: 1030, Seconds: 700, Runs: 4, Green: 2}}
+	ps := []Problem{{"A", "New Year Transportation", "https://codeforces.com/contest/500/problem/A"}, {"B", "a|b", "https://codeforces.com/contest/500/problem/B"}}
+	md := Report(s, ps, res, st, "solved 1/2  penalty 32", time.Unix(1000+9000, 0))
+	for _, want := range []string{"# Good Bye 2014 (virtual)", "(2:00:00)", "- Result: solved 1/2  penalty 32",
+		"| A New Year Transportation | solved at 12m | 1 | 11:40 | 0m | 4 (2 passing) |", "| B a\\|b | - | 2 | 0:00 | - | 0 (0 passing) |",
+		"- Last solve: 12m", "## Upsolve", "- [B a|b](https://codeforces.com/contest/500/problem/B)"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("missing %q in\n%s", want, md)
+		}
 	}
 }

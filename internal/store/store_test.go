@@ -171,3 +171,54 @@ func TestSessionRoundTrip(t *testing.T) {
 		t.Fatal("ended session must be gone")
 	}
 }
+
+func TestSessionStats(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "v.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if st, err := s.SessionStats(); err != nil || len(st) != 0 {
+		t.Fatalf("no session: %v %v", st, err)
+	}
+	if err := s.SaveSession(session.Session{ContestID: 1, Name: "R", Mode: session.Practice, Start: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveSessionStats(session.Stats{"A": {Runs: 3, Seconds: 60}}); err != nil {
+		t.Fatal(err)
+	}
+	if st, err := s.SessionStats(); err != nil || st["A"] == nil || st["A"].Runs != 3 || st["A"].Seconds != 60 {
+		t.Fatalf("round trip: %v %v", st, err)
+	}
+	s.SaveSession(session.Session{ContestID: 2, Name: "S", Mode: session.Virtual, Start: 5, End: 10})
+	if st, _ := s.SessionStats(); len(st) != 0 {
+		t.Fatalf("a new session starts with no stats: %v", st)
+	}
+}
+
+func TestClearCacheKeepsMarks(t *testing.T) {
+	s, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveProblemset([]cf.Problem{{ContestID: 1, Index: "A", Name: "A", Tags: []string{}}}, time.Unix(1700000000, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetMark(1, "A", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ClearCache(); err != nil {
+		t.Fatal(err)
+	}
+	if ps, _ := s.Problems(); len(ps) != 0 {
+		t.Fatalf("problems survived: %v", ps)
+	}
+	if at, _ := s.ProblemsetSyncedAt(); !at.IsZero() {
+		t.Fatalf("sync time survived: %v", at)
+	}
+	var n int
+	s.db.QueryRow("SELECT count(*) FROM marks").Scan(&n)
+	if n != 1 {
+		t.Fatalf("marks cleared: %d", n)
+	}
+}

@@ -61,6 +61,9 @@ func (m Model) tabRanges() [][2]int {
 
 // header is the top bar: logo, tab pills, and who you are on the right.
 func (m Model) header(w int) string {
+	if m.cmOn() {
+		return m.cmHeader(w)
+	}
 	st := m.styles()
 	var b strings.Builder
 	b.WriteString(st.PillOn.Render(logo) + " ")

@@ -76,6 +76,7 @@ func TestVirtualSessionHidesAndScores(t *testing.T) {
 	d := m.raw
 	d.Subs = []cf.Submission{sessSub("A", "WRONG_ANSWER", now.Unix()+60), sessSub("A", "OK", now.Unix()+600), sessSub("B", "OK", now.Unix()-5)}
 	m = m.WithData(d)
+	m.cm.rail = railFull // the rail shows each result in full
 	out = plain(m)
 	if !strings.Contains(out, "solved 1/2") || !strings.Contains(out, "penalty 30") || !strings.Contains(out, "10m +1") || m.statusOf(ps[1]) != store.StatusNone {
 		t.Fatalf("score after a solve (10 min + 20 for one wrong):\n%s", out)
@@ -124,12 +125,11 @@ func TestSessionRefusals(t *testing.T) {
 	if m.sess == nil || m.sess.Mode != session.Practice {
 		t.Fatalf("practice starts: %+v", m.sess)
 	}
-	m, _ = send(m, "esc")
-	m, _ = send(m, "k")
-	m, _ = send(m, "enter")
-	m, _ = send(m, "s")
-	if !strings.Contains(plain(m), "end the running session first") {
-		t.Fatalf("one session at a time:\n%s", plain(m))
+	if m, _ = send(m, "2"); m.tab != 0 || !m.viewing() {
+		t.Fatalf("contest mode hides the tabs: tab %d", m.tab)
+	}
+	if m, _ := m.startSession(cs[0], session.Virtual); !strings.Contains(m.contestNote, "end the running session first") {
+		t.Fatalf("one session at a time: %q", m.contestNote)
 	}
 }
 
@@ -195,6 +195,7 @@ func TestLiveSessionUsesStandings(t *testing.T) {
 	if calls != 1 || fetches != 0 {
 		t.Fatalf("calls=%d fetches=%d", calls, fetches)
 	}
+	m.cm.rail = railFull
 	out := plain(m)
 	for _, want := range []string{"rank 5  490 pts", "490* +1"} {
 		if !strings.Contains(out, want) {

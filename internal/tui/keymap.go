@@ -140,10 +140,9 @@ var keyActions = []keyAction{
 	{"full", "pan_right", "pan right (no wrap)", ks("l", "right")},
 	{"full", "pan_left", "pan left (no wrap)", ks("h", "left")},
 	{"full", "wrap", "toggle wrap and pan", ks("w")},
-	{"full", "section_1", "jump to Input", ks("1")},
-	{"full", "section_2", "jump to Expected", ks("2")},
-	{"full", "section_3", "jump to Output", ks("3")},
-	{"full", "section_4", "jump to Stderr", ks("4")},
+	{"full", "raw", "toggle folding of sanitizer noise in stderr", ks("z")},
+	{"full", "next", "next test", ks("n")},
+	{"full", "prev", "previous test", ks("p")},
 	{"full", "copy", "copy the section at the top", ks("y")},
 	{"full", "rerun", "rerun just this test", ks("r")},
 
@@ -187,33 +186,48 @@ var keyActions = []keyAction{
 	{"editor", "wider", "grow the editor column", ks("alt+]")},
 	{"editor", "narrower", "shrink the editor column", ks("alt+[")},
 	{"editor", "swap_side", "move editor between left and right", ks("alt+s")},
+
+	{"contest_mode", "next", "next problem", ks("alt+n")},
+	{"contest_mode", "prev", "previous problem", ks("alt+p")},
+	{"contest_mode", "jump_1", "jump to problem 1 (A)", ks("alt+1")},
+	{"contest_mode", "jump_2", "jump to problem 2", ks("alt+2")},
+	{"contest_mode", "jump_3", "jump to problem 3", ks("alt+3")},
+	{"contest_mode", "jump_4", "jump to problem 4", ks("alt+4")},
+	{"contest_mode", "jump_5", "jump to problem 5", ks("alt+5")},
+	{"contest_mode", "jump_6", "jump to problem 6", ks("alt+6")},
+	{"contest_mode", "jump_7", "jump to problem 7", ks("alt+7")},
+	{"contest_mode", "jump_8", "jump to problem 8", ks("alt+8")},
+	{"contest_mode", "jump_9", "jump to problem 9", ks("alt+9")},
+	{"contest_mode", "rail", "cycle the problem rail: full, compact, hidden", ks("alt+b")},
+	{"contest_mode", "exit", "session summary: end the session and save its report", ks("alt+x")},
 }
 
 // keyGroups lists the action groups live in each context, innermost first. Keys in one chain
 // must be unique; ctrl+c always quits and cannot be rebound.
 var keyGroups = map[string][]string{
-	"problems":   {"problems", "app", "tabs", "common"},
-	"contests":   {"contests", "app", "tabs", "common"},
-	"contest":    {"contest", "app", "tabs", "common"},
-	"stats":      {"stats", "app", "tabs", "common"},
-	"picker":     {"picker", "app", "tabs", "common"},
-	"settings":   {"settings", "app", "tabs", "common"},
-	"problem":    {"problem", "tabs", "common"},
-	"full":       {"full", "common"},
-	"testmgr":    {"testmgr"},
-	"editorial":  {"editorial"},
-	"submission": {"submission"},
-	"help":       {"help", "common"},
-	"editor":     {"editor"},
+	"problems":     {"problems", "app", "tabs", "common"},
+	"contests":     {"contests", "app", "tabs", "common"},
+	"contest":      {"contest", "app", "tabs", "common"},
+	"stats":        {"stats", "app", "tabs", "common"},
+	"picker":       {"picker", "app", "tabs", "common"},
+	"settings":     {"settings", "app", "tabs", "common"},
+	"problem":      {"problem", "tabs", "common"},
+	"full":         {"full", "common"},
+	"testmgr":      {"testmgr"},
+	"editorial":    {"editorial"},
+	"submission":   {"submission"},
+	"help":         {"help", "common"},
+	"editor":       {"editor"},
+	"contest_mode": {"contest_mode"},
 }
 
 // keyGroupOrder is how the shortcut editor lists the groups.
-var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "full", "editorial", "testmgr", "submission", "help", "editor"}
+var keyGroupOrder = []string{"common", "tabs", "app", "problems", "contests", "contest", "stats", "picker", "settings", "problem", "full", "editorial", "testmgr", "submission", "help", "editor", "contest_mode"}
 
 var keyGroupTitle = map[string]string{
 	"common": "Everywhere", "tabs": "Tabs", "app": "Tab screens", "problems": "Problems", "contests": "Contests",
 	"contest": "Contest modal", "stats": "Stats", "picker": "Picker", "settings": "Settings", "problem": "Problem view", "full": "Full-screen test view",
-	"editorial": "Editorial", "testmgr": "Test manager", "submission": "Submission modal", "help": "Help", "editor": "Embedded editor",
+	"editorial": "Editorial", "testmgr": "Test manager", "submission": "Submission modal", "help": "Help", "editor": "Embedded editor", "contest_mode": "Contest mode",
 }
 
 // keymap is the user's bindings over keyActions. user is "group.id" -> keys.
@@ -442,7 +456,7 @@ func parseKey(s string) (tea.KeyPressMsg, error) {
 	return tea.KeyPressMsg(k), nil
 }
 
-var keyRef = regexp.MustCompile(`\{([a-z]+\.[a-z_0-9]+)\}`)
+var keyRef = regexp.MustCompile(`\{([a-z_]+\.[a-z_0-9]+)\}`)
 
 // kx replaces {context.action} in s with that action's current first key, so hints and messages
 // follow the user's bindings.

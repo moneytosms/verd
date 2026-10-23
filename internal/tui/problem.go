@@ -102,8 +102,15 @@ func (m Model) stmtWidth() int {
 	return m.contentWidth() - 4
 }
 
-// paneHeight is the height of the split view's panes.
-func (m Model) paneHeight() int { return max(6, m.height-5) }
+// paneHeight is the height of the split view's panes: everything the header and footer leave, so
+// zen mode (neither) fills the window.
+func (m Model) paneHeight() int {
+	slack := 0
+	if m.ftrOn() {
+		slack = 1 // room for a toast above the footer
+	}
+	return max(6, m.height-m.contentTop()-m.footerSize()-slack)
+}
 
 // stmtLines is the statement as shown in the split view's left pane.
 func (m Model) stmtLines() []string {

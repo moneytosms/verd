@@ -1515,6 +1515,26 @@ func TestSnippetsSettingOpensTemplate(t *testing.T) {
 	}
 }
 
+func TestClearCacheAsksFirst(t *testing.T) {
+	n := 0
+	m := New(nil, "", Deps{ClearCache: func() error { n++; return nil }})
+	m, _ = send(m, "5")
+	for settingDefs[m.setSel].key != "clear_cache" {
+		m, _ = send(m, "j")
+	}
+	m, _ = send(m, "enter")
+	if n != 0 {
+		t.Fatal("cleared without confirming")
+	}
+	m, _ = send(m, "j")
+	m, _ = send(m, "k")
+	m, _ = send(m, "enter") // moving away disarmed it: this asks again
+	m, _ = send(m, "enter")
+	if n != 1 {
+		t.Fatalf("cleared %d times", n)
+	}
+}
+
 func TestShortPaths(t *testing.T) {
 	in := "/home/u/verd/1900/A/main.cpp:1:21: error: expected primary-expression\n/usr/include/c++/13/bits/x.h:5:2: note: here\n    1 | int x = ;"
 	want := "main.cpp:1:21: error: expected primary-expression\nx.h:5:2: note: here\n    1 | int x = ;"

@@ -184,10 +184,9 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `l`, `right` | `pan_right` | pan right (no wrap) |
 | `h`, `left` | `pan_left` | pan left (no wrap) |
 | `w` | `wrap` | toggle wrap and pan |
-| `1` | `section_1` | jump to Input |
-| `2` | `section_2` | jump to Expected |
-| `3` | `section_3` | jump to Output |
-| `4` | `section_4` | jump to Stderr |
+| `z` | `raw` | toggle folding of sanitizer noise in stderr |
+| `n` | `next` | next test |
+| `p` | `prev` | previous test |
 | `y` | `copy` | copy the section at the top |
 | `r` | `rerun` | rerun just this test |
 
@@ -252,6 +251,24 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `alt+]` | `wider` | grow the editor column |
 | `alt+[` | `narrower` | shrink the editor column |
 | `alt+s` | `swap_side` | move editor between left and right |
+
+## Contest mode
+
+| Key(s) | Action | What it does |
+| --- | --- | --- |
+| `alt+n` | `next` | next problem |
+| `alt+p` | `prev` | previous problem |
+| `alt+1` | `jump_1` | jump to problem 1 (A) |
+| `alt+2` | `jump_2` | jump to problem 2 |
+| `alt+3` | `jump_3` | jump to problem 3 |
+| `alt+4` | `jump_4` | jump to problem 4 |
+| `alt+5` | `jump_5` | jump to problem 5 |
+| `alt+6` | `jump_6` | jump to problem 6 |
+| `alt+7` | `jump_7` | jump to problem 7 |
+| `alt+8` | `jump_8` | jump to problem 8 |
+| `alt+9` | `jump_9` | jump to problem 9 |
+| `alt+b` | `rail` | cycle the problem rail: full, compact, hidden |
+| `alt+x` | `exit` | session summary: end the session and save its report |
 
 
 <!-- keys:end -->

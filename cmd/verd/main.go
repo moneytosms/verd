@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -348,10 +348,10 @@ func loadConfig(path string) (config.Config, error) {
 func buildSettings(cfg config.Config) map[string]string {
 	return map[string]string{
 		"theme": cfg.Theme, "background": cfg.Background, "handle": cfg.Handle, "workspace": cfg.Workspace,
-		"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest),
+		"default_lang": cfg.DefaultLang, "autotest": fmt.Sprint(cfg.Autotest), "resume": fmt.Sprint(cfg.Resume),
 		"time_multiplier": fmt.Sprint(cfg.TimeMultiplier), "float_eps": fmt.Sprint(cfg.FloatEps),
 		"editor": cfg.Editor, "source_cf": fmt.Sprint(cfg.SourceCF), "source_cses": fmt.Sprint(cfg.SourceCSES), "split": cfg.Split, "embed_ratio": fmt.Sprint(cfg.EmbedRatio), "embed_focus_key": cfg.EmbedFocusKey,
-		"embed_side": cfg.EmbedSide, "embed_zoom": fmt.Sprint(cfg.EmbedZoom), "border": cfg.Border, "submit_mode": cfg.SubmitMode,
+		"embed_side": cfg.EmbedSide, "embed_zoom": fmt.Sprint(cfg.EmbedZoom), "border": cfg.Border, "submit_mode": cfg.SubmitMode, "browser": cfg.Browser,
 		"images": cfg.Images, "reading_size": cfg.ReadingSize, "reading_width": fmt.Sprint(cfg.ReadingWidth), "reading_margin": fmt.Sprint(cfg.ReadingMargin),
 		"reading_spacing": cfg.ReadingSpacing, "reading_headings": cfg.ReadingHeadings,
 		"reading_math": cfg.ReadingMath, "reading_emphasis": fmt.Sprint(cfg.ReadingEmphasis),
@@ -417,8 +417,14 @@ func runTUI(path string) error {
 		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
 			return refresh.Detail(ctx, s, client, p, force, time.Now())
 		},
-		OpenURL: openURL,
-		Edit:    func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
+		OpenURL: func(url string) error {
+			open := sub.env.OpenCommand(url)
+			if open == nil {
+				return errors.New("no browser opener found")
+			}
+			return exec.Command(open[0], open[1:]...).Start()
+		},
+		Edit: func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
 		EditAt: func(p cf.Problem, lang string, line int) (*exec.Cmd, error) {
 			if err := requireEditor(ctrl); err != nil {
 				return nil, err
@@ -526,7 +532,8 @@ func runTUI(path string) error {
 			}
 			return "", fmt.Errorf("no sync for %s", source)
 		},
-		SetMark: func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) },
+		SetMark:    func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) },
+		ClearCache: s.ClearCache,
 		SaveCreds: func(cookie, ua string) (string, error) {
 			where, _, err := credStore().Save(creds.Creds{Cookie: cookie, UserAgent: ua})
 			return where, err
@@ -560,7 +567,15 @@ func runTUI(path string) error {
 			}
 			return x, s.SaveSession(x)
 		},
-		EndSession: s.EndSession,
+		EndSession:       s.EndSession,
+		SaveSessionStats: s.SaveSessionStats,
+		SaveReport: func(x session.Session, md string) (string, error) {
+			path := filepath.Join(workspace.New(cfg.Workspace).Dir(x.ContestID, ""), fmt.Sprintf("%s-%s.md", x.Mode, time.Unix(x.Start, 0).Format("2006-01-02-1504")))
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				return "", err
+			}
+			return path, os.WriteFile(path, []byte(md), 0o644)
+		},
 		Editorial: func(p cf.Problem) (*editorial.Result, error) {
 			return editorial.Load(context.Background(), s, client, p, time.Now())
 		},
@@ -626,7 +641,15 @@ func runTUI(path string) error {
 		},
 	}
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
-	prog = tea.NewProgram(tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithBackground(cfg.Background).WithData(data))
+	model := tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithBackground(cfg.Background).WithData(data)
+	statePath := filepath.Join(config.DataDir(), "state.json")
+	if b, err := os.ReadFile(statePath); err == nil && cfg.Resume {
+		var st tui.State
+		if json.Unmarshal(b, &st) == nil {
+			model = model.WithState(st)
+		}
+	}
+	prog = tea.NewProgram(model)
 	detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
 		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
 	}
@@ -643,7 +666,17 @@ func runTUI(path string) error {
 	go watchConfig(context.Background(), filepath.Dir(path), filepath.Base(path), func() {
 		prog.Send(tui.ConfigChangedMsg{})
 	})
-	_, err = prog.Run()
+	final, err := prog.Run()
+	// read live: Settings can turn resume off while verd runs
+	if fm, ok := final.(tui.Model); ok && err == nil {
+		fm.FlushStats()
+		if c, cerr := config.Load(path); cerr == nil && c.Resume {
+			if b, jerr := json.Marshal(fm.State()); jerr == nil {
+				_ = os.MkdirAll(filepath.Dir(statePath), 0o755)
+				_ = os.WriteFile(statePath, b, 0o644)
+			}
+		}
+	}
 	return err
 }
 
@@ -687,6 +720,9 @@ func loadData(s *store.Store, handle string) (tui.Data, error) {
 	if d.Session, err = s.Session(); err != nil {
 		return d, err
 	}
+	if d.SessionStats, err = s.SessionStats(); err != nil {
+		return d, err
+	}
 	var cfOnly []cf.Problem // stats are about Codeforces: other sources have no ratings or Submissions
 	for _, p := range d.Problems {
 		if p.Source() == cf.SourceCF {
@@ -709,16 +745,6 @@ func watchConfig(ctx context.Context, dir, name string, send func()) {
 			send()
 		}
 	}
-}
-
-func openURL(url string) error {
-	switch {
-	case os.Getenv("WSL_DISTRO_NAME") != "":
-		return exec.Command("wslview", url).Start()
-	case runtime.GOOS == "darwin":
-		return exec.Command("open", url).Start()
-	}
-	return exec.Command("xdg-open", url).Start()
 }
 
 // langSummary describes each configured language for the Settings tab.

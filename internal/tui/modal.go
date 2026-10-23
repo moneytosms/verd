@@ -60,14 +60,21 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 		if x := runner.Explain(res); x.Hint != "" {
 			body = append([]string{res.Detail(), "", "why: " + x.Hint}, "")
 			if x.Loc != "" {
-				body = append(body[:len(body)-1], "at:  "+x.Loc, "")
+				at := "at:  " + x.Loc
+				if x.Code != "" {
+					at += "  │ " + x.Code
+				}
+				body = append(body[:len(body)-1], at, "")
+			}
+			if x.Trace != "" {
+				body = append(body[:len(body)-1], "via: "+x.Trace, "")
 			}
 		}
 		if strings.TrimSpace(res.Stderr) == "" {
 			body = append(body, "(stderr empty)")
 		} else {
 			body = append(body, "stderr:")
-			body = append(body, cleanLines(res.Stderr)...)
+			body = append(body, cleanLines(runner.Fold(res.Stderr))...)
 		}
 		if strings.TrimSpace(res.Input) != "" {
 			body = append(body, "", "input:")

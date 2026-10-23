@@ -70,9 +70,11 @@ type Deps struct {
 	// Sync pulls a provider's solved tasks into the marks using its saved session (no prompts).
 	Sync func(source string) (string, error)
 	// SetMark records a hand-made solved mark for a Problem of a source with no Submission feed.
-	SetMark   func(p cf.Problem, on bool) error
-	SaveCreds func(cookie, ua string) (string, error)
-	HasCreds  func() bool
+	SetMark func(p cf.Problem, on bool) error
+	// ClearCache drops the network cache (marks and per-Problem state stay).
+	ClearCache func() error
+	SaveCreds  func(cookie, ua string) (string, error)
+	HasCreds   func() bool
 	// EditConfig opens config.toml in the editor; LangSummary describes each configured language.
 	EditConfig  func() (*exec.Cmd, error)
 	LangSummary []string
@@ -83,6 +85,10 @@ type Deps struct {
 	// StartSession begins a contest session (virtual or practice) and stores it; EndSession forgets it.
 	StartSession func(c cf.Contest, mode string) (session.Session, error)
 	EndSession   func() error
+	// SaveSessionStats records the running session's stats; SaveReport writes the ended session's
+	// Markdown report and says where.
+	SaveSessionStats func(session.Stats) error
+	SaveReport       func(s session.Session, markdown string) (string, error)
 	// Standings downloads the live standings of a contest with the user's row (see cf.Client.Standings).
 	Standings func(contest int) (*cf.Standing, error)
 	// Editorial loads a problem's editorial (see editorial.Load).
@@ -138,15 +144,16 @@ type RunOpts struct {
 
 // Data is everything the UI renders from the cache.
 type Data struct {
-	Session  *session.Session // the running contest session, nil if none
-	Subs     []cf.Submission  // every stored Submission, for scoring the session
-	Handle   string
-	Rating   int // latest rating, 0 = unrated
-	Problems []cf.Problem
-	Contests []cf.Contest
-	Statuses map[string]store.Status
-	Stats    stats.Stats
-	SyncedAt time.Time // zero = never fully synced
+	Session      *session.Session // the running contest session, nil if none
+	SessionStats session.Stats    // what verd recorded during it
+	Subs         []cf.Submission  // every stored Submission, for scoring the session
+	Handle       string
+	Rating       int // latest rating, 0 = unrated
+	Problems     []cf.Problem
+	Contests     []cf.Contest
+	Statuses     map[string]store.Status
+	Stats        stats.Stats
+	SyncedAt     time.Time // zero = never fully synced
 }
 
 type Model struct {
@@ -225,10 +232,13 @@ type Model struct {
 	detScroll   int
 	full        bool // full-screen test view open
 	fullOff     int
-	fullX       int  // horizontal pan of the full-screen view
-	fullWrap    bool // wrap long lines instead of panning
-	wAdj, hAdj  int  // user resize of the split view: right column width, Tests pane height
-	dragging    bool // dragging the column divider
+	fullX       int     // horizontal pan of the full-screen view
+	fullWrap    bool    // wrap long lines instead of panning
+	fullRaw     bool    // show stderr as printed, without folding sanitizer noise
+	cm          cmState // contest mode (see contestmode.go)
+	inner       int     // set while drawing next to the contest rail: the main area's width
+	wAdj, hAdj  int     // user resize of the split view: right column width, Tests pane height
+	dragging    bool    // dragging the column divider
 	sel         selection
 	showTags    bool // tags revealed in the Problem pane
 	bodyW       int  // width the statement was rendered at
@@ -254,9 +264,10 @@ type Model struct {
 	setFind     bool     // keys go into setQ
 	helpQ       string   // fuzzy search over every shortcut
 	helpFind    bool
-	km          *keymap    // shortcut bindings
-	ke          *keyEditor // the shortcut editor modal, when open
-	openTab     int        // the tab the open Problem lives on; other tabs hide it until you come back
+	km          *keymap     // shortcut bindings
+	ke          *keyEditor  // the shortcut editor modal, when open
+	openTab     int         // the tab the open Problem lives on; other tabs hide it until you come back
+	resume      *cf.Problem // Problem to reopen at start (resume)
 	setEdit     *settingEdit
 	setNote     string
 	bgMode      string // background setting: auto, dark or light
@@ -550,13 +561,16 @@ func (m Model) liveSearch() Model {
 }
 
 // contentWidth is the width available to verd's own screen.
+// contentWidth is verd's drawing width: the window less an embedded editor and the contest rail.
 func (m Model) contentWidth() int {
-	if m.embed.term != nil {
-		if left, right := m.layout(); right > 0 {
-			return left
-		}
+	if m.inner > 0 {
+		return m.inner
 	}
-	return m.width
+	w := m.verdWidth()
+	if rw := m.railCols(w); rw > 0 {
+		return w - rw - 1
+	}
+	return w
 }
 
 func (m Model) Init() tea.Cmd {
@@ -566,6 +580,9 @@ func (m Model) Init() tea.Cmd {
 	}
 	if len(m.deps.Refresh) > 0 {
 		cmds = append(cmds, m.refresh(0))
+	}
+	if p := m.resume; p != nil {
+		cmds = append(cmds, func() tea.Msg { return resumeMsg{*p} })
 	}
 	return tea.Batch(cmds...)
 }
@@ -721,12 +738,22 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if nm, cmd, ok := m.onEmbedMsg(msg); ok {
 		return nm, cmd
 	}
+	if k, ok := msg.(tea.KeyPressMsg); ok && m.cmOn() && m.ke == nil && m.modalBox() == nil {
+		if nm, cmd, ok := m.cmKey(k); ok {
+			return nm, cmd
+		}
+	}
 	nm, cmd, ok := m.routeEmbedInput(msg)
 	if ok {
 		return nm, cmd
 	}
 	m = nm // a click on verd's side moves focus even though the click is also handled below
 	msg = m.shiftMouse(msg)
+	if nm, rest, cmd, ok := m.railMouse(msg); ok {
+		return nm, cmd
+	} else {
+		msg = rest
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -753,6 +780,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return nm, cmd
 	case testEventMsg:
 		return m.onTestEvent(msg)
+	case resumeMsg:
+		m.resume = nil
+		return m.reopen(msg.p)
 	case ExternalRun:
 		for _, p := range m.Problems { // the server only knows the id; borrow the name
 			if p.ContestID == msg.Problem.ContestID && p.Index == msg.Problem.Index {
@@ -819,7 +849,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
-			m = m.setBody(msg.body, msg.w)
+			m = m.setBody(msg.body, msg.w).cmRestoreScroll()
 			m.imgWant = true
 			m = m.loadCases()
 			if m.pending != nil {
@@ -948,11 +978,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1", "2", "3", "4", "5":
 			pos := int(k[0] - '1')
 			visible := m.visibleTabs()
-			if pos < len(visible) {
+			if pos < len(visible) && !m.cmOn() {
 				m.tab = m.tabIDFromPos(pos)
 				return m.onTab(), nil
 			}
 		case "tab":
+			if m.cmOn() {
+				return m, nil
+			}
 			visible := m.visibleTabs()
 			currentPos := m.tabPosFromID(m.tab)
 			if currentPos >= 0 {
@@ -1114,11 +1147,13 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	case "esc":
-		m = m.closeProblem()
+		if !m.cmOn() { // contest mode always shows a Problem
+			m = m.closeProblem()
+		}
 	case "1", "2", "3", "4", "5": // the Problem stays open; esc closes it
 		pos := int(msg.String()[0] - '1')
 		visible := m.visibleTabs()
-		if pos < len(visible) {
+		if pos < len(visible) && !m.cmOn() {
 			m.tab = m.tabIDFromPos(pos)
 			return m.onTab(), nil
 		}
@@ -1436,6 +1471,9 @@ func (m Model) tabPosFromID(id int) int {
 
 // screen is verd's own screen (everything except an embedded editor pane), truncated to m.width.
 func (m Model) screen() string {
+	if rw := m.railCols(m.width); rw > 0 && m.inner == 0 {
+		return m.withRail(rw, Model.screen)
+	}
 	st := m.styles()
 	var b strings.Builder
 	if m.hdrOn() {
@@ -1459,6 +1497,9 @@ func (m Model) screen() string {
 	if m.confirm {
 		footer = paintRow(" "+st.Warn.Render(m.confirmText()), m.width, st.Bar)
 	} else {
+		if m.cmOn() { // contest mode always shows a Problem: there is no back
+			footer = strings.Replace(strings.Replace(footer, "  {problem.back} back", "", 1), "{problem.back} back  ", "", 1)
+		}
 		footer = m.hintBar(m.kx(footer), m.width)
 	}
 	// Status badges get their own line so the key hints can never push them off the pane.
