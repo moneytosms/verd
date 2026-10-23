@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -292,6 +293,9 @@ func TestLiveOutput(t *testing.T) {
 }
 
 func TestSanitizerRerunExplainsOutOfBounds(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS g++ is Apple clang: no GCC sanitizer message")
+	}
 	need(t, "g++")
 	f := newFixture(t)
 	src := f.write("oob.cpp", `#include <vector>

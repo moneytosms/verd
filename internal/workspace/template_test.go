@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -115,6 +116,9 @@ func TestTimeVars(t *testing.T) {
 }
 
 func TestDefaultCppTemplateBuildsWithDebugHeader(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("bits/stdc++.h is GNU libstdc++; macOS g++ is Apple clang")
+	}
 	gxx, err := exec.LookPath("g++")
 	if err != nil {
 		t.Skip("no g++")
