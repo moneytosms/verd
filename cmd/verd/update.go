@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,17 +27,9 @@ func updateCmd(out io.Writer, check bool) error {
 	if version == "dev" {
 		return &exitError{2, "this is a source build (version dev): update with `go install github.com/moneytosms/verd/cmd/verd@latest`"}
 	}
-	hc := &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	req, _ := http.NewRequest("GET", releaseBase+"/latest", nil)
-	req.Header.Set("Accept", "*/*") // GitHub's edge caches this redirect per Accept header; a bare request can see a stale tag
-	resp, err := hc.Do(req)
+	tag, err := latestTag()
 	if err != nil {
 		return &exitError{2, "update: " + err.Error()}
-	}
-	resp.Body.Close()
-	tag := filepath.Base(resp.Header.Get("Location"))
-	if !strings.HasPrefix(tag, "v") {
-		return &exitError{2, "update: no release found"}
 	}
 	latest := strings.TrimPrefix(tag, "v")
 	if !newer(latest, cur) {
@@ -54,11 +47,42 @@ func updateCmd(out io.Writer, check bool) error {
 	if exe, err = filepath.EvalSymlinks(exe); err != nil {
 		return err
 	}
+	bin, err := downloadVerified(tag, latest)
+	if err != nil {
+		return err
+	}
+	if err := installBinary(exe, bin); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "updated verd %s -> %s (restart verd to use it)\n", cur, latest)
+	return nil
+}
+
+// latestTag reads the newest release tag from the /latest redirect.
+func latestTag() (string, error) {
+	hc := &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	req, _ := http.NewRequest("GET", releaseBase+"/latest", nil)
+	req.Header.Set("Accept", "*/*") // GitHub's edge caches this redirect per Accept header; a bare request can see a stale tag
+	resp, err := hc.Do(req)
+	if err != nil {
+		return "", err
+	}
+	resp.Body.Close()
+	tag := filepath.Base(resp.Header.Get("Location"))
+	if !strings.HasPrefix(tag, "v") {
+		return "", errors.New("no release found")
+	}
+	return tag, nil
+}
+
+// downloadVerified fetches this platform's archive for tag and returns the verd binary in it,
+// after checking the archive against checksums.txt.
+func downloadVerified(tag, latest string) ([]byte, error) {
 	name := fmt.Sprintf("verd_%s_%s_%s.tar.gz", latest, runtime.GOOS, runtime.GOARCH)
 	dl := &http.Client{Timeout: 5 * time.Minute}
 	sums, err := fetch(dl, releaseBase+"/download/"+tag+"/checksums.txt")
 	if err != nil {
-		return &exitError{2, "update: " + err.Error()}
+		return nil, &exitError{2, "update: " + err.Error()}
 	}
 	want := ""
 	for _, l := range strings.Split(string(sums), "\n") {
@@ -68,15 +92,20 @@ func updateCmd(out io.Writer, check bool) error {
 	}
 	archive, err := fetch(dl, releaseBase+"/download/"+tag+"/"+name)
 	if err != nil {
-		return &exitError{2, "update: " + err.Error()}
+		return nil, &exitError{2, "update: " + err.Error()}
 	}
 	if sum := sha256.Sum256(archive); want == "" || hex.EncodeToString(sum[:]) != want {
-		return &exitError{2, "update: checksum mismatch for " + name}
+		return nil, &exitError{2, "update: checksum mismatch for " + name}
 	}
 	bin, err := extractVerd(archive)
 	if err != nil {
-		return &exitError{2, "update: " + err.Error()}
+		return nil, &exitError{2, "update: " + err.Error()}
 	}
+	return bin, nil
+}
+
+// installBinary swaps exe for bin: write a temp file beside it, then rename over it.
+func installBinary(exe string, bin []byte) error {
 	tmp, err := os.CreateTemp(filepath.Dir(exe), ".verd-update-*")
 	if err != nil {
 		return &exitError{2, fmt.Sprintf("update: cannot write next to %s (%v): re-run the installer with sudo or from a writable directory", exe, err)}
@@ -92,11 +121,7 @@ func updateCmd(out io.Writer, check bool) error {
 	if err := os.Chmod(tmp.Name(), 0o755); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp.Name(), exe); err != nil { // atomic; a running verd keeps its old inode
-		return err
-	}
-	fmt.Fprintf(out, "updated verd %s -> %s (restart verd to use it)\n", cur, latest)
-	return nil
+	return os.Rename(tmp.Name(), exe) // atomic; a running verd keeps its old inode
 }
 
 func fetch(c *http.Client, url string) ([]byte, error) {

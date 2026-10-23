@@ -63,21 +63,7 @@ func shell(code string) string {
 }
 
 func shellLine(line string) string {
-	body, comment := line, ""
-	inS, inD := false, false
-	for i, r := range line {
-		switch {
-		case r == '\'' && !inD:
-			inS = !inS
-		case r == '"' && !inS:
-			inD = !inD
-		case r == '#' && !inS && !inD && (i == 0 || line[i-1] == ' ' || line[i-1] == '\t'):
-			body, comment = line[:i], line[i:]
-		}
-		if comment != "" {
-			break
-		}
-	}
+	body, comment := splitComment(line)
 	var b strings.Builder
 	cmd := true // the next word is a command
 	rest := body
@@ -96,45 +82,74 @@ func shellLine(line string) string {
 			rest = rest[j:]
 			continue
 		}
-		// one word, keeping quoted parts together
-		j, q := 0, byte(0)
-		for j < len(rest) {
-			c := rest[j]
-			if q != 0 {
-				if c == q {
-					q = 0
-				}
-			} else if c == '\'' || c == '"' {
-				q = c
-			} else if c == ' ' || c == '\t' {
-				break
-			}
-			j++
-		}
+		j := wordEnd(rest)
 		w := rest[:j]
 		rest = rest[j:]
-		switch {
-		case w == "|" || w == "&&" || w == ";" || w == ">" || w == ">>" || w == "<" || w == "||":
-			b.WriteString(span("so", w))
-			cmd = w == "|" || w == "&&" || w == ";" || w == "||"
-		case strings.HasPrefix(w, "-") && len(w) > 1:
-			b.WriteString(span("sf", w))
-		case strings.ContainsAny(w[:1], `'"`) || strings.Contains(w, `"`) && strings.Contains(w, "="):
-			b.WriteString(span("ss", w))
-		case assignRe.MatchString(w):
-			name, val, _ := strings.Cut(w, "=")
-			b.WriteString(span("sv", name+"=") + span("ss", val))
-		case cmd:
-			b.WriteString(span("sc", w))
-			cmd = false
-		case strings.HasPrefix(w, "$"):
-			b.WriteString(span("sv", w))
-		default:
-			b.WriteString(html.EscapeString(w))
-		}
+		var h string
+		h, cmd = shellWord(w, cmd)
+		b.WriteString(h)
 	}
 	if comment != "" {
 		b.WriteString(span("cm", comment))
 	}
 	return b.String()
+}
+
+// splitComment splits a shell line at its trailing comment: a '#' outside quotes that starts a word.
+func splitComment(line string) (body, comment string) {
+	body = line
+	inS, inD := false, false
+	for i, r := range line {
+		switch {
+		case r == '\'' && !inD:
+			inS = !inS
+		case r == '"' && !inS:
+			inD = !inD
+		case r == '#' && !inS && !inD && (i == 0 || line[i-1] == ' ' || line[i-1] == '\t'):
+			body, comment = line[:i], line[i:]
+		}
+		if comment != "" {
+			break
+		}
+	}
+	return body, comment
+}
+
+// wordEnd is the length of the word at the start of s, keeping quoted parts together.
+func wordEnd(s string) int {
+	j, q := 0, byte(0)
+	for j < len(s) {
+		c := s[j]
+		if q != 0 {
+			if c == q {
+				q = 0
+			}
+		} else if c == '\'' || c == '"' {
+			q = c
+		} else if c == ' ' || c == '\t' {
+			break
+		}
+		j++
+	}
+	return j
+}
+
+// shellWord is the highlighted form of one word, and whether the word after it is a command.
+func shellWord(w string, cmd bool) (string, bool) {
+	switch {
+	case w == "|" || w == "&&" || w == ";" || w == ">" || w == ">>" || w == "<" || w == "||":
+		return span("so", w), w == "|" || w == "&&" || w == ";" || w == "||"
+	case strings.HasPrefix(w, "-") && len(w) > 1:
+		return span("sf", w), cmd
+	case strings.ContainsAny(w[:1], `'"`) || strings.Contains(w, `"`) && strings.Contains(w, "="):
+		return span("ss", w), cmd
+	case assignRe.MatchString(w):
+		name, val, _ := strings.Cut(w, "=")
+		return span("sv", name+"=") + span("ss", val), cmd
+	case cmd:
+		return span("sc", w), false
+	case strings.HasPrefix(w, "$"):
+		return span("sv", w), cmd
+	}
+	return html.EscapeString(w), cmd
 }

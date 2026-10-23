@@ -442,18 +442,16 @@ func (m Model) refilter() Model {
 			}
 		}
 	}
+	m.sortVisible(scores)
+	m.cursor = min(m.cursor, max(0, len(m.visible)-1))
+	return m
+}
+
+// sortVisible orders the visible Problems by the sort setting, else by search score.
+func (m Model) sortVisible(scores map[string]int) {
 	switch m.sortBy {
 	case "rating", "-rating":
-		sort.SliceStable(m.visible, func(i, j int) bool {
-			a, b := m.visible[i].Rating, m.visible[j].Rating
-			if a == 0 || b == 0 { // unrated last either way
-				return b == 0 && a != 0
-			}
-			if m.sortBy == "rating" {
-				return a < b
-			}
-			return a > b
-		})
+		m.sortByRating()
 	case "solved":
 		sort.SliceStable(m.visible, func(i, j int) bool { return m.visible[i].SolvedCount > m.visible[j].SolvedCount })
 	case "id":
@@ -471,8 +469,20 @@ func (m Model) refilter() Model {
 			return scores[fmt.Sprintf("%d%s", a.ContestID, a.Index)] > scores[fmt.Sprintf("%d%s", b.ContestID, b.Index)]
 		})
 	}
-	m.cursor = min(m.cursor, max(0, len(m.visible)-1))
-	return m
+}
+
+// sortByRating sorts ascending for "rating" and descending for "-rating", unrated last.
+func (m Model) sortByRating() {
+	sort.SliceStable(m.visible, func(i, j int) bool {
+		a, b := m.visible[i].Rating, m.visible[j].Rating
+		if a == 0 || b == 0 { // unrated last either way
+			return b == 0 && a != 0
+		}
+		if m.sortBy == "rating" {
+			return a < b
+		}
+		return a > b
+	})
 }
 
 // input is a one-line prompt for the filter (`f`) or search (`/`).
@@ -643,6 +653,16 @@ type detailMsg struct {
 // readingOptions constructs scrape.Options from config values.
 func (m Model) readingOptions() scrape.Options {
 	o := scrape.DefaultOptions()
+	m.readingSize(&o)
+	m.readingText(&o)
+	if p, ok := m.readingPalette(); ok {
+		o.Palette = &p
+	}
+	return o
+}
+
+// readingSize applies the width and margin settings.
+func (m Model) readingSize(o *scrape.Options) {
 	if v := m.setting("reading_width"); v != "" && v != "0" {
 		fmt.Sscanf(v, "%d", &o.Width)
 	}
@@ -652,6 +672,10 @@ func (m Model) readingOptions() scrape.Options {
 	if v := m.setting("reading_margin"); v != "" && v != "1" { // 1 is the default
 		fmt.Sscanf(v, "%d", &o.Margin)
 	}
+}
+
+// readingText applies the spacing, heading, math and emphasis settings.
+func (m Model) readingText(o *scrape.Options) {
 	if v := m.setting("reading_spacing"); v != "" && v != "normal" {
 		o.Spacing = v
 	}
@@ -664,10 +688,6 @@ func (m Model) readingOptions() scrape.Options {
 	if v := m.setting("reading_emphasis"); v == "false" {
 		o.Emphasis = false
 	}
-	if p, ok := m.readingPalette(); ok {
-		o.Palette = &p
-	}
-	return o
 }
 
 func (m Model) load(p cf.Problem, force bool) tea.Cmd {
@@ -742,15 +762,7 @@ func (m Model) rewrap() Model {
 }
 
 func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if nm, cmd, ok := m.onEmbedMsg(msg); ok {
-		return nm, cmd
-	}
-	if k, ok := msg.(tea.KeyPressMsg); ok && m.cmOn() && m.ke == nil && m.modalBox() == nil {
-		if nm, cmd, ok := m.cmKey(k); ok {
-			return nm, cmd
-		}
-	}
-	nm, cmd, ok := m.routeEmbedInput(msg)
+	nm, cmd, ok := m.updateEmbed(msg)
 	if ok {
 		return nm, cmd
 	}
@@ -761,6 +773,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	} else {
 		msg = rest
 	}
+	if nm, cmd, ok := m.updateGroups(msg); ok {
+		return nm, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -769,262 +784,439 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.bgMode == "" || m.bgMode == "auto" {
 			m.dark = msg.IsDark()
 		}
-	case refreshedMsg:
-		m = m.WithData(msg.data)
-		m.offline = errors.Is(msg.err, cf.ErrNetwork)
-		if msg.stage == 0 || msg.err != nil { // later stages must not erase an earlier stage's notice
-			m.Notice = ""
-			if msg.err != nil && !m.offline {
-				m.Notice = "sync failed: " + msg.err.Error()
-			}
+	case tea.PasteMsg:
+		m = m.onPaste(msg)
+	case tea.KeyPressMsg:
+		return m.updateKeyPress(msg)
+	}
+	return m, nil
+}
+
+// updateEmbed gives the embedded editor pane and contest mode first claim on a message.
+func (m Model) updateEmbed(msg tea.Msg) (Model, tea.Cmd, bool) {
+	if nm, cmd, ok := m.onEmbedMsg(msg); ok {
+		return nm, cmd, true
+	}
+	if k, ok := msg.(tea.KeyPressMsg); ok && m.cmOn() && m.ke == nil && m.modalBox() == nil {
+		if nm, cmd, ok := m.cmKey(k); ok {
+			return nm, cmd, true
 		}
-		if next := msg.stage + 1; !m.offline && next < len(m.deps.Refresh) {
-			return m, m.refresh(next)
-		}
-		m.syncing = false
+	}
+	return m.routeEmbedInput(msg)
+}
+
+// updateGroups routes run results, editor polls, data, sync and pointer messages.
+func (m Model) updateGroups(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	if nm, cmd, ok := m.updateRun(msg); ok {
+		return nm, cmd, true
+	}
+	if nm, cmd, ok := m.updateEditor(msg); ok {
+		return nm, cmd, true
+	}
+	if nm, cmd, ok := m.updateData(msg); ok {
+		return nm, cmd, true
+	}
+	if nm, cmd, ok := m.updateSync(msg); ok {
+		return nm, cmd, true
+	}
+	return m.updatePointer(msg)
+}
+
+func (m Model) updateRun(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
 	case submitStartedMsg, ExternalSubmit, subUpdateMsg, toastClearMsg, reloadMsg:
 		nm, cmd, _ := m.onSubmitMsg(msg)
-		return nm, cmd
+		return nm, cmd, true
 	case testEventMsg:
-		return m.onTestEvent(msg)
+		nm, cmd := m.onTestEvent(msg)
+		return nm, cmd, true
 	case resumeMsg:
 		m.resume = nil
-		return m.reopen(msg.p)
+		nm, cmd := m.reopen(msg.p)
+		return nm, cmd, true
 	case ExternalRun:
-		for _, p := range m.Problems { // the server only knows the id; borrow the name
-			if p.ContestID == msg.Problem.ContestID && p.Index == msg.Problem.Index {
-				msg.Problem = p
-				break
-			}
-		}
-		if m.open == nil || m.open.ContestID != msg.Problem.ContestID || m.open.Index != msg.Problem.Index {
-			nm, cmd := m.openProblem(msg.Problem)
-			m = nm.(Model)
-			m.pending = &msg
-			return m, cmd
-		}
-		if m.detail == nil {
-			m.pending = &msg
-			return m, nil
-		}
-		return m.attachExternal(msg)
+		nm, cmd := m.onExternal(msg)
+		return nm, cmd, true
 	case stressEventMsg:
-		return m.onStressEvent(msg)
+		nm, cmd := m.onStressEvent(msg)
+		return nm, cmd, true
 	case watchMsg:
-		if msg.closed || m.open == nil {
-			return m, nil
-		}
-		cmd := listenWatch(msg.ch)
-		if m.deps.Autotest && m.detail != nil && m.deps.SolutionPath != nil && msg.path == m.deps.SolutionPath(*m.open, m.lang()) {
-			nm, run := m.startTests()
-			return nm, tea.Batch(cmd, run)
-		}
-		return m, cmd
+		nm, cmd := m.onWatch(msg)
+		return nm, cmd, true
 	case sessTickMsg:
-		return m.onSessTick()
-	case editorialMsg:
-		return m.onEditorial(msg), nil
-	case standingMsg:
-		return m.onStanding(msg), nil
+		nm, cmd := m.onSessTick()
+		return nm, cmd, true
+	}
+	return m, nil, false
+}
+
+// updateEditor polls the split-pane editor and reloads the tests when it closes.
+func (m Model) updateEditor(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
 	case editorTickMsg:
 		if m.deps.EditorAlive != nil && m.deps.EditorAlive() {
-			return m, editorTick()
+			return m, editorTick(), true
 		}
 		m.editorOpen = false // the pane closed
-		m = m.loadCases()    // the user may have added or edited tests there
+		return m.loadCases(), nil, true
 	case editorDoneMsg:
 		if msg.err != nil {
 			m.errMsg = "editor: " + msg.err.Error()
 		}
-		m = m.loadCases()
+		return m.loadCases(), nil, true
+	}
+	return m, nil, false
+}
+
+func (m Model) updateData(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+	case refreshedMsg:
+		nm, cmd := m.onRefreshed(msg)
+		return nm, cmd, true
+	case editorialMsg:
+		return m.onEditorial(msg), nil, true
+	case standingMsg:
+		return m.onStanding(msg), nil, true
 	case detailMsg:
-		if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
-			break // user already left or switched Problems
-		}
-		m.loading = false
-		switch {
-		case errors.Is(msg.err, cf.ErrNetwork):
-			m.offline = true
-			if m.detail == nil {
-				m.errMsg = "offline: statement not cached. Press {problem.open_browser} to open in browser."
-			} else {
-				m.errMsg = "offline: could not refetch"
-			}
-		case errors.Is(msg.err, cf.ErrChallenge):
-			m.errMsg = "Codeforces blocked the request (Cloudflare). Press {problem.open_browser} to open in browser."
-		case msg.err != nil:
-			m.errMsg = "load failed: " + msg.err.Error()
-		default:
-			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
-			if m.defaultLang() == "ask" && m.pstate.Lang == "" && len(m.deps.Langs) > 0 {
-				m.langAsk, m.langSel = true, 0
-			}
-			m = m.setBody(msg.body, msg.w).cmRestoreScroll()
-			m.imgWant = true
-			m = m.loadCases()
-			if m.pending != nil {
-				r := *m.pending
-				m.pending = nil
-				return m.attachExternal(r)
-			}
-		}
+		nm, cmd := m.onDetail(msg)
+		return nm, cmd, true
 	case imagesMsg:
-		m = m.onImages(msg)
+		return m.onImages(msg), nil, true
+	case ConfigChangedMsg:
+		nm, cmd := m.onConfigChanged()
+		return nm, cmd, true
+	}
+	return m, nil, false
+}
+
+// updateSync applies a manual sync's result and a contest fetch's result.
+func (m Model) updateSync(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
 	case syncDoneMsg:
 		m.Notice = msg.text
 		if msg.err != nil {
 			m.Notice = clean(msg.err.Error())
-			return m, nil
+			return m, nil, true
 		}
-		return m, m.reload()
+		return m, m.reload(), true
 	case contestFetchedMsg:
 		m.contestBusy = false
 		if msg.err != nil {
 			m.contestNote = clean(msg.err.Error())
-			return m, nil
+			return m, nil, true
 		}
 		m.contestNote = ""
-		return m, m.reload()
-	case ConfigChangedMsg:
-		return m.onConfigChanged()
+		return m, m.reload(), true
+	}
+	return m, nil, false
+}
+
+// onRefreshed takes one sync stage's data and starts the next stage while online.
+func (m Model) onRefreshed(msg refreshedMsg) (tea.Model, tea.Cmd) {
+	m = m.WithData(msg.data)
+	m.offline = errors.Is(msg.err, cf.ErrNetwork)
+	if msg.stage == 0 || msg.err != nil { // later stages must not erase an earlier stage's notice
+		m.Notice = ""
+		if msg.err != nil && !m.offline {
+			m.Notice = "sync failed: " + msg.err.Error()
+		}
+	}
+	if next := msg.stage + 1; !m.offline && next < len(m.deps.Refresh) {
+		return m, m.refresh(next)
+	}
+	m.syncing = false
+	return m, nil
+}
+
+// onExternal attaches a Test Run started outside verd, opening its Problem if needed.
+func (m Model) onExternal(msg ExternalRun) (tea.Model, tea.Cmd) {
+	for _, p := range m.Problems { // the server only knows the id; borrow the name
+		if p.ContestID == msg.Problem.ContestID && p.Index == msg.Problem.Index {
+			msg.Problem = p
+			break
+		}
+	}
+	if m.open == nil || m.open.ContestID != msg.Problem.ContestID || m.open.Index != msg.Problem.Index {
+		nm, cmd := m.openProblem(msg.Problem)
+		m = nm.(Model)
+		m.pending = &msg
+		return m, cmd
+	}
+	if m.detail == nil {
+		m.pending = &msg
+		return m, nil
+	}
+	return m.attachExternal(msg)
+}
+
+// onWatch keeps listening for saved files and runs the tests on the Solution when autotest is on.
+func (m Model) onWatch(msg watchMsg) (tea.Model, tea.Cmd) {
+	if msg.closed || m.open == nil {
+		return m, nil
+	}
+	cmd := listenWatch(msg.ch)
+	if m.deps.Autotest && m.detail != nil && m.deps.SolutionPath != nil && msg.path == m.deps.SolutionPath(*m.open, m.lang()) {
+		nm, run := m.startTests()
+		return nm, tea.Batch(cmd, run)
+	}
+	return m, cmd
+}
+
+func (m Model) onDetail(msg detailMsg) (tea.Model, tea.Cmd) {
+	if m.open == nil || m.open.ContestID != msg.p.ContestID || m.open.Index != msg.p.Index {
+		return m, nil // user already left or switched Problems
+	}
+	m.loading = false
+	if msg.err != nil {
+		return m.onDetailErr(msg.err), nil
+	}
+	m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
+	if m.defaultLang() == "ask" && m.pstate.Lang == "" && len(m.deps.Langs) > 0 {
+		m.langAsk, m.langSel = true, 0
+	}
+	m = m.setBody(msg.body, msg.w).cmRestoreScroll()
+	m.imgWant = true
+	m = m.loadCases()
+	if m.pending != nil {
+		r := *m.pending
+		m.pending = nil
+		return m.attachExternal(r)
+	}
+	return m, nil
+}
+
+// onDetailErr shows why a statement did not load.
+func (m Model) onDetailErr(err error) Model {
+	switch {
+	case errors.Is(err, cf.ErrNetwork):
+		m.offline = true
+		if m.detail == nil {
+			m.errMsg = "offline: statement not cached. Press {problem.open_browser} to open in browser."
+		} else {
+			m.errMsg = "offline: could not refetch"
+		}
+	case errors.Is(err, cf.ErrChallenge):
+		m.errMsg = "Codeforces blocked the request (Cloudflare). Press {problem.open_browser} to open in browser."
+	default:
+		m.errMsg = "load failed: " + err.Error()
+	}
+	return m
+}
+
+// updatePointer handles mouse clicks, drags, releases and the wheel.
+func (m Model) updatePointer(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
 	case tea.MouseClickMsg:
 		if msg.Button == tea.MouseLeft {
-			return m.onClick(msg.X, msg.Y)
+			nm, cmd := m.onClick(msg.X, msg.Y)
+			return nm, cmd, true
 		}
 	case tea.MouseMotionMsg:
-		if msg.Button == tea.MouseLeft {
-			m = m.dragSelect(msg.X, msg.Y)
-		}
-		if m.dragging && msg.Button == tea.MouseLeft {
-			if g, ok := m.splitGeom(); ok {
-				m.wAdj += g.lw - msg.X // divider follows the pointer
-			}
-		}
+		return m.onDrag(msg), nil, true
 	case tea.MouseReleaseMsg:
 		m.dragging = false
 		nm, cmd := m.endSelect()
-		return nm, cmd
+		return nm, cmd, true
 	case tea.MouseWheelMsg:
-		return m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
-	case tea.PasteMsg:
-		if m.tab == 4 && m.setEdit != nil {
-			m.setEdit.text += clean(msg.Content)
-		} else if m.tm != nil && m.tm.ed != nil {
-			m.tm.ed.insert(clean(msg.Content))
-		} else if m.input != nil {
-			m.input.text += clean(msg.Content)
-			if m.input.kind == '/' {
-				m = m.liveSearch()
-			}
+		nm, cmd := m.onWheel(msg.X, msg.Y, msg.Button == tea.MouseWheelUp)
+		return nm, cmd, true
+	}
+	return m, nil, false
+}
+
+// onDrag extends a selection under a left drag and moves the column divider.
+func (m Model) onDrag(msg tea.MouseMotionMsg) Model {
+	if msg.Button == tea.MouseLeft {
+		m = m.dragSelect(msg.X, msg.Y)
+	}
+	if m.dragging && msg.Button == tea.MouseLeft {
+		if g, ok := m.splitGeom(); ok {
+			m.wAdj += g.lw - msg.X // divider follows the pointer
 		}
-	case tea.KeyPressMsg:
-		if m.ke != nil {
-			return m.updateKeyEditor(msg)
+	}
+	return m
+}
+
+// onPaste puts pasted text into the focused field.
+func (m Model) onPaste(msg tea.PasteMsg) Model {
+	if m.tab == 4 && m.setEdit != nil {
+		m.setEdit.text += clean(msg.Content)
+	} else if m.tm != nil && m.tm.ed != nil {
+		m.tm.ed.insert(clean(msg.Content))
+	} else if m.input != nil {
+		m.input.text += clean(msg.Content)
+		if m.input.kind == '/' {
+			m = m.liveSearch()
 		}
-		var keep bool
-		if msg, keep = m.remapKey(msg); !keep {
-			return m, nil
-		}
-		if m.edv != nil {
-			return m.updateEditorial(msg)
-		}
-		if m.sessSum {
-			return m.updateSessSummary(msg)
-		}
-		if m.pal != nil {
-			return m.updatePalette(msg)
-		}
-		if m.sp != nil {
-			return m.updateSnippets(msg)
-		}
-		if m.tm != nil {
-			return m.updateTM(msg)
-		}
-		if m.fm != nil {
-			return m.updateFilters(msg)
-		}
-		if m.subModal {
-			switch msg.String() {
-			case "q", "esc", "enter":
-				m.subModal = false
-			case "ctrl+c":
-				return m, tea.Quit
-			}
-			return m, nil
-		}
-		if m.help {
-			return m.updateHelp(msg)
-		}
-		if m.langAsk {
-			return m.updateLangAsk(msg)
-		}
-		if msg.String() == "x" && m.toast != nil && m.input == nil && !m.typing() {
-			m.toast = nil
-			return m, nil
-		}
-		if msg.String() == "ctrl+k" && m.input == nil && !m.typing() {
-			return m.openPalette(), nil
-		}
-		if msg.String() == "Z" && m.input == nil && !m.typing() && m.ke == nil {
-			return m.toggleZen(), nil
-		}
-		if msg.String() == "?" && m.input == nil && !m.typing() {
-			m.help, m.helpPage, m.helpScroll = true, 0, 0
-			return m, nil
-		}
-		if m.viewing() {
-			return m.updateProblem(msg)
-		}
-		if m.input != nil {
-			return m.updateInput(msg)
-		}
-		switch k := msg.String(); k {
-		case "ctrl+r":
-			if m.tab == 1 && m.contestOpen != nil {
-				return m.fetchContest()
-			}
-			if len(m.deps.Refresh) == 0 || m.syncing {
-				return m, nil
-			}
-			m.syncing = true
-			return m, m.refresh(0)
-		case "1", "2", "3", "4", "5":
-			pos := int(k[0] - '1')
-			visible := m.visibleTabs()
-			if pos < len(visible) && !m.cmOn() && !m.typing() {
-				m.tab = m.tabIDFromPos(pos)
-				return m.onTab(), nil
-			}
-		case "tab":
-			if m.cmOn() || m.typing() {
-				return m, nil
-			}
-			visible := m.visibleTabs()
-			currentPos := m.tabPosFromID(m.tab)
-			if currentPos >= 0 {
-				nextPos := (currentPos + 1) % len(visible)
-				m.tab = m.tabIDFromPos(nextPos)
-			} else {
-				m.tab = m.tabIDFromPos(0)
-			}
-			return m.onTab(), nil
-		}
-		switch m.tab {
-		case 0:
-			return m.updateList(msg)
-		case 1:
-			return m.updateContests(msg)
-		case 2:
-			return m.updateStats(msg)
-		case 3:
-			return m.updatePicker(msg)
-		case 4:
-			return m.updateSettings(msg)
-		}
-		if k := msg.String(); k == "q" || k == "ctrl+c" {
-			return m, tea.Quit
-		}
+	}
+	return m
+}
+
+func (m Model) updateKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.ke != nil {
+		return m.updateKeyEditor(msg)
+	}
+	var keep bool
+	if msg, keep = m.remapKey(msg); !keep {
 		return m, nil
+	}
+	if nm, cmd, ok := m.updatePanel(msg); ok {
+		return nm, cmd
+	}
+	if nm, cmd, ok := m.updateDialog(msg); ok {
+		return nm, cmd
+	}
+	if nm, cmd, ok := m.globalKey(msg); ok {
+		return nm, cmd
+	}
+	if m.viewing() {
+		return m.updateProblem(msg)
+	}
+	if m.input != nil {
+		return m.updateInput(msg)
+	}
+	if nm, cmd, ok := m.tabKey(msg.String()); ok {
+		return nm, cmd
+	}
+	return m.updateTab(msg)
+}
+
+// updatePanel sends a key to the first open panel that takes input.
+func (m Model) updatePanel(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
+	if m.edv != nil {
+		nm, cmd := m.updateEditorial(msg)
+		return nm, cmd, true
+	}
+	if m.sessSum {
+		nm, cmd := m.updateSessSummary(msg)
+		return nm, cmd, true
+	}
+	if m.pal != nil {
+		nm, cmd := m.updatePalette(msg)
+		return nm, cmd, true
+	}
+	if m.sp != nil {
+		nm, cmd := m.updateSnippets(msg)
+		return nm, cmd, true
+	}
+	if m.tm != nil {
+		nm, cmd := m.updateTM(msg)
+		return nm, cmd, true
+	}
+	if m.fm != nil {
+		nm, cmd := m.updateFilters(msg)
+		return nm, cmd, true
+	}
+	return m, nil, false
+}
+
+// updateDialog sends a key to the Submission modal, help or the language picker.
+func (m Model) updateDialog(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
+	if m.subModal {
+		switch msg.String() {
+		case "q", "esc", "enter":
+			m.subModal = false
+		case "ctrl+c":
+			return m, tea.Quit, true
+		}
+		return m, nil, true
+	}
+	if m.help {
+		nm, cmd := m.updateHelp(msg)
+		return nm, cmd, true
+	}
+	if m.langAsk {
+		nm, cmd := m.updateLangAsk(msg)
+		return nm, cmd, true
+	}
+	return m, nil, false
+}
+
+// globalKey handles the keys that work on every screen: toast, palette, zen and help.
+func (m Model) globalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
+	switch {
+	case msg.String() == "x" && m.toast != nil && m.input == nil && !m.typing():
+		m.toast = nil
+		return m, nil, true
+	case msg.String() == "ctrl+k" && m.input == nil && !m.typing():
+		return m.openPalette(), nil, true
+	case msg.String() == "Z" && m.input == nil && !m.typing() && m.ke == nil:
+		return m.toggleZen(), nil, true
+	case msg.String() == "?" && m.input == nil && !m.typing():
+		m.help, m.helpPage, m.helpScroll = true, 0, 0
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
+func (m Model) tabKey(k string) (tea.Model, tea.Cmd, bool) {
+	switch k {
+	case "ctrl+r":
+		return m.refreshKey()
+	case "1", "2", "3", "4", "5":
+		return m.tabNumber(k)
+	case "tab":
+		return m.cycleTab()
+	}
+	return m, nil, false
+}
+
+// refreshKey is ctrl+r: fetch the contest on its page, else sync the data.
+func (m Model) refreshKey() (tea.Model, tea.Cmd, bool) {
+	if m.tab == 1 && m.contestOpen != nil {
+		nm, cmd := m.fetchContest()
+		return nm, cmd, true
+	}
+	if len(m.deps.Refresh) == 0 || m.syncing {
+		return m, nil, true
+	}
+	m.syncing = true
+	return m, m.refresh(0), true
+}
+
+// tabNumber jumps to the tab at a number key; a number the tab row lacks is not handled.
+func (m Model) tabNumber(k string) (tea.Model, tea.Cmd, bool) {
+	pos := int(k[0] - '1')
+	visible := m.visibleTabs()
+	if pos < len(visible) && !m.cmOn() && !m.typing() {
+		m.tab = m.tabIDFromPos(pos)
+		return m.onTab(), nil, true
+	}
+	return m, nil, false
+}
+
+// cycleTab moves to the next visible tab.
+func (m Model) cycleTab() (tea.Model, tea.Cmd, bool) {
+	if m.cmOn() || m.typing() {
+		return m, nil, true
+	}
+	visible := m.visibleTabs()
+	currentPos := m.tabPosFromID(m.tab)
+	if currentPos >= 0 {
+		nextPos := (currentPos + 1) % len(visible)
+		m.tab = m.tabIDFromPos(nextPos)
+	} else {
+		m.tab = m.tabIDFromPos(0)
+	}
+	return m.onTab(), nil, true
+}
+
+// updateTab sends the key to the current tab. q and ctrl+c quit only if no tab takes them.
+func (m Model) updateTab(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch m.tab {
+	case 0:
+		return m.updateList(msg)
+	case 1:
+		return m.updateContests(msg)
+	case 2:
+		return m.updateStats(msg)
+	case 3:
+		return m.updatePicker(msg)
+	case 4:
+		return m.updateSettings(msg)
+	}
+	if k := msg.String(); k == "q" || k == "ctrl+c" {
+		return m, tea.Quit
 	}
 	return m, nil
 }
@@ -1113,39 +1305,13 @@ func (m Model) closeProblem() Model {
 func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.sel = selection{}
 	if m.confirm {
-		switch msg.String() {
-		case "y", "enter":
-			return m.startSubmit()
-		case "n", "esc":
-			m.confirm = false
-		case "ctrl+c":
-			return m, tea.Quit
-		}
-		return m, nil
+		return m.updateConfirm(msg)
 	}
 	if m.full {
 		return m.updateFull(msg)
 	}
 	if r := m.run; r != nil && r.diff {
-		switch msg.String() {
-		case "esc", "d", "q":
-			r.diff = false
-		case "e":
-			if r.overall == runner.CE {
-				return m.editAtError()
-			}
-		case "j", "down":
-			r.diffOff++
-		case "k", "up":
-			r.diffOff = max(0, r.diffOff-1)
-		case "pgdown":
-			r.diffOff += m.page()
-		case "pgup":
-			r.diffOff = max(0, r.diffOff-m.page())
-		case "ctrl+c":
-			return m.stopTests(), tea.Quit
-		}
-		return m, nil
+		return m.updateDiff(r, msg)
 	}
 	if m.strs != nil && m.strs.diff {
 		return m.updateStressOverlay(msg)
@@ -1156,34 +1322,147 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if nm, cmd, handled := m.updateTests(msg); handled {
 		return nm, cmd
 	}
+	k := msg.String()
+	if nm, cmd, ok := m.problemTop(k); ok {
+		return nm, cmd
+	}
+	if nm, cmd, ok := m.problemEdit(k); ok {
+		return nm, cmd
+	}
+	if nm, cmd, ok := m.problemLayout(k); ok {
+		return nm, cmd
+	}
+	return m, nil
+}
+
+// updateConfirm answers the prompt asking whether to submit despite failing local tests.
+func (m Model) updateConfirm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "y", "enter":
+		return m.startSubmit()
+	case "n", "esc":
+		m.confirm = false
+	case "ctrl+c":
 		return m, tea.Quit
+	}
+	return m, nil
+}
+
+// updateDiff handles keys while a Test Run's diff is open.
+func (m Model) updateDiff(r *testRun, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "d", "q":
+		r.diff = false
+	case "e":
+		if r.overall == runner.CE {
+			return m.editAtError()
+		}
+	case "j", "down":
+		r.diffOff++
+	case "k", "up":
+		r.diffOff = max(0, r.diffOff-1)
+	case "pgdown":
+		r.diffOff += m.page()
+	case "pgup":
+		r.diffOff = max(0, r.diffOff-m.page())
+	case "ctrl+c":
+		return m.stopTests(), tea.Quit
+	}
+	return m, nil
+}
+
+// problemTop handles quit, closing the Problem, panels, tabs and pane focus.
+func (m Model) problemTop(k string) (tea.Model, tea.Cmd, bool) {
+	switch k {
+	case "ctrl+c", "q":
+		return m, tea.Quit, true
 	case "esc":
 		if !m.cmOn() { // contest mode always shows a Problem
 			m = m.closeProblem()
 		}
+		return m, nil, true
 	case "1", "2", "3", "4", "5": // the Problem stays open; esc closes it
-		pos := int(msg.String()[0] - '1')
+		pos := int(k[0] - '1')
 		visible := m.visibleTabs()
 		if pos < len(visible) && !m.cmOn() {
 			m.tab = m.tabIDFromPos(pos)
-			return m.onTab(), nil
+			return m.onTab(), nil, true
 		}
+		return m, nil, true
 	case "f":
 		m.full, m.fullOff = true, 0
 	case "v":
 		m.showTags = !m.showTags
 	case "P":
-		return m.cyclePalette(), nil
+		return m.cyclePalette(), nil, true
+	case "tab":
+		m.pane = (m.pane + 1) % panes
+	case "shift+tab":
+		m.pane = (m.pane + panes - 1) % panes
+	default:
+		return m, nil, false
+	}
+	return m, nil, true
+}
+
+// problemEdit handles the keys that change the Problem or open something for it.
+func (m Model) problemEdit(k string) (tea.Model, tea.Cmd, bool) {
+	switch k {
 	case "y":
-		return m.copyPane()
+		nm, cmd := m.copyPane()
+		return nm, cmd, true
 	case "I":
-		return m.copyCase("input")
+		nm, cmd := m.copyCase("input")
+		return nm, cmd, true
 	case "E":
-		return m.copyCase("expected")
+		nm, cmd := m.copyCase("expected")
+		return nm, cmd, true
 	case "O":
-		return m.copyCase("output")
+		nm, cmd := m.copyCase("output")
+		return nm, cmd, true
+	case "r":
+		return m.refetchProblem()
+	case "c":
+		return m.cycleMode(), nil, true
+	case "s":
+		nm, cmd := m.trySubmit()
+		return nm, cmd, true
+	case "l":
+		return m.pickLang(), nil, true
+	case "e":
+		if m.deps.Edit == nil {
+			return m, nil, true
+		}
+		cmd, err := m.deps.Edit(*m.open, m.lang())
+		nm, c := m.afterOpen(cmd, err, "edit")
+		return nm, c, true
+	case "N":
+		if m.deps.EditNote == nil {
+			return m, nil, true
+		}
+		cmd, err := m.deps.EditNote(*m.open)
+		nm, c := m.afterOpen(cmd, err, "note")
+		return nm, c, true
+	case "i":
+		return m.openSnippets(m.lang()), nil, true
+	case "H":
+		nm, cmd := m.openEditorial(*m.open)
+		return nm, cmd, true
+	case "T":
+		return m.openTM(false), nil, true
+	case "a":
+		return m.openTM(true), nil, true
+	case "m":
+		return m.toggleMark(*m.open), nil, true
+	case "o":
+		return m.openBrowser()
+	}
+	return m, nil, false
+}
+
+// problemLayout handles the split-view resize keys and scrolling.
+func (m Model) problemLayout(k string) (tea.Model, tea.Cmd, bool) {
+	switch k {
 	case ">", ".":
 		m.wAdj += 4
 	case "<", ",":
@@ -1192,77 +1471,65 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.hAdj++
 	case "-":
 		m.hAdj--
-	case "r":
-		if m.offline {
-			m.errMsg = "offline: refetch needs network (ctrl+r on a list retries the connection)"
-			break
-		}
-		m.loading, m.errMsg = true, ""
-		return m, m.load(*m.open, true)
-	case "c":
-		if m.detail == nil {
-			break
-		}
-		m.pstate.Mode = nextMode(m.mode())
-		if m.deps.SaveState != nil {
-			if err := m.deps.SaveState(*m.open, m.pstate); err != nil {
-				m.errMsg = "saving mode: " + err.Error()
-			}
-		}
-	case "s":
-		return m.trySubmit()
-	case "l":
-		if len(m.deps.Langs) == 0 || m.detail == nil {
-			break
-		}
-		m = m.chooseLang(nextOf(m.deps.Langs, m.lang()))
-	case "e":
-		if m.deps.Edit == nil {
-			break
-		}
-		cmd, err := m.deps.Edit(*m.open, m.lang())
-		return m.afterOpen(cmd, err, "edit")
-	case "N":
-		if m.deps.EditNote == nil {
-			break
-		}
-		cmd, err := m.deps.EditNote(*m.open)
-		return m.afterOpen(cmd, err, "note")
-	case "i":
-		m = m.openSnippets(m.lang())
-	case "H":
-		return m.openEditorial(*m.open)
-	case "T":
-		m = m.openTM(false)
-	case "a":
-		m = m.openTM(true)
-	case "tab":
-		m.pane = (m.pane + 1) % panes
-	case "shift+tab":
-		m.pane = (m.pane + panes - 1) % panes
-	case "m":
-		m = m.toggleMark(*m.open)
-	case "o":
-		if open, p := m.deps.OpenURL, *m.open; open != nil {
-			return m, func() tea.Msg {
-				open(p.URL())
-				return nil
-			}
-		}
 	case "up", "k":
-		m = m.moveInPane(-1)
+		return m.moveInPane(-1), nil, true
 	case "down", "j":
-		m = m.moveInPane(1)
+		return m.moveInPane(1), nil, true
 	case "pgup":
-		m = m.moveInPane(-m.page())
+		return m.moveInPane(-m.page()), nil, true
 	case "pgdown":
-		m = m.moveInPane(m.page())
+		return m.moveInPane(m.page()), nil, true
 	case "home", "g":
-		m = m.moveInPane(-1 << 30)
+		return m.moveInPane(-1 << 30), nil, true
 	case "end", "G":
-		m = m.moveInPane(1 << 30)
+		return m.moveInPane(1 << 30), nil, true
+	default:
+		return m, nil, false
 	}
-	return m, nil
+	return m, nil, true
+}
+
+// refetchProblem reloads the statement from the network; offline it says why not.
+func (m Model) refetchProblem() (tea.Model, tea.Cmd, bool) {
+	if m.offline {
+		m.errMsg = "offline: refetch needs network (ctrl+r on a list retries the connection)"
+		return m, nil, true
+	}
+	m.loading, m.errMsg = true, ""
+	return m, m.load(*m.open, true), true
+}
+
+// cycleMode moves the Comparison Mode to the next one and saves it.
+func (m Model) cycleMode() Model {
+	if m.detail == nil {
+		return m
+	}
+	m.pstate.Mode = nextMode(m.mode())
+	if m.deps.SaveState != nil {
+		if err := m.deps.SaveState(*m.open, m.pstate); err != nil {
+			m.errMsg = "saving mode: " + err.Error()
+		}
+	}
+	return m
+}
+
+// pickLang moves to the next configured language.
+func (m Model) pickLang() Model {
+	if len(m.deps.Langs) == 0 || m.detail == nil {
+		return m
+	}
+	return m.chooseLang(nextOf(m.deps.Langs, m.lang()))
+}
+
+// openBrowser opens the Problem page in the browser.
+func (m Model) openBrowser() (tea.Model, tea.Cmd, bool) {
+	if open, p := m.deps.OpenURL, *m.open; open != nil {
+		return m, func() tea.Msg {
+			open(p.URL())
+			return nil
+		}, true
+	}
+	return m, nil, true
 }
 
 // moveInPane scrolls the focused pane (or moves the test selection) by d lines.
@@ -1490,35 +1757,70 @@ func (m Model) screen() string {
 	if rw := m.railCols(m.width); rw > 0 && m.inner == 0 {
 		return m.withRail(rw, Model.screen)
 	}
-	st := m.styles()
 	var b strings.Builder
 	if m.hdrOn() {
 		b.WriteString(m.header(m.width) + "\n" + m.rule(m.width) + "\n")
 	}
-	footer := ""
+	footer := m.footerLine(m.tabView(&b))
+	// Status badges get their own line so the key hints can never push them off the pane.
+	footerContent := footer
+	if badges := m.badges(); len(badges) > 0 {
+		footerContent += "\n" + strings.Join(badges, " ")
+	}
+	if m.zen && m.Notice != "" {
+		b.WriteString("\n" + m.styles().Dim.Render(clean(m.Notice)))
+	}
+	if m.ftrOn() {
+		// Footer is shown
+		if t := m.viewToast(); t != "" {
+			b.WriteString("\n" + t)
+		}
+		b.WriteString("\n" + footerContent)
+	}
+	// If footer is false, we don't append anything (footerContent is not needed)
+	// Never let a line overflow the pane (styles are preserved by the ANSI-aware truncation).
+	lines := strings.Split(b.String(), "\n")
+	for i, l := range lines {
+		lines[i] = xansi.Truncate(l, m.width, "…")
+	}
+	if bx := m.modalBox(); bx != nil {
+		lines = m.overlayModal(lines, bx)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// tabView writes the current screen's body to b and returns its key hints.
+func (m Model) tabView(b *strings.Builder) string {
 	switch {
 	case m.viewing():
-		footer = m.viewProblem(&b)
+		return m.viewProblem(b)
 	case m.tab == 0:
-		footer = m.viewList(&b)
+		return m.viewList(b)
 	case m.tab == 1:
-		footer = m.viewContests(&b)
+		return m.viewContests(b)
 	case m.tab == 2:
-		footer = m.viewStats(&b)
+		return m.viewStats(b)
 	case m.tab == 3:
-		footer = m.viewPicker(&b)
-	default:
-		footer = m.viewSettings(&b)
+		return m.viewPicker(b)
 	}
+	return m.viewSettings(b)
+}
+
+// footerLine is the key hint line: the confirm prompt while asking, else the hints.
+func (m Model) footerLine(footer string) string {
+	st := m.styles()
 	if m.confirm {
-		footer = paintRow(" "+st.Warn.Render(m.confirmText()), m.width, st.Bar)
-	} else {
-		if m.cmOn() { // contest mode always shows a Problem: there is no back
-			footer = strings.Replace(strings.Replace(footer, "  {problem.back} back", "", 1), "{problem.back} back  ", "", 1)
-		}
-		footer = m.hintBar(m.kx(footer), m.width)
+		return paintRow(" "+st.Warn.Render(m.confirmText()), m.width, st.Bar)
 	}
-	// Status badges get their own line so the key hints can never push them off the pane.
+	if m.cmOn() { // contest mode always shows a Problem: there is no back
+		footer = strings.Replace(strings.Replace(footer, "  {problem.back} back", "", 1), "{problem.back} back  ", "", 1)
+	}
+	return m.hintBar(m.kx(footer), m.width)
+}
+
+// badges are the status tags shown under the key hints.
+func (m Model) badges() []string {
+	st := m.styles()
 	var badges []string
 	if m.Notice != "" {
 		badges = append(badges, badge(st.Warn, clean(m.Notice)))
@@ -1536,40 +1838,24 @@ func (m Model) screen() string {
 	case m.offline:
 		badges = append(badges, badge(st.Bad, fmt.Sprintf("offline, synced %s ago", ago(m.clock().Sub(m.syncedAt)))))
 	}
-	footerContent := footer
-	if len(badges) > 0 {
-		footerContent += "\n" + strings.Join(badges, " ")
+	return badges
+}
+
+// overlayModal mutes the screen lines and lays the modal box over them.
+func (m Model) overlayModal(lines []string, bx []string) []string {
+	st := m.styles()
+	for i, l := range lines { // scrim: mute what is behind the modal so it stands out
+		lines[i] = st.Dim.Render(scrimText(l))
 	}
-	if m.zen && m.Notice != "" {
-		b.WriteString("\n" + st.Dim.Render(clean(m.Notice)))
+	modalY := m.height - 3
+	if !m.ftrOn() {
+		modalY = m.height // no footer means more space for the modal
 	}
-	if m.ftrOn() {
-		// Footer is shown
-		if t := m.viewToast(); t != "" {
-			b.WriteString("\n" + t)
-		}
-		b.WriteString("\n" + footerContent)
-	}
-	// If footer is false, we don't append anything (footerContent is not needed)
-	// Never let a line overflow the pane (styles are preserved by the ANSI-aware truncation).
-	lines := strings.Split(b.String(), "\n")
+	lines = overlay(lines, bx, m.width, modalY)
 	for i, l := range lines {
-		lines[i] = xansi.Truncate(l, m.width, "…")
+		lines[i] = xansi.Truncate(l, m.width, "")
 	}
-	if bx := m.modalBox(); bx != nil {
-		for i, l := range lines { // scrim: mute what is behind the modal so it stands out
-			lines[i] = st.Dim.Render(scrimText(l))
-		}
-		modalY := m.height - 3
-		if !m.ftrOn() {
-			modalY = m.height // no footer means more space for the modal
-		}
-		lines = overlay(lines, bx, m.width, modalY)
-		for i, l := range lines {
-			lines[i] = xansi.Truncate(l, m.width, "")
-		}
-	}
-	return strings.Join(lines, "\n")
+	return lines
 }
 
 func (m Model) viewProblem(b *strings.Builder) string {

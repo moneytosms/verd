@@ -113,116 +113,132 @@ func (m Model) routeEmbedInput(msg tea.Msg) (Model, tea.Cmd, bool) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		key := msg.String()
-		if slices.Contains(m.edKeys("zoom"), key) {
-			// zoom whichever side has the keyboard; pressing it again restores the split
-			switch {
-			case m.embed.zoom, m.embed.zoomV:
-				m.embed.zoom, m.embed.zoomV = false, false
-			case m.embed.focus:
-				m.embed.zoom = true
-			default:
-				m.embed.zoomV = true
-			}
-			m.embed.focus = m.embed.zoom
-			if m.embed.focus {
-				t.Focus()
-			} else {
-				t.Blur()
-			}
-			m.resizeEmbed()
-			return m, m.relayout(), true
-		}
-		if slices.Contains(m.edKeys("wider"), key) && m.embed.focus {
-			r := m.deps.EmbedRatio + 0.05
-			if r > 0.9 {
-				r = 0.9
-			}
-			if m.deps.SaveSetting != nil {
-				m.deps.SaveSetting("embed_ratio", fmt.Sprintf("%.1f", r))
-			}
-			m.deps.EmbedRatio = r
-			m.resizeEmbed()
-			return m, m.relayout(), true
-		}
-		if slices.Contains(m.edKeys("narrower"), key) && m.embed.focus {
-			r := m.deps.EmbedRatio - 0.05
-			if r < 0.1 {
-				r = 0.1
-			}
-			if m.deps.SaveSetting != nil {
-				m.deps.SaveSetting("embed_ratio", fmt.Sprintf("%.1f", r))
-			}
-			m.deps.EmbedRatio = r
-			m.resizeEmbed()
-			return m, m.relayout(), true
-		}
-		if slices.Contains(m.edKeys("swap_side"), key) && m.embed.focus {
-			side := "right"
-			if m.deps.EmbedSide == "right" {
-				side = "left"
-			}
-			if m.deps.SaveSetting != nil {
-				m.deps.SaveSetting("embed_side", side)
-			}
-			m.deps.EmbedSide = side
-			m.resizeEmbed()
-			return m, m.relayout(), true
-		}
-		want, dir := m.embed.focus, false
-		switch key := msg.String(); {
-		case slices.Contains(m.edKeys("focus"), key):
-			want, dir = !m.embed.focus, true
-		case slices.Contains(m.edKeys("focus_left"), key):
-			want, dir = m.paneLeft(), true // the editor is in the left column
-		case slices.Contains(m.edKeys("focus_right"), key):
-			want, dir = !m.paneLeft(), true
-		}
-		if dir {
-			if m.embed.zoom {
-				return m, nil, true // verd is hidden; alt+z first
-			}
-			m.embed.focus = want
-			if want {
-				t.Focus()
-			} else {
-				t.Blur()
-			}
-			return m, nil, true
-		}
-		if m.embed.focus {
-			t.SendKey(msg)
-			return m, nil, true
-		}
+		return m.routeEmbedKey(msg)
 	case tea.PasteMsg:
 		if m.embed.focus {
 			t.Paste(msg.Content)
 			return m, nil, true
 		}
 	case tea.MouseMsg:
-		left, right := m.layout()
-		mouse := msg.Mouse()
-		if right == 0 {
-			return m, nil, false
-		}
-		x0 := left + 1 // editor column's first x
-		if m.paneLeft() {
-			x0 = 0
-		}
-		inPane := m.embed.zoom || mouse.X >= x0 && mouse.X < x0+right && mouse.Y < m.height
-		if _, click := msg.(tea.MouseClickMsg); click {
-			m.embed.focus = inPane // clicking a column gives it the keyboard
-		}
-		if inPane {
-			rel := mouse
-			if !m.embed.zoom {
-				rel.X -= x0
-			}
-			t.SendMouse(translateMouse(msg, rel))
-			return m, nil, true
-		}
+		return m.routeEmbedMouse(msg)
 	}
 	return m, nil, false
+}
+
+// routeEmbedKey handles the editor's own keys (zoom, resize, swap, focus) and passes the rest on
+// to the editor when it has focus.
+func (m Model) routeEmbedKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
+	t, key := m.embed.term, msg.String()
+	switch {
+	case slices.Contains(m.edKeys("zoom"), key):
+		m = m.toggleZoom()
+		return m, m.relayout(), true
+	case slices.Contains(m.edKeys("wider"), key) && m.embed.focus:
+		m = m.saveEmbedRatio(min(m.deps.EmbedRatio+0.05, 0.9))
+		return m, m.relayout(), true
+	case slices.Contains(m.edKeys("narrower"), key) && m.embed.focus:
+		m = m.saveEmbedRatio(max(m.deps.EmbedRatio-0.05, 0.1))
+		return m, m.relayout(), true
+	case slices.Contains(m.edKeys("swap_side"), key) && m.embed.focus:
+		m = m.swapEmbedSide()
+		return m, m.relayout(), true
+	}
+	want, dir := m.embed.focus, false
+	switch {
+	case slices.Contains(m.edKeys("focus"), key):
+		want, dir = !m.embed.focus, true
+	case slices.Contains(m.edKeys("focus_left"), key):
+		want, dir = m.paneLeft(), true // the editor is in the left column
+	case slices.Contains(m.edKeys("focus_right"), key):
+		want, dir = !m.paneLeft(), true
+	}
+	if dir {
+		if m.embed.zoom {
+			return m, nil, true // verd is hidden; alt+z first
+		}
+		m.embed.focus = want
+		if want {
+			t.Focus()
+		} else {
+			t.Blur()
+		}
+		return m, nil, true
+	}
+	if m.embed.focus {
+		t.SendKey(msg)
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
+// toggleZoom zooms whichever side has the keyboard; zooming again restores the split.
+func (m Model) toggleZoom() Model {
+	switch {
+	case m.embed.zoom, m.embed.zoomV:
+		m.embed.zoom, m.embed.zoomV = false, false
+	case m.embed.focus:
+		m.embed.zoom = true
+	default:
+		m.embed.zoomV = true
+	}
+	m.embed.focus = m.embed.zoom
+	if m.embed.focus {
+		m.embed.term.Focus()
+	} else {
+		m.embed.term.Blur()
+	}
+	m.resizeEmbed()
+	return m
+}
+
+// saveEmbedRatio stores the editor's share of the window and resizes it.
+func (m Model) saveEmbedRatio(r float64) Model {
+	if m.deps.SaveSetting != nil {
+		m.deps.SaveSetting("embed_ratio", fmt.Sprintf("%.1f", r))
+	}
+	m.deps.EmbedRatio = r
+	m.resizeEmbed()
+	return m
+}
+
+func (m Model) swapEmbedSide() Model {
+	side := "right"
+	if m.deps.EmbedSide == "right" {
+		side = "left"
+	}
+	if m.deps.SaveSetting != nil {
+		m.deps.SaveSetting("embed_side", side)
+	}
+	m.deps.EmbedSide = side
+	m.resizeEmbed()
+	return m
+}
+
+// routeEmbedMouse sends a mouse event to the editor when it lands in the editor column. A click
+// there also gives the editor the keyboard.
+func (m Model) routeEmbedMouse(msg tea.MouseMsg) (Model, tea.Cmd, bool) {
+	left, right := m.layout()
+	mouse := msg.Mouse()
+	if right == 0 {
+		return m, nil, false
+	}
+	x0 := left + 1 // editor column's first x
+	if m.paneLeft() {
+		x0 = 0
+	}
+	inPane := m.embed.zoom || mouse.X >= x0 && mouse.X < x0+right && mouse.Y < m.height
+	if _, click := msg.(tea.MouseClickMsg); click {
+		m.embed.focus = inPane // clicking a column gives it the keyboard
+	}
+	if !inPane {
+		return m, nil, false
+	}
+	rel := mouse
+	if !m.embed.zoom {
+		rel.X -= x0
+	}
+	m.embed.term.SendMouse(translateMouse(msg, rel))
+	return m, nil, true
 }
 
 // translateMouse rebuilds msg with pane-relative coordinates.

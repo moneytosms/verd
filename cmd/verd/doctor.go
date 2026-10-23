@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/moneytosms/verd/internal/config"
 )
 
 // Checks is an injectable set of functions for diagnostics, used by tests to fake I/O.
@@ -39,123 +41,162 @@ type checkResult struct {
 // doctorCmd runs diagnostics on the verd installation.
 func doctorCmd(out io.Writer, path string, c Checks) error {
 	var results []checkResult
-
-	// Check: config file loads
 	cfg, err := loadConfig(path)
 	if err != nil {
 		results = append(results, checkResult{"fail", "config", err.Error()})
 	} else {
-		results = append(results, checkResult{"ok", "config", "loads"})
+		results = append(results, configChecks(cfg, c)...)
+	}
+	results = append(results, multiplexerChecks(c)...)
+	results = append(results, colorCheck(c))
+	results = append(results, termChecks(c)...)
+	return printChecks(out, results)
+}
 
-		// Check: handle is set
-		if cfg.Handle == "" {
-			results = append(results, checkResult{"fail", "handle", "not set"})
+// configChecks runs the checks that need a loadable config.
+func configChecks(cfg config.Config, c Checks) []checkResult {
+	res := []checkResult{{"ok", "config", "loads"}, handleCheck(cfg)}
+	res = append(res, workspaceChecks(cfg, c)...)
+	res = append(res, langChecks(cfg, c)...)
+	return append(res, editorChecks(cfg, c)...)
+}
+
+// handleCheck: the handle must be set.
+func handleCheck(cfg config.Config) checkResult {
+	if cfg.Handle == "" {
+		return checkResult{"fail", "handle", "not set"}
+	}
+	return checkResult{"ok", "handle", cfg.Handle}
+}
+
+// workspaceChecks: the workspace exists or can be created, and is not under /mnt/ on WSL.
+func workspaceChecks(cfg config.Config, c Checks) []checkResult {
+	ws := workspacePath(cfg.Workspace)
+	res := []checkResult{workspaceResult(ws, c)}
+	if c.Getenv("WSL_DISTRO_NAME") != "" && strings.HasPrefix(ws, "/mnt/") {
+		res = append(res, checkResult{"warn", "workspace", "under /mnt/ on WSL: slow I/O (use /tmp or $HOME)"})
+	}
+	return res
+}
+
+// workspacePath expands "" and "~/" in the configured workspace.
+func workspacePath(ws string) string {
+	switch {
+	case ws == "" || ws == ".":
+		return "."
+	case strings.HasPrefix(ws, "~/"):
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, ws[2:])
+	}
+	return ws
+}
+
+// workspaceResult: an existing directory is ok, an existing file fails, a missing path is created.
+func workspaceResult(ws string, c Checks) checkResult {
+	if info, err := c.Stat(ws); err == nil {
+		if !info.IsDir() {
+			return checkResult{"fail", "workspace", "not a directory"}
+		}
+		return checkResult{"ok", "workspace", ws}
+	}
+	if err := os.MkdirAll(ws, 0o755); err != nil {
+		return checkResult{"fail", "workspace", fmt.Sprintf("cannot create: %v", err)}
+	}
+	return checkResult{"ok", "workspace", "creatable at " + ws}
+}
+
+// langChecks: each language's compiler or run command is on PATH.
+func langChecks(cfg config.Config, c Checks) []checkResult {
+	var res []checkResult
+	for langName, lang := range cfg.Lang {
+		execName := ""
+		if len(lang.Compile) > 0 {
+			execName = lang.Compile[0]
+		} else if len(lang.Run) > 0 {
+			execName = lang.Run[0]
+		}
+		if execName == "" {
+			continue
+		}
+		if _, err := c.LookPath(execName); err != nil {
+			res = append(res, checkResult{"fail", langName, execName + " not on PATH"})
 		} else {
-			results = append(results, checkResult{"ok", "handle", cfg.Handle})
-		}
-
-		// Check: workspace exists or is creatable
-		ws := cfg.Workspace
-		if ws == "" || ws == "." {
-			ws = "."
-		} else if strings.HasPrefix(ws, "~/") {
-			home, _ := os.UserHomeDir()
-			ws = filepath.Join(home, ws[2:])
-		}
-
-		if info, err := c.Stat(ws); err == nil {
-			if !info.IsDir() {
-				results = append(results, checkResult{"fail", "workspace", "not a directory"})
-			} else {
-				results = append(results, checkResult{"ok", "workspace", ws})
-			}
-		} else {
-			// Try to create it
-			if err := os.MkdirAll(ws, 0o755); err != nil {
-				results = append(results, checkResult{"fail", "workspace", fmt.Sprintf("cannot create: %v", err)})
-			} else {
-				results = append(results, checkResult{"ok", "workspace", "creatable at " + ws})
-			}
-		}
-
-		// Check: workspace not under /mnt/ on WSL
-		if c.Getenv("WSL_DISTRO_NAME") != "" && strings.HasPrefix(ws, "/mnt/") {
-			results = append(results, checkResult{"warn", "workspace", "under /mnt/ on WSL: slow I/O (use /tmp or $HOME)"})
-		}
-
-		// Check: each language's compiler/run is on PATH
-		for langName, lang := range cfg.Lang {
-			execName := ""
-			if len(lang.Compile) > 0 {
-				execName = lang.Compile[0]
-			} else if len(lang.Run) > 0 {
-				execName = lang.Run[0]
-			}
-			if execName != "" {
-				if _, err := c.LookPath(execName); err != nil {
-					results = append(results, checkResult{"fail", langName, execName + " not on PATH"})
-				} else {
-					results = append(results, checkResult{"ok", langName, execName})
-				}
-			}
-		}
-
-		// Check: editor command on PATH
-		if cfg.Editor != "" {
-			editorCmd := strings.Fields(cfg.Editor)[0]
-			if _, err := c.LookPath(editorCmd); err != nil {
-				results = append(results, checkResult{"fail", "editor", editorCmd + " not on PATH"})
-			} else {
-				results = append(results, checkResult{"ok", "editor", editorCmd})
-
-				// Check: nvim version if editor is nvim
-				if editorCmd == "nvim" {
-					out, err := c.RunCmd("nvim", "--version")
-					if err != nil {
-						results = append(results, checkResult{"fail", "nvim version", "could not check"})
-					} else {
-						// Parse version from "nvim X.Y.Z ..." or "NVIM X.Y.Z ..."
-						ver := strings.Fields(out)
-						if len(ver) > 1 {
-							versionStr := ver[1]
-							if isVersionAtLeast(versionStr, "0.9") {
-								results = append(results, checkResult{"ok", "nvim version", versionStr})
-							} else {
-								results = append(results, checkResult{"warn", "nvim version", fmt.Sprintf("%s (< 0.9)", versionStr)})
-							}
-						}
-					}
-				}
-			}
+			res = append(res, checkResult{"ok", langName, execName})
 		}
 	}
+	return res
+}
 
-	// Check: tmux or herdr presence (info only, no fail/warn)
+// editorChecks: the editor command is on PATH, and nvim is new enough.
+func editorChecks(cfg config.Config, c Checks) []checkResult {
+	if cfg.Editor == "" {
+		return nil
+	}
+	editorCmd := strings.Fields(cfg.Editor)[0]
+	if _, err := c.LookPath(editorCmd); err != nil {
+		return []checkResult{{"fail", "editor", editorCmd + " not on PATH"}}
+	}
+	res := []checkResult{{"ok", "editor", editorCmd}}
+	if editorCmd == "nvim" {
+		res = append(res, nvimVersionChecks(c)...)
+	}
+	return res
+}
+
+// nvimVersionChecks parses "nvim X.Y.Z ..." or "NVIM X.Y.Z ..." and wants 0.9 or newer.
+func nvimVersionChecks(c Checks) []checkResult {
+	text, err := c.RunCmd("nvim", "--version")
+	if err != nil {
+		return []checkResult{{"fail", "nvim version", "could not check"}}
+	}
+	ver := strings.Fields(text)
+	if len(ver) <= 1 {
+		return nil
+	}
+	versionStr := ver[1]
+	if isVersionAtLeast(versionStr, "0.9") {
+		return []checkResult{{"ok", "nvim version", versionStr}}
+	}
+	return []checkResult{{"warn", "nvim version", fmt.Sprintf("%s (< 0.9)", versionStr)}}
+}
+
+// multiplexerChecks: tmux or herdr presence (info only, no fail/warn).
+func multiplexerChecks(c Checks) []checkResult {
 	if _, err := c.LookPath("tmux"); err == nil {
-		results = append(results, checkResult{"ok", "tmux", "available"})
-	} else if _, err := c.LookPath("herdr"); err == nil {
-		results = append(results, checkResult{"ok", "herdr", "available"})
+		return []checkResult{{"ok", "tmux", "available"}}
 	}
+	if _, err := c.LookPath("herdr"); err == nil {
+		return []checkResult{{"ok", "herdr", "available"}}
+	}
+	return nil
+}
 
-	// Check: terminal color support
+// colorCheck: terminal color support, from COLORTERM.
+func colorCheck(c Checks) checkResult {
 	colorTerm := c.Getenv("COLORTERM")
-	if colorTerm == "truecolor" || colorTerm == "24bit" {
-		results = append(results, checkResult{"ok", "terminal colors", "truecolor"})
-	} else if colorTerm != "" {
-		results = append(results, checkResult{"warn", "terminal colors", colorTerm + " (named themes may look off)"})
-	} else {
-		results = append(results, checkResult{"warn", "terminal colors", "unknown (use truecolor terminal or 'terminal' theme)"})
+	switch {
+	case colorTerm == "truecolor" || colorTerm == "24bit":
+		return checkResult{"ok", "terminal colors", "truecolor"}
+	case colorTerm != "":
+		return checkResult{"warn", "terminal colors", colorTerm + " (named themes may look off)"}
 	}
+	return checkResult{"warn", "terminal colors", "unknown (use truecolor terminal or 'terminal' theme)"}
+}
 
-	// Check: $TERM not "dumb"
+// termChecks: $TERM must not be "dumb".
+func termChecks(c Checks) []checkResult {
 	term := c.Getenv("TERM")
-	if term == "dumb" {
-		results = append(results, checkResult{"fail", "TERM", "is 'dumb': verd cannot run here"})
-	} else if term != "" {
-		results = append(results, checkResult{"ok", "TERM", term})
+	switch {
+	case term == "dumb":
+		return []checkResult{{"fail", "TERM", "is 'dumb': verd cannot run here"}}
+	case term != "":
+		return []checkResult{{"ok", "TERM", term}}
 	}
+	return nil
+}
 
-	// Print results
+// printChecks prints each result and returns exitError 1 if any failed.
+func printChecks(out io.Writer, results []checkResult) error {
 	hasFail := false
 	for _, r := range results {
 		fmt.Fprintf(out, "%s  %-20s %s\n", r.level, r.name, r.detail)
@@ -163,7 +204,6 @@ func doctorCmd(out io.Writer, path string, c Checks) error {
 			hasFail = true
 		}
 	}
-
 	if hasFail {
 		return &exitError{1, ""}
 	}

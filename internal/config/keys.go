@@ -2,9 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -43,29 +40,52 @@ func (c Config) KeyBindings() (map[string][]string, error) {
 // SetKeys writes `action = keys` under [keys.ctx] in the config file, keeping everything else.
 // Empty keys removes the line (back to the default).
 func SetKeys(path, ctx, action string, keys []string) error {
-	b, err := os.ReadFile(path)
-	if err != nil && !os.IsNotExist(err) {
+	b, err := readConfig(path)
+	if err != nil {
 		return err
 	}
 	lines := strings.Split(strings.TrimRight(string(b), "\n"), "\n")
 	if len(b) == 0 {
 		lines = nil
 	}
-	var line string
-	if len(keys) > 0 {
-		var v any = keys
-		if len(keys) == 1 {
-			v = keys[0]
-		}
-		enc, err := toml.Marshal(map[string]any{action: v})
-		if err != nil {
-			return err
-		}
-		line = strings.TrimRight(string(enc), "\n")
+	line, err := keyLine(action, keys)
+	if err != nil {
+		return err
 	}
 	header := "[keys." + ctx + "]"
-	live := regexp.MustCompile(`^\s*` + regexp.QuoteMeta(action) + `\s*=`)
-	at, end := -1, len(lines) // table header line and the line after its last entry
+	at, end := findTable(lines, header)
+	switch {
+	case at < 0 && line == "":
+		return nil
+	case at < 0:
+		lines = append(lines, "", header, line)
+	default:
+		lines = setEntry(lines, at, end, action, line)
+	}
+	return saveFile(path, strings.Join(lines, "\n")+"\n")
+}
+
+// keyLine renders `action = keys` as one TOML line; a single key is written as a string.
+// No keys gives "", which means remove.
+func keyLine(action string, keys []string) (string, error) {
+	if len(keys) == 0 {
+		return "", nil
+	}
+	var v any = keys
+	if len(keys) == 1 {
+		v = keys[0]
+	}
+	enc, err := toml.Marshal(map[string]any{action: v})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(string(enc), "\n"), nil
+}
+
+// findTable returns the index of the header line and of the line after its last entry.
+// at is -1 when the table is absent.
+func findTable(lines []string, header string) (at, end int) {
+	at, end = -1, len(lines)
 	for i, l := range lines {
 		t := strings.TrimSpace(l)
 		if at < 0 {
@@ -75,38 +95,27 @@ func SetKeys(path, ctx, action string, keys []string) error {
 			continue
 		}
 		if strings.HasPrefix(t, "[") {
-			end = i
-			break
+			return at, i
 		}
 	}
-	switch {
-	case at < 0 && line == "":
-		return nil
-	case at < 0:
-		lines = append(lines, "", header, line)
-	default:
-		done := false
-		for i := at + 1; i < end; i++ {
-			if live.MatchString(lines[i]) {
-				if line == "" {
-					lines = append(lines[:i], lines[i+1:]...)
-				} else {
-					lines[i] = line
-				}
-				done = true
-				break
+	return at, end
+}
+
+// setEntry replaces the action's line inside the table at lines[at:end], or removes it when line
+// is empty. A missing entry gets line right under the header.
+func setEntry(lines []string, at, end int, action, line string) []string {
+	live := regexp.MustCompile(`^\s*` + regexp.QuoteMeta(action) + `\s*=`)
+	for i := at + 1; i < end; i++ {
+		if live.MatchString(lines[i]) {
+			if line == "" {
+				return append(lines[:i], lines[i+1:]...)
 			}
+			lines[i] = line
+			return lines
 		}
-		if !done && line != "" {
-			lines = append(lines[:at+1], append([]string{line}, lines[at+1:]...)...)
-		}
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	if line == "" {
+		return lines
 	}
-	mode := fs.FileMode(0o644)
-	if st, err := os.Stat(path); err == nil {
-		mode = st.Mode()
-	}
-	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), mode)
+	return append(lines[:at+1], append([]string{line}, lines[at+1:]...)...)
 }

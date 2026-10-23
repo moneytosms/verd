@@ -107,199 +107,125 @@ func exec1(ctx context.Context, argv []string, stdin string, limit time.Duration
 	return o.String(), e.String(), code, false
 }
 
-func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
+// hunt is one counterexample search: the built argv of each program and the limits.
+type hunt struct {
+	spec   Spec
+	argv   [4][]string // gen, solution, brute, validator
+	limit  time.Duration
+	eps    float64
+	mode   runner.Mode
+	step   int      // seeds per unit of work
+	chunks sync.Map // batch number -> *batchChunk
+
+	next     atomic.Int64 // next unit to claim
+	minFail  atomic.Int64 // lowest failing seed seen so far; higher seeds need not start
+	deadline time.Time
+}
+
+// batchChunk is one batch gen run, shared by the seeds it covers.
+type batchChunk struct {
+	once  sync.Once
+	cases []string
+	err   string
+}
+
+// doneUnit is the outcome of seeds lo..hi; r is the first failure, nil if all passed.
+type doneUnit struct {
+	lo, hi int
+	r      *Result
+}
+
+// newHunt applies the defaults and builds every program. A build failure comes back as the Result.
+func newHunt(ctx context.Context, spec Spec) (*hunt, *Result) {
 	if spec.MaxIter == 0 {
 		spec.MaxIter = 1000
 	}
 	if spec.Timeout == 0 {
 		spec.Timeout = 30 * time.Second
 	}
-	limit := 10 * time.Second
+	h := &hunt{spec: spec, limit: 10 * time.Second, eps: spec.FloatEps, mode: spec.Mode, step: max(spec.Multi, 1)}
 	if spec.TimeLimitMS > 0 {
-		limit = time.Duration(spec.TimeLimitMS) * time.Millisecond
+		h.limit = time.Duration(spec.TimeLimitMS) * time.Millisecond
 	}
-	eps := spec.FloatEps
-	if eps == 0 {
-		eps = 1e-6
+	if h.eps == 0 {
+		h.eps = 1e-6
 	}
-	mode := spec.Mode
-	if mode == "" {
-		mode = runner.Tokens
+	if h.mode == "" {
+		h.mode = runner.Tokens
 	}
-	var argv [4][]string
 	for i, p := range []Program{spec.Gen, spec.Solution, spec.Brute, spec.Validator} {
 		if p.Path == "" {
 			continue
 		}
 		a, _, err := runner.Build(ctx, p.Lang, p.Path, spec.CacheDir)
 		if err != nil {
-			return Result{Kind: Error, Err: fmt.Sprintf("building %s: %v", p.Path, err)}
+			return nil, &Result{Kind: Error, Err: fmt.Sprintf("building %s: %v", p.Path, err)}
 		}
-		argv[i] = a
+		h.argv[i] = a
 	}
-	jobs := spec.Jobs
+	return h, nil
+}
+
+func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
+	h, bad := newHunt(ctx, spec)
+	if bad != nil {
+		return *bad
+	}
+	return h.search(ctx, progress)
+}
+
+// search runs the workers and reports their units in seed order.
+func (h *hunt) search(ctx context.Context, progress func(i, seed int)) Result {
+	jobs := h.spec.Jobs
 	if jobs <= 0 {
 		jobs = min(runtime.NumCPU(), 16)
 	}
-	jobs = min(jobs, spec.MaxIter)
-	// genCase returns the Input for seed i. With Batch, one gen run serves a chunk of seeds.
-	var chunks sync.Map // chunk number -> *chunk
-	type chunk struct {
-		once  sync.Once
-		cases []string
-		err   string
-	}
-	genRaw := func(wctx context.Context, i int) (in, errOut string, ok bool) {
-		if spec.Batch <= 1 {
-			in, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(i)), "", limit, "SIZE="+strconv.Itoa(sizeFor(i)))
-			return in, ge, gc == 0 && !gtle
-		}
-		n, k := (i-1)/spec.Batch, (i-1)%spec.Batch
-		c, _ := chunks.LoadOrStore(n, &chunk{})
-		ck := c.(*chunk)
-		ck.once.Do(func() {
-			first := n*spec.Batch + 1
-			out, ge, gc, gtle := exec1(wctx, append(append([]string{}, argv[0]...), strconv.Itoa(first), strconv.Itoa(spec.Batch)), "", 10*limit, "SIZE="+strconv.Itoa(sizeFor(first)))
-			if wctx.Err() != nil {
-				return
-			}
-			if gc != 0 || gtle {
-				ck.err = ge
-				return
-			}
-			if ck.cases = splitCases(out); len(ck.cases) != spec.Batch {
-				ck.err = fmt.Sprintf("batch gen printed %d cases, want %d (separate cases with a --- line)", len(ck.cases), spec.Batch)
-			}
-		})
-		if ck.err != "" || k >= len(ck.cases) {
-			return "", ck.err, false
-		}
-		return ck.cases[k], "", true
-	}
-	genCase := func(wctx context.Context, i int) (in, errOut string, ok bool) {
-		in, errOut, ok = genRaw(wctx, i)
-		if ok && argv[3] != nil {
-			_, ve, vc, vtle := exec1(wctx, argv[3], in, limit)
-			if (vc != 0 || vtle) && wctx.Err() == nil {
-				return in, "validator rejected the generated input: " + strings.TrimSpace(ve), false
-			}
-		}
-		return
-	}
-	// iterate runs one seed; nil means it passed. ok is false if ctx was cancelled mid-run.
-	iterate := func(wctx context.Context, i int) (r *Result, ok bool) {
-		in, ge, gok := genCase(wctx, i)
-		if wctx.Err() != nil {
-			return nil, false
-		}
-		if spec.Multi > 1 {
-			in = "1\n" + in
-		}
-		if !gok {
-			return &Result{Kind: Error, Iterations: i, Seed: i, Err: "gen failed: " + ge}, true
-		}
-		got, se, sc, stle := exec1(wctx, argv[1], in, limit)
-		switch {
-		case wctx.Err() != nil:
-			return nil, false
-		case stle:
-			return &Result{Kind: SolutionTLE, Iterations: i, Seed: i, Input: in}, true
-		case sc != 0:
-			return &Result{Kind: SolutionRE, Iterations: i, Seed: i, Input: in, Err: se}, true
-		}
-		want, be, bc, btle := exec1(wctx, argv[2], in, 10*limit)
-		if wctx.Err() != nil {
-			return nil, false
-		}
-		if bc != 0 || btle {
-			return &Result{Kind: Error, Iterations: i, Seed: i, Input: in, Err: "brute failed: " + be}, true
-		}
-		if ok, mm := runner.Compare(mode, want, got, eps); !ok {
-			return &Result{Kind: Mismatch, Iterations: i, Seed: i, Input: in, Want: want, Got: got, Mismatch: mm}, true
-		}
-		return nil, true
-	}
-
-	step := max(spec.Multi, 1) // seeds per unit of work
-	// fast runs seeds lo..hi as one multi-test input; true means all passed. Anything else falls back to per-seed runs.
-	fast := func(wctx context.Context, lo, hi int) bool {
-		var b strings.Builder
-		b.WriteString(strconv.Itoa(hi-lo+1) + "\n")
-		for i := lo; i <= hi; i++ {
-			in, _, ok := genCase(wctx, i)
-			if !ok {
-				return false
-			}
-			b.WriteString(in)
-		}
-		n := time.Duration(hi - lo + 1)
-		got, _, sc, stle := exec1(wctx, argv[1], b.String(), limit*n)
-		if sc != 0 || stle {
-			return false
-		}
-		want, _, bc, btle := exec1(wctx, argv[2], b.String(), 10*limit*n)
-		if bc != 0 || btle {
-			return false
-		}
-		ok, _ := runner.Compare(mode, want, got, eps)
-		return ok
-	}
-	// unit runs seeds lo..hi; nil means all passed.
-	unit := func(wctx context.Context, lo, hi int) (r *Result, ok bool) {
-		if step > 1 && fast(wctx, lo, hi) {
-			return nil, wctx.Err() == nil
-		}
-		for i := lo; i <= hi; i++ {
-			if r, ok = iterate(wctx, i); r != nil || !ok {
-				return
-			}
-		}
-		return nil, true
-	}
-
-	// Workers claim seeds in increasing order; results are consumed in seed order so the
-	// lowest failing seed wins and stop conditions match the sequential loop.
-	type done struct {
-		lo, hi int
-		r      *Result
-	}
+	jobs = min(jobs, h.spec.MaxIter)
 	wctx, stop := context.WithCancel(ctx)
 	defer stop()
-	deadline := time.Now().Add(spec.Timeout)
-	var next atomic.Int64
-	var minFail atomic.Int64 // lowest failing seed seen so far; higher seeds need not start
-	minFail.Store(math.MaxInt64)
-	results := make(chan done)
+	h.deadline = time.Now().Add(h.spec.Timeout)
+	h.minFail.Store(math.MaxInt64)
+	// Workers claim seeds in increasing order; results are consumed in seed order so the
+	// lowest failing seed wins and stop conditions match the sequential loop.
+	results := make(chan doneUnit)
 	var wg sync.WaitGroup
 	for range jobs {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				lo := int(next.Add(1)-1)*step + 1
-				hi := min(lo+step-1, spec.MaxIter)
-				if lo > spec.MaxIter || int64(lo) > minFail.Load() || time.Now().After(deadline) || wctx.Err() != nil {
-					return
-				}
-				r, ok := unit(wctx, lo, hi)
-				if !ok {
-					return
-				}
-				if r != nil {
-					for m := minFail.Load(); int64(r.Seed) < m && !minFail.CompareAndSwap(m, int64(r.Seed)); m = minFail.Load() {
-					}
-				}
-				select {
-				case results <- done{lo, hi, r}:
-				case <-wctx.Done():
-					return
-				}
-			}
+			h.worker(wctx, results)
 		}()
 	}
 	go func() { wg.Wait(); close(results) }()
+	return h.report(ctx, results, progress)
+}
 
-	pending := map[int]*done{}
+func (h *hunt) worker(wctx context.Context, results chan<- doneUnit) {
+	for {
+		lo := int(h.next.Add(1)-1)*h.step + 1
+		hi := min(lo+h.step-1, h.spec.MaxIter)
+		if lo > h.spec.MaxIter || int64(lo) > h.minFail.Load() || time.Now().After(h.deadline) || wctx.Err() != nil {
+			return
+		}
+		r, ok := h.unit(wctx, lo, hi)
+		if !ok {
+			return
+		}
+		if r != nil {
+			for m := h.minFail.Load(); int64(r.Seed) < m && !h.minFail.CompareAndSwap(m, int64(r.Seed)); m = h.minFail.Load() {
+			}
+		}
+		select {
+		case results <- doneUnit{lo, hi, r}:
+		case <-wctx.Done():
+			return
+		}
+	}
+}
+
+// report emits progress for passed seeds in order and returns at the first failure, or when results run out.
+func (h *hunt) report(ctx context.Context, results <-chan doneUnit, progress func(i, seed int)) Result {
+	pending := map[int]*doneUnit{}
 	emit := 1 // next seed to report
 	for d := range results {
 		pending[d.lo] = &d
@@ -318,6 +244,144 @@ func loop(ctx context.Context, spec Spec, progress func(i, seed int)) Result {
 		return Result{Kind: Cancelled, Iterations: emit - 1}
 	}
 	return Result{Kind: Limit, Iterations: emit - 1}
+}
+
+// unit runs seeds lo..hi; nil means all passed.
+func (h *hunt) unit(wctx context.Context, lo, hi int) (r *Result, ok bool) {
+	if h.step > 1 && h.fast(wctx, lo, hi) {
+		return nil, wctx.Err() == nil
+	}
+	for i := lo; i <= hi; i++ {
+		if r, ok = h.iterate(wctx, i); r != nil || !ok {
+			return
+		}
+	}
+	return nil, true
+}
+
+// fast runs seeds lo..hi as one multi-test input; true means all passed. Anything else falls back to per-seed runs.
+func (h *hunt) fast(wctx context.Context, lo, hi int) bool {
+	var b strings.Builder
+	b.WriteString(strconv.Itoa(hi-lo+1) + "\n")
+	for i := lo; i <= hi; i++ {
+		in, _, ok := h.genCase(wctx, i)
+		if !ok {
+			return false
+		}
+		b.WriteString(in)
+	}
+	n := time.Duration(hi - lo + 1)
+	got, _, sc, stle := exec1(wctx, h.argv[1], b.String(), h.limit*n)
+	if sc != 0 || stle {
+		return false
+	}
+	want, _, bc, btle := exec1(wctx, h.argv[2], b.String(), 10*h.limit*n)
+	if bc != 0 || btle {
+		return false
+	}
+	ok, _ := runner.Compare(h.mode, want, got, h.eps)
+	return ok
+}
+
+// iterate runs one seed; nil means it passed. ok is false if ctx was cancelled mid-run.
+func (h *hunt) iterate(wctx context.Context, i int) (*Result, bool) {
+	in, ge, gok := h.genCase(wctx, i)
+	if wctx.Err() != nil {
+		return nil, false
+	}
+	if h.spec.Multi > 1 {
+		in = "1\n" + in
+	}
+	if !gok {
+		return &Result{Kind: Error, Iterations: i, Seed: i, Err: "gen failed: " + ge}, true
+	}
+	got, r, ok := h.solve(wctx, i, in)
+	if r != nil || !ok {
+		return r, ok
+	}
+	want, r, ok := h.brute(wctx, i, in)
+	if r != nil || !ok {
+		return r, ok
+	}
+	return h.compare(i, in, want, got), true
+}
+
+// genCase is gen, then the validator (if any) must accept the input.
+func (h *hunt) genCase(wctx context.Context, i int) (in, errOut string, ok bool) {
+	in, errOut, ok = h.gen(wctx, i)
+	if ok && h.argv[3] != nil {
+		_, ve, vc, vtle := exec1(wctx, h.argv[3], in, h.limit)
+		if (vc != 0 || vtle) && wctx.Err() == nil {
+			return in, "validator rejected the generated input: " + strings.TrimSpace(ve), false
+		}
+	}
+	return
+}
+
+// gen returns the Input for seed i. With Batch, one gen run serves a chunk of seeds.
+func (h *hunt) gen(wctx context.Context, i int) (in, errOut string, ok bool) {
+	if h.spec.Batch <= 1 {
+		in, ge, gc, gtle := exec1(wctx, append(append([]string{}, h.argv[0]...), strconv.Itoa(i)), "", h.limit, "SIZE="+strconv.Itoa(sizeFor(i)))
+		return in, ge, gc == 0 && !gtle
+	}
+	n, k := (i-1)/h.spec.Batch, (i-1)%h.spec.Batch
+	c, _ := h.chunks.LoadOrStore(n, &batchChunk{})
+	ck := c.(*batchChunk)
+	ck.once.Do(func() { h.runChunk(wctx, ck, n) })
+	if ck.err != "" || k >= len(ck.cases) {
+		return "", ck.err, false
+	}
+	return ck.cases[k], "", true
+}
+
+// runChunk makes one batch gen run for chunk n and splits its output into cases.
+func (h *hunt) runChunk(wctx context.Context, ck *batchChunk, n int) {
+	first := n*h.spec.Batch + 1
+	out, ge, gc, gtle := exec1(wctx, append(append([]string{}, h.argv[0]...), strconv.Itoa(first), strconv.Itoa(h.spec.Batch)), "", 10*h.limit, "SIZE="+strconv.Itoa(sizeFor(first)))
+	if wctx.Err() != nil {
+		return
+	}
+	if gc != 0 || gtle {
+		ck.err = ge
+		return
+	}
+	if ck.cases = splitCases(out); len(ck.cases) != h.spec.Batch {
+		ck.err = fmt.Sprintf("batch gen printed %d cases, want %d (separate cases with a --- line)", len(ck.cases), h.spec.Batch)
+	}
+}
+
+// solve runs the Solution on in. A failure comes back as the Result; ok is false if ctx was cancelled.
+func (h *hunt) solve(wctx context.Context, i int, in string) (got string, r *Result, ok bool) {
+	got, se, sc, stle := exec1(wctx, h.argv[1], in, h.limit)
+	switch {
+	case wctx.Err() != nil:
+		return "", nil, false
+	case stle:
+		return "", &Result{Kind: SolutionTLE, Iterations: i, Seed: i, Input: in}, true
+	case sc != 0:
+		return "", &Result{Kind: SolutionRE, Iterations: i, Seed: i, Input: in, Err: se}, true
+	}
+	return got, nil, true
+}
+
+// brute runs the brute force on in. A failure comes back as the Result; ok is false if ctx was cancelled.
+func (h *hunt) brute(wctx context.Context, i int, in string) (want string, r *Result, ok bool) {
+	want, be, bc, btle := exec1(wctx, h.argv[2], in, 10*h.limit)
+	switch {
+	case wctx.Err() != nil:
+		return "", nil, false
+	case bc != 0 || btle:
+		return "", &Result{Kind: Error, Iterations: i, Seed: i, Input: in, Err: "brute failed: " + be}, true
+	}
+	return want, nil, true
+}
+
+// compare is a Mismatch Result when want and got differ, else nil.
+func (h *hunt) compare(i int, in, want, got string) *Result {
+	if ok, mm := runner.Compare(h.mode, want, got, h.eps); !ok {
+		return &Result{Kind: Mismatch, Iterations: i, Seed: i, Input: in, Want: want, Got: got, Mismatch: mm}
+	}
+	return nil
 }
 
 // splitCases splits batch gen output on lines that are exactly "---"; a trailing separator is allowed.

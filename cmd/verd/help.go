@@ -389,12 +389,7 @@ func renderDoc(w io.Writer, d cmdDoc, color bool) {
 		rest := strings.TrimPrefix(u, "verd ")
 		fmt.Fprintf(w, "  %s %s\n", s.wrap(s.dim, "verd"), s.args(rest))
 	}
-	if d.About != "" {
-		section(w, s, "DESCRIPTION")
-		for _, l := range words(d.About, 2, 78) {
-			fmt.Fprintln(w, l)
-		}
-	}
+	renderParagraphs(w, s, "DESCRIPTION", d.About)
 	if len(d.Subs) > 0 {
 		section(w, s, "COMMANDS")
 		table(w, s, d.Subs, s.name)
@@ -403,33 +398,51 @@ func renderDoc(w io.Writer, d cmdDoc, color bool) {
 		section(w, s, "OPTIONS")
 		table(w, s, d.Flags, s.name)
 	}
-	if len(d.Examples) > 0 {
-		section(w, s, "EXAMPLES")
-		col := 0
-		for _, e := range d.Examples {
-			if len(e.Name) <= 52 {
-				col = max(col, len(e.Name))
-			}
-		}
-		for _, e := range d.Examples {
-			if e.Desc == "" {
-				fmt.Fprintf(w, "  %s\n", e.Name)
-			} else {
-				fmt.Fprintf(w, "  %s%s  %s\n", e.Name, strings.Repeat(" ", max(0, col-len(e.Name))), s.wrap(s.dim, "# "+e.Desc))
-			}
+	renderExamples(w, s, d.Examples)
+	renderParagraphs(w, s, "EXIT STATUS", d.Exit)
+	renderSee(w, s, d.See)
+}
+
+// renderParagraphs writes a titled section of wrapped text; an empty text writes nothing.
+func renderParagraphs(w io.Writer, s helpStyle, title, text string) {
+	if text == "" {
+		return
+	}
+	section(w, s, title)
+	for _, l := range words(text, 2, 78) {
+		fmt.Fprintln(w, l)
+	}
+}
+
+// renderExamples writes the EXAMPLES section, comments aligned in one column.
+func renderExamples(w io.Writer, s helpStyle, examples []opt) {
+	if len(examples) == 0 {
+		return
+	}
+	section(w, s, "EXAMPLES")
+	col := 0
+	for _, e := range examples {
+		if len(e.Name) <= 52 {
+			col = max(col, len(e.Name))
 		}
 	}
-	if d.Exit != "" {
-		section(w, s, "EXIT STATUS")
-		for _, l := range words(d.Exit, 2, 78) {
-			fmt.Fprintln(w, l)
+	for _, e := range examples {
+		if e.Desc == "" {
+			fmt.Fprintf(w, "  %s\n", e.Name)
+		} else {
+			fmt.Fprintf(w, "  %s%s  %s\n", e.Name, strings.Repeat(" ", max(0, col-len(e.Name))), s.wrap(s.dim, "# "+e.Desc))
 		}
 	}
-	if len(d.See) > 0 {
-		section(w, s, "SEE ALSO")
-		for _, r := range d.See {
-			fmt.Fprintf(w, "  %s %s\n", s.wrap(s.dim, "verd help"), s.wrap(s.name, r))
-		}
+}
+
+// renderSee writes the SEE ALSO section.
+func renderSee(w io.Writer, s helpStyle, see []string) {
+	if len(see) == 0 {
+		return
+	}
+	section(w, s, "SEE ALSO")
+	for _, r := range see {
+		fmt.Fprintf(w, "  %s %s\n", s.wrap(s.dim, "verd help"), s.wrap(s.name, r))
 	}
 }
 

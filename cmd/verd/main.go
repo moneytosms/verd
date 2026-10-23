@@ -101,237 +101,297 @@ func run(args []string, out io.Writer) error {
 		return showHelp(out, topic)
 	}
 	path := filepath.Join(config.Dir(), "config.toml")
-	if i := slices.Index(args, "--here"); i >= 0 { // keep Solutions in the current directory
-		args, hereWorkspace = slices.Delete(slices.Clone(args), i, i+1), true
-	}
+	args = takeHere(args)
 	if len(args) == 0 {
 		return runTUI(path)
 	}
-	switch args[0] {
-	case "init":
-		if err := config.Init(path, slices.Contains(args[1:], "--force")); err != nil {
-			return err
-		}
-		fmt.Fprintln(out, "wrote", path)
-		cfg, err := config.Load(path)
-		if err != nil {
-			cfg = config.Default()
-		}
-		force := slices.Contains(args[1:], "--force")
-		tmpls, err := workspace.InitTemplates(cfg.TemplatesPath(), config.Default().Lang, force)
-		for _, p := range tmpls {
-			fmt.Fprintln(out, "wrote", p)
-		}
-		if err != nil {
-			return err
-		}
-		nsnip, err := workspace.InitSnippets(cfg.SnippetsPath(), config.Default().Lang, force)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(out, "wrote %d snippets to %s\n", nsnip, cfg.SnippetsPath())
-		if slices.Contains(args[1:], "--no-setup") || !term.IsTerminal(int(os.Stdin.Fd())) {
-			fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
-			return nil
-		}
-		fmt.Fprint(out, "Run the guided setup now? [Y/n] ")
-		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-		if a := strings.ToLower(strings.TrimSpace(line)); a == "n" || a == "no" {
-			fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
-			return nil
-		}
-		return setupCmd(out, os.Stdin, path, credStore())
-	case "update":
-		return updateCmd(out, slices.Contains(args[1:], "--check"))
-	case "uninstall":
-		exe, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		cfg, _ := loadConfig(path)
-		return uninstallCmd(out, os.Stdin, args[1:], uninstallPaths{exe: exe, config: config.Dir(), data: config.DataDir(), cache: config.CacheDir(), workspace: workspace.New(cfg.Workspace).Root})
-	case "setup":
-		return setupCmd(out, os.Stdin, path, credStore())
-	case "test":
-		file, opts, ok := parseTestArgs(args[1:])
-		if !ok {
-			return &exitError{2, "usage: verd test <file> [-v] [-t a,b]"}
-		}
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		client := cf.New(cf.BaseURL)
-		detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
-			return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
-		}
-		mode := func(contest int, index string) string {
-			st, _ := s.ProblemState(contest, index)
-			return st.Mode
-		}
-		// A running TUI shows the run in its pane; otherwise run headless.
-		if !opts.verbose && len(opts.only) == 0 {
-			if handled, err := delegateTest(context.Background(), out, socketPath(), file); handled {
-				return err
-			}
-		}
-		return testCmd(context.Background(), out, cfg, config.CacheDir(), detail, mode, file, opts)
-	case "submit":
-		if len(args) != 2 {
-			return &exitError{2, "usage: verd submit <file>"}
-		}
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		if handled, err := delegateSubmit(context.Background(), out, socketPath(), args[1]); handled {
-			return err
-		}
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		sub := newSubmitter(cfg, cf.New(cf.BaseURL), s)
-		p, lang, err := absSolutionProblem(cfg, args[1])
-		if err != nil {
-			return &exitError{2, err.Error()}
-		}
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-		defer cancel()
-		st, err := sub.begin(ctx, p, lang)
-		if err != nil {
-			return &exitError{2, err.Error()}
-		}
-		if fi, err := os.Stderr.Stat(); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
-			fmt.Fprint(os.Stderr, osc52(st.Text)) // clipboard over ssh/tmux where the terminal allows it
-		}
-		return printSubmit(out, st)
-	case "stress":
-		fs := flag.NewFlagSet("stress", flag.ContinueOnError)
-		iter := fs.Int("iter", 1000, "max iterations")
-		secs := fs.Int("time", 30, "max seconds")
-		jobs := fs.Int("jobs", 0, "parallel iterations (0 = CPU count, max 16)")
-		multi := fs.Int("multi", 0, "cases per Solution/brute run; both read t then t cases, gen prints one case without t")
-		batch := fs.Int("batch", 0, "cases per gen run; gen gets \"<seed> <N>\" and prints N cases split by --- lines")
-		if err := fs.Parse(args[1:]); err != nil || fs.NArg() != 1 {
-			return &exitError{2, "usage: verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>"}
-		}
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		client := cf.New(cf.BaseURL)
-		detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
-			return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
-		}
-		mode := func(contest int, index string) string { st, _ := s.ProblemState(contest, index); return st.Mode }
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-		defer cancel()
-		limit := time.Duration(*secs) * time.Second
-		if handled, err := delegateStress(ctx, out, socketPath(), fs.Arg(0), *iter, limit, *jobs, *batch, *multi); handled {
-			return err
-		}
-		return stressCmd(ctx, out, cfg, config.CacheDir(), detail, mode, fs.Arg(0), *iter, limit, *jobs, *batch, *multi)
-	case "login":
-		return loginCmd(out, os.Stdin, credStore())
-	case "logout":
-		if len(args) == 2 { // verd logout cses: forget a provider's session
-			for _, p := range providers() {
-				if strings.EqualFold(args[1], p.source) {
-					return logoutCmd(out, p.creds)
-				}
-			}
-			return &exitError{2, "unknown provider " + args[1]}
-		}
-		return logoutCmd(out, credStore())
-	case "sync":
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-		defer cancel()
-		return syncCmd(ctx, out, os.Stdin, args[1:], s)
-	case "daily":
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		d, err := loadData(s, cfg.Handle)
-		if err != nil {
-			return err
-		}
-		return dailyCmd(out, d, time.Now())
-	case "keys":
-		return keysCmd(out, path, args[1:])
-	case "themes":
-		return themesCmd(out, args[1:])
-	case "config":
-		if handled, err := configSub(out, path, args[1:]); handled {
-			return err
-		}
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		b, err := cfg.Effective()
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(out, "# %s\n%s", path, b)
-		return nil
-	case "doctor":
-		return doctorCmd(out, path, DefaultChecks())
-	case "__complete":
-		if len(args) != 2 {
-			return &exitError{2, "usage: verd __complete config-keys|key-actions|themes"}
-		}
-		return completeCmd(out, args[1])
-	case "editorial":
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
-		if err != nil {
-			return err
-		}
-		defer s.Close()
-		client := cf.New(cf.BaseURL)
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-		defer cancel()
-		return editorialCmd(out, cfg, func(p cf.Problem) (*editorial.Result, error) {
-			return editorial.Load(ctx, s, client, p, time.Now())
-		}, args[1:])
-	case "snippet":
-		cfg, err := loadConfig(path)
-		if err != nil {
-			return err
-		}
-		return snippetCmd(out, cfg, args[1:])
-	case "completions":
-		return completionsCmd(out, args[1:])
-	case "schema":
-		return schemaCmd(out)
+	if cmd, ok := commands(out, path)[args[0]]; ok {
+		return cmd(args)
 	}
 	return fmt.Errorf("unknown command %q (see verd --help)", args[0])
+}
+
+// takeHere strips --here: the Workspace becomes the current directory, so Solutions stay there.
+func takeHere(args []string) []string {
+	i := slices.Index(args, "--here")
+	if i < 0 {
+		return args
+	}
+	hereWorkspace = true
+	return slices.Delete(slices.Clone(args), i, i+1)
+}
+
+// commands maps each subcommand to its handler. args[0] is the command name.
+func commands(out io.Writer, path string) map[string]func(args []string) error {
+	return map[string]func(args []string) error{
+		"init":        func(args []string) error { return runInit(out, path, args) },
+		"update":      func(args []string) error { return updateCmd(out, slices.Contains(args[1:], "--check")) },
+		"uninstall":   func(args []string) error { return runUninstall(out, path, args) },
+		"setup":       func(args []string) error { return setupCmd(out, os.Stdin, path, credStore()) },
+		"test":        func(args []string) error { return runTest(out, path, args) },
+		"submit":      func(args []string) error { return runSubmit(out, path, args) },
+		"stress":      func(args []string) error { return runStress(out, path, args) },
+		"login":       func(args []string) error { return loginCmd(out, os.Stdin, credStore()) },
+		"logout":      func(args []string) error { return runLogout(out, args) },
+		"sync":        func(args []string) error { return runSync(out, args) },
+		"daily":       func(args []string) error { return runDaily(out, path) },
+		"keys":        func(args []string) error { return keysCmd(out, path, args[1:]) },
+		"themes":      func(args []string) error { return themesCmd(out, args[1:]) },
+		"config":      func(args []string) error { return runConfig(out, path, args) },
+		"doctor":      func(args []string) error { return doctorCmd(out, path, DefaultChecks()) },
+		"__complete":  func(args []string) error { return runComplete(out, args) },
+		"editorial":   func(args []string) error { return runEditorial(out, path, args) },
+		"snippet":     func(args []string) error { return runSnippet(out, path, args) },
+		"completions": func(args []string) error { return completionsCmd(out, args[1:]) },
+		"schema":      func(args []string) error { return schemaCmd(out) },
+	}
+}
+
+// openStore opens the verd database.
+func openStore() (*store.Store, error) {
+	return store.Open(filepath.Join(config.DataDir(), "verd.db"))
+}
+
+// detailFor returns the cache-first Problem detail used by the test, stress and TUI paths.
+func detailFor(s *store.Store, client *cf.Client) detailFunc {
+	return func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
+		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
+	}
+}
+
+// modeFor returns the saved Comparison Mode of a Problem.
+func modeFor(s *store.Store) modeFunc {
+	return func(contest int, index string) string {
+		st, _ := s.ProblemState(contest, index)
+		return st.Mode
+	}
+}
+
+func runInit(out io.Writer, path string, args []string) error {
+	force := slices.Contains(args[1:], "--force")
+	if err := config.Init(path, force); err != nil {
+		return err
+	}
+	fmt.Fprintln(out, "wrote", path)
+	cfg, err := config.Load(path)
+	if err != nil {
+		cfg = config.Default()
+	}
+	if err := writeInitFiles(out, cfg, force); err != nil {
+		return err
+	}
+	if slices.Contains(args[1:], "--no-setup") || !term.IsTerminal(int(os.Stdin.Fd())) {
+		fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
+		return nil
+	}
+	fmt.Fprint(out, "Run the guided setup now? [Y/n] ")
+	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	if a := strings.ToLower(strings.TrimSpace(line)); a == "n" || a == "no" {
+		fmt.Fprintln(out, "next: verd setup (guided), or set handle in", path)
+		return nil
+	}
+	return setupCmd(out, os.Stdin, path, credStore())
+}
+
+// writeInitFiles writes the starter templates and snippets.
+func writeInitFiles(out io.Writer, cfg config.Config, force bool) error {
+	tmpls, err := workspace.InitTemplates(cfg.TemplatesPath(), config.Default().Lang, force)
+	for _, p := range tmpls {
+		fmt.Fprintln(out, "wrote", p)
+	}
+	if err != nil {
+		return err
+	}
+	nsnip, err := workspace.InitSnippets(cfg.SnippetsPath(), config.Default().Lang, force)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "wrote %d snippets to %s\n", nsnip, cfg.SnippetsPath())
+	return nil
+}
+
+func runUninstall(out io.Writer, path string, args []string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	cfg, _ := loadConfig(path)
+	return uninstallCmd(out, os.Stdin, args[1:], uninstallPaths{exe: exe, config: config.Dir(), data: config.DataDir(), cache: config.CacheDir(), workspace: workspace.New(cfg.Workspace).Root})
+}
+
+func runTest(out io.Writer, path string, args []string) error {
+	file, opts, ok := parseTestArgs(args[1:])
+	if !ok {
+		return &exitError{2, "usage: verd test <file> [-v] [-t a,b]"}
+	}
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	// A running TUI shows the run in its pane; otherwise run headless.
+	if !opts.verbose && len(opts.only) == 0 {
+		if handled, err := delegateTest(context.Background(), out, socketPath(), file); handled {
+			return err
+		}
+	}
+	client := cf.New(cf.BaseURL)
+	return testCmd(context.Background(), out, cfg, config.CacheDir(), detailFor(s, client), modeFor(s), file, opts)
+}
+
+func runSubmit(out io.Writer, path string, args []string) error {
+	if len(args) != 2 {
+		return &exitError{2, "usage: verd submit <file>"}
+	}
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	if handled, err := delegateSubmit(context.Background(), out, socketPath(), args[1]); handled {
+		return err
+	}
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	sub := newSubmitter(cfg, cf.New(cf.BaseURL), s)
+	p, lang, err := absSolutionProblem(cfg, args[1])
+	if err != nil {
+		return &exitError{2, err.Error()}
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	st, err := sub.begin(ctx, p, lang)
+	if err != nil {
+		return &exitError{2, err.Error()}
+	}
+	if fi, err := os.Stderr.Stat(); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+		fmt.Fprint(os.Stderr, osc52(st.Text)) // clipboard over ssh/tmux where the terminal allows it
+	}
+	return printSubmit(out, st)
+}
+
+func runStress(out io.Writer, path string, args []string) error {
+	fset := flag.NewFlagSet("stress", flag.ContinueOnError)
+	iter := fset.Int("iter", 1000, "max iterations")
+	secs := fset.Int("time", 30, "max seconds")
+	jobs := fset.Int("jobs", 0, "parallel iterations (0 = CPU count, max 16)")
+	multi := fset.Int("multi", 0, "cases per Solution/brute run; both read t then t cases, gen prints one case without t")
+	batch := fset.Int("batch", 0, "cases per gen run; gen gets \"<seed> <N>\" and prints N cases split by --- lines")
+	if err := fset.Parse(args[1:]); err != nil || fset.NArg() != 1 {
+		return &exitError{2, "usage: verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>"}
+	}
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	client := cf.New(cf.BaseURL)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	limit := time.Duration(*secs) * time.Second
+	if handled, err := delegateStress(ctx, out, socketPath(), fset.Arg(0), *iter, limit, *jobs, *batch, *multi); handled {
+		return err
+	}
+	return stressCmd(ctx, out, cfg, config.CacheDir(), detailFor(s, client), modeFor(s), fset.Arg(0), *iter, limit, *jobs, *batch, *multi)
+}
+
+func runLogout(out io.Writer, args []string) error {
+	if len(args) == 2 { // verd logout cses: forget a provider's session
+		for _, p := range providers() {
+			if strings.EqualFold(args[1], p.source) {
+				return logoutCmd(out, p.creds)
+			}
+		}
+		return &exitError{2, "unknown provider " + args[1]}
+	}
+	return logoutCmd(out, credStore())
+}
+
+func runSync(out io.Writer, args []string) error {
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	return syncCmd(ctx, out, os.Stdin, args[1:], s)
+}
+
+func runDaily(out io.Writer, path string) error {
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	d, err := loadData(s, cfg.Handle)
+	if err != nil {
+		return err
+	}
+	return dailyCmd(out, d, time.Now())
+}
+
+func runConfig(out io.Writer, path string, args []string) error {
+	if handled, err := configSub(out, path, args[1:]); handled {
+		return err
+	}
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	b, err := cfg.Effective()
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "# %s\n%s", path, b)
+	return nil
+}
+
+func runComplete(out io.Writer, args []string) error {
+	if len(args) != 2 {
+		return &exitError{2, "usage: verd __complete config-keys|key-actions|themes"}
+	}
+	return completeCmd(out, args[1])
+}
+
+func runEditorial(out io.Writer, path string, args []string) error {
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	s, err := openStore()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	client := cf.New(cf.BaseURL)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	return editorialCmd(out, cfg, func(p cf.Problem) (*editorial.Result, error) {
+		return editorial.Load(ctx, s, client, p, time.Now())
+	}, args[1:])
+}
+
+func runSnippet(out io.Writer, path string, args []string) error {
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	return snippetCmd(out, cfg, args[1:])
 }
 
 // hereWorkspace is set by --here: the Workspace is the current directory, not the configured one.
@@ -377,7 +437,7 @@ func runTUI(path string) error {
 	}
 	defer srv.Close()
 
-	s, err := store.Open(filepath.Join(config.DataDir(), "verd.db"))
+	s, err := openStore()
 	if err != nil {
 		return err
 	}
@@ -398,80 +458,16 @@ func runTUI(path string) error {
 	ctrl.Mux = pickMux(cfg.Split)
 	ctrl.SetEditor(cfg.Editor)
 	sub := newSubmitter(cfg, client, s)
-	keys, err := cfg.KeyBindings()
-	if err == nil {
-		err = tui.CheckKeys(keys)
-	}
+	keys, err := checkKeys(cfg, path)
 	if err != nil {
-		return fmt.Errorf("config %s: %w", path, err)
+		return err
 	}
 	deps := tui.Deps{
-		Keys:     keys,
-		SaveKeys: func(ctx, action string, ks []string) error { return config.SetKeys(path, ctx, action, ks) },
-		Submit: func(ctx context.Context, p cf.Problem, lang string) (tui.SubmitStart, error) {
-			st, err := sub.begin(ctx, p, lang)
-			if err != nil {
-				return tui.SubmitStart{}, err
-			}
-			return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Status: st.Status, Updates: st.Updates}, nil
-		},
-		Reload: func() (tui.Data, error) { return loadData(s, cfg.Handle) },
-		Load: func(p cf.Problem, force bool) (*scrape.Detail, error) {
-			return refresh.Detail(ctx, s, client, p, force, time.Now())
-		},
-		OpenURL: func(url string) error {
-			open := sub.env.OpenCommand(url)
-			if open == nil {
-				return errors.New("no browser opener found")
-			}
-			return exec.Command(open[0], open[1:]...).Start()
-		},
-		Edit: func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) },
-		EditAt: func(p cf.Problem, lang string, line int) (*exec.Cmd, error) {
-			if err := requireEditor(ctrl); err != nil {
-				return nil, err
-			}
-			ref, err := solutionRef(cfg, p, lang)
-			if err != nil {
-				return nil, err
-			}
-			return ctrl.Open(ref.Path, line)
-		},
-		Note: func(p cf.Problem) string { return workspace.New(cfg.Workspace).Note(p.ContestID, p.Index) },
-		EditNote: func(p cf.Problem) (*exec.Cmd, error) {
-			if err := requireEditor(ctrl); err != nil {
-				return nil, err
-			}
-			path, err := workspace.New(cfg.Workspace).EnsureNote(p.ContestID, p.Index)
-			if err != nil {
-				return nil, err
-			}
-			return ctrl.Open(path, 1)
-		},
-		AddCustom: func(p cf.Problem) (*exec.Cmd, error) { return addCustom(cfg, ctrl, p) },
-		Ensure: func(p cf.Problem, lang string) error {
-			_, _, err := ensureSolution(cfg, p, lang)
-			return err
-		},
+		Keys:        keys,
 		Autotest:    cfg.Autotest,
 		Mouse:       cfg.Mouse,
 		WheelLines:  cfg.WheelLines,
 		MouseSelect: cfg.MouseSelect,
-		Watch: func(ctx context.Context, p cf.Problem) (<-chan string, error) {
-			dir := workspace.New(cfg.Workspace).Dir(p.ContestID, p.Index)
-			if err := os.MkdirAll(dir, 0o755); err != nil { // so a Solution created later is still watched
-				return nil, err
-			}
-			return watch.Dir(ctx, dir, 150*time.Millisecond)
-		},
-		SolutionPath: func(p cf.Problem, lang string) string {
-			ref, err := solutionRef(cfg, p, lang)
-			if err != nil {
-				return ""
-			}
-			abs, _ := filepath.Abs(ref.Path) // watcher events are absolute
-			return abs
-		},
 		EmbedRatio:  cfg.EmbedRatio,
 		FocusKey:    cfg.EmbedFocusKey,
 		EmbedSide:   cfg.EmbedSide,
@@ -479,203 +475,316 @@ func runTUI(path string) error {
 		Langs:       langKeys(cfg),
 		DefaultLang: cfg.DefaultLang,
 		EditorAlive: ctrl.Alive,
-		LoadState: func(p cf.Problem) tui.ProblemState {
-			st, _ := s.ProblemState(p.ContestID, p.Index)
-			return tui.ProblemState{Lang: st.Lang, Mode: st.Mode}
-		},
-		SaveState: func(p cf.Problem, st tui.ProblemState) error {
-			cur, _ := s.ProblemState(p.ContestID, p.Index)
-			cur.Lang, cur.Mode = st.Lang, st.Mode
-			return s.SaveProblemState(p.ContestID, p.Index, cur, time.Now())
-		},
-		Tests: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan runner.Event, error) {
-			ref, err := solutionRef(cfg, p, o.Lang)
-			if err != nil {
-				return nil, err
-			}
-			spec, err := buildSpec(cfg, config.CacheDir(), ref, d, o.Mode)
-			if err != nil {
-				return nil, fmt.Errorf("%w (press {problem.edit} to create one)", err)
-			}
-			spec.Only, spec.Live = o.Only, true
-			return runner.Run(ctx, spec), nil
-		},
-		Stress: func(ctx context.Context, p cf.Problem, d *scrape.Detail, o tui.RunOpts) (<-chan stress.Event, error) {
-			ref, err := solutionRef(cfg, p, o.Lang)
-			if err != nil {
-				return nil, err
-			}
-			if _, err := os.Stat(ref.Path); err != nil {
-				return nil, fmt.Errorf("no Solution yet (press {problem.edit} to create one)")
-			}
-			gen, brute, missing := stressHelpers(cfg, ref)
-			spec, err := buildStress(cfg, config.CacheDir(), ref, d, o.Mode, 0, 0, 0, 0, 0)
-			if err != nil {
-				return nil, err
-			}
-			if missing { // first time: open the fresh helpers so the user can fill them in
-				if cmd, err := ctrl.OpenPair(gen, brute); err != nil || cmd != nil {
-					return nil, fmt.Errorf("created %s and %s: fill them in, then press {problem.stress} again", gen, brute)
-				}
-				return nil, errors.New("created gen and brute: fill them in, then press {problem.stress} again")
-			}
-			return stress.Run(ctx, spec), nil
-		},
-		Settings: buildSettings(cfg),
-		Sync: func(source string) (string, error) {
-			for _, p := range providers() {
-				if p.source == source {
-					solved, added, err := syncProvider(context.Background(), p, s, nil)
-					if errors.Is(err, errNeedLogin) {
-						return "", fmt.Errorf("run `verd sync %s` once to sign in", p.source)
-					}
-					return fmt.Sprintf("%s: %d solved, %d new marks", p.name, solved, added), err
-				}
-			}
-			return "", fmt.Errorf("no sync for %s", source)
-		},
-		SetMark:    func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) },
-		ClearCache: s.ClearCache,
-		SaveCreds: func(cookie, ua string) (string, error) {
-			where, _, err := credStore().Save(creds.Creds{Cookie: cookie, UserAgent: ua})
-			return where, err
-		},
-		HasCreds: func() bool { _, err := credStore().Load(); return err == nil },
-		SaveSetting: func(key, value string) error {
-			if err := config.Set(path, key, value); err != nil {
-				return err
-			}
-			switch key {
-			case "split":
-				ctrl.SetMux(pickMux(value))
-			case "editor":
-				ctrl.SetEditor(value)
-			}
-			return nil
-		},
-		FetchContest: func(id int) error {
-			_, err := refresh.ContestProblems(ctx, s, client, id)
-			return err
-		},
-		EditTemplate: func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) },
-		StartSession: func(c cf.Contest, mode string) (session.Session, error) {
-			now := time.Now().Unix()
-			x := session.Session{ContestID: c.ID, Name: c.Name, Mode: mode, Start: now}
-			switch mode {
-			case session.Virtual:
-				x.End = now + c.Duration
-			case session.Live: // the real clock
-				x.Start, x.End = c.Start, c.Start+c.Duration
-			}
-			return x, s.SaveSession(x)
-		},
-		EndSession:       s.EndSession,
-		SaveSessionStats: s.SaveSessionStats,
-		SaveReport: func(x session.Session, md string) (string, error) {
-			return saveReport(workspace.New(cfg.Workspace).Dir(x.ContestID, ""), x, md)
-		},
-		Editorial: func(p cf.Problem) (*editorial.Result, error) {
-			return editorial.Load(context.Background(), s, client, p, time.Now())
-		},
-		Standings: func(contest int) (*cf.Standing, error) {
-			return client.Standings(context.Background(), contest, cfg.Handle)
-		},
-		Snippets: func(lang string) []tui.Snippet {
-			var out []tui.Snippet
-			for _, s := range workspace.ListSnippets(cfg.SnippetsPath(), lang, cfg.Lang[lang]) {
-				out = append(out, tui.Snippet{Name: s.Name, Desc: s.Desc, Code: s.Code})
-			}
-			return out
-		},
-		EditConfig: func() (*exec.Cmd, error) {
-			if _, err := os.Stat(path); err != nil {
-				if err := config.Init(path, false); err != nil {
-					return nil, err
-				}
-			}
-			return ctrl.Open(path, 0)
-		},
+		Settings:    buildSettings(cfg),
 		LangSummary: langSummary(cfg),
-		Customs: func(p cf.Problem) ([]tui.Case, error) {
-			cs, err := workspace.New(cfg.Workspace).Customs(p.ContestID, p.Index)
-			out := make([]tui.Case, len(cs))
-			for i, c := range cs {
-				out[i] = tui.Case{Name: c.Name, Input: c.Input, Want: c.Want, Custom: true}
-			}
-			return out, err
-		},
-		SaveCase: func(p cf.Problem, name, input, want string) (string, error) {
-			return workspace.New(cfg.Workspace).SaveCase(p.ContestID, p.Index, name, input, want)
-		},
-		DeleteCase: func(p cf.Problem, name string) error {
-			return workspace.New(cfg.Workspace).DeleteCustom(p.ContestID, p.Index, name)
-		},
-		SaveCounterexample: func(p cf.Problem, input, want string) (string, error) {
-			return workspace.New(cfg.Workspace).SaveCustom(p.ContestID, p.Index, input, want)
-		},
-		// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
-		Refresh: []func() (tui.Data, error){
-			stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
-			stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
-			stage(s, cfg.Handle, func() error {
-				// read live: Settings can switch CSES on while verd runs
-				if c, err := config.Load(path); err == nil && c.SourceCSES {
-					_, err := refresh.Source(ctx, s, cf.SourceCSES, time.Now())
-					return err
-				}
-				return nil
-			}),
-		},
-		LoadConfig: func() (map[string]string, map[string][]string, error) {
-			c, err := loadConfig(path)
-			if err != nil {
-				return nil, nil, err
-			}
-			keys, err := c.KeyBindings()
-			if err != nil {
-				return nil, nil, err
-			}
-			return buildSettings(c), keys, nil
-		},
 	}
+	submitDeps(&deps, sub)
+	editDeps(&deps, cfg, path, ctrl, pickMux)
+	problemDeps(&deps, cfg, s, client, ctx)
+	runDeps(&deps, cfg, ctrl)
+	sessionDeps(&deps, cfg, s)
+	dataDeps(&deps, cfg, path, s, client, ctx)
+
 	note := workspace.Warning(workspace.New(cfg.Workspace).Root, os.Getenv("WSL_DISTRO_NAME") != "")
 	model := tui.New(data.Problems, note, deps).WithTheme(cfg.Theme).WithBackground(cfg.Background).WithData(data)
 	statePath := filepath.Join(config.DataDir(), "state.json")
-	if b, err := os.ReadFile(statePath); err == nil && cfg.Resume {
-		var st tui.State
-		if json.Unmarshal(b, &st) == nil {
-			model = model.WithState(st)
-		}
-	}
+	model = restoreState(model, statePath, cfg.Resume)
 	prog = tea.NewProgram(model)
-	detail := func(ctx context.Context, contest int, index string) (*scrape.Detail, error) {
-		return refresh.Detail(ctx, s, client, cf.Problem{ContestID: contest, Index: index}, false, time.Now())
-	}
-	mode := func(contest int, index string) string {
-		st, _ := s.ProblemState(contest, index)
-		return st.Mode
-	}
-	go srv.Serve(dispatch(map[string]ipc.Handler{
-		"test":   testHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
-		"submit": submitHandler(sub, func(r tui.ExternalSubmit) { prog.Send(r) }),
-		"stress": stressHandler(cfg, config.CacheDir(), detail, mode, func(r tui.ExternalRun) { prog.Send(r) }),
-	}))
+	go srv.Serve(ipcHandler(cfg, s, client, sub, prog))
 	// Watch config file for changes (hot reload).
 	go watchConfig(context.Background(), filepath.Dir(path), filepath.Base(path), func() {
 		prog.Send(tui.ConfigChangedMsg{})
 	})
 	final, err := prog.Run()
-	// read live: Settings can turn resume off while verd runs
 	if fm, ok := final.(tui.Model); ok && err == nil {
-		fm.FlushStats()
-		if c, cerr := config.Load(path); cerr == nil && c.Resume {
-			if b, jerr := json.Marshal(fm.State()); jerr == nil {
-				_ = os.MkdirAll(filepath.Dir(statePath), 0o755)
-				_ = os.WriteFile(statePath, b, 0o644)
-			}
-		}
+		saveState(fm, path, statePath)
 	}
 	return err
+}
+
+// checkKeys loads the key bindings and rejects a config with bad ones.
+func checkKeys(cfg config.Config, path string) (map[string][]string, error) {
+	keys, err := cfg.KeyBindings()
+	if err == nil {
+		err = tui.CheckKeys(keys)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("config %s: %w", path, err)
+	}
+	return keys, nil
+}
+
+// ipcHandler serves `verd test|submit|stress` from another shell through the running TUI.
+func ipcHandler(cfg config.Config, s *store.Store, client *cf.Client, sub *submitter, prog *tea.Program) ipc.Handler {
+	return dispatch(map[string]ipc.Handler{
+		"test":   testHandler(cfg, config.CacheDir(), detailFor(s, client), modeFor(s), func(r tui.ExternalRun) { prog.Send(r) }),
+		"submit": submitHandler(sub, func(r tui.ExternalSubmit) { prog.Send(r) }),
+		"stress": stressHandler(cfg, config.CacheDir(), detailFor(s, client), modeFor(s), func(r tui.ExternalRun) { prog.Send(r) }),
+	})
+}
+
+// submitDeps wires the submit flow and opening a URL in the browser.
+func submitDeps(d *tui.Deps, sub *submitter) {
+	d.Submit = func(ctx context.Context, p cf.Problem, lang string) (tui.SubmitStart, error) {
+		st, err := sub.begin(ctx, p, lang)
+		if err != nil {
+			return tui.SubmitStart{}, err
+		}
+		return tui.SubmitStart{Text: st.Text, Notes: st.Notes, Direct: st.Direct, Status: st.Status, Updates: st.Updates}, nil
+	}
+	d.OpenURL = func(url string) error {
+		open := sub.env.OpenCommand(url)
+		if open == nil {
+			return errors.New("no browser opener found")
+		}
+		return exec.Command(open[0], open[1:]...).Start()
+	}
+}
+
+// editDeps wires the editor, notes, custom cases, templates and the config file.
+func editDeps(d *tui.Deps, cfg config.Config, path string, ctrl *editor.Controller, pickMux func(string) mux.Mux) {
+	d.Edit = func(p cf.Problem, lang string) (*exec.Cmd, error) { return editOpen(cfg, ctrl, p, lang) }
+	d.EditAt = func(p cf.Problem, lang string, line int) (*exec.Cmd, error) {
+		if err := requireEditor(ctrl); err != nil {
+			return nil, err
+		}
+		ref, err := solutionRef(cfg, p, lang)
+		if err != nil {
+			return nil, err
+		}
+		return ctrl.Open(ref.Path, line)
+	}
+	d.EditNote = func(p cf.Problem) (*exec.Cmd, error) {
+		if err := requireEditor(ctrl); err != nil {
+			return nil, err
+		}
+		note, err := workspace.New(cfg.Workspace).EnsureNote(p.ContestID, p.Index)
+		if err != nil {
+			return nil, err
+		}
+		return ctrl.Open(note, 1)
+	}
+	d.AddCustom = func(p cf.Problem) (*exec.Cmd, error) { return addCustom(cfg, ctrl, p) }
+	d.EditTemplate = func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) }
+	d.EditConfig = func() (*exec.Cmd, error) {
+		if _, err := os.Stat(path); err != nil {
+			if err := config.Init(path, false); err != nil {
+				return nil, err
+			}
+		}
+		return ctrl.Open(path, 0)
+	}
+	d.SaveSetting = func(key, value string) error {
+		if err := config.Set(path, key, value); err != nil {
+			return err
+		}
+		switch key {
+		case "split":
+			ctrl.SetMux(pickMux(value))
+		case "editor":
+			ctrl.SetEditor(value)
+		}
+		return nil
+	}
+}
+
+// problemDeps wires the Problem, Solution, test, stress and custom-case actions.
+func problemDeps(d *tui.Deps, cfg config.Config, s *store.Store, client *cf.Client, ctx context.Context) {
+	d.Load = func(p cf.Problem, force bool) (*scrape.Detail, error) {
+		return refresh.Detail(ctx, s, client, p, force, time.Now())
+	}
+	d.Note = func(p cf.Problem) string { return workspace.New(cfg.Workspace).Note(p.ContestID, p.Index) }
+	d.Ensure = func(p cf.Problem, lang string) error {
+		_, _, err := ensureSolution(cfg, p, lang)
+		return err
+	}
+	d.Watch = func(ctx context.Context, p cf.Problem) (<-chan string, error) {
+		dir := workspace.New(cfg.Workspace).Dir(p.ContestID, p.Index)
+		if err := os.MkdirAll(dir, 0o755); err != nil { // so a Solution created later is still watched
+			return nil, err
+		}
+		return watch.Dir(ctx, dir, 150*time.Millisecond)
+	}
+	d.SolutionPath = func(p cf.Problem, lang string) string {
+		ref, err := solutionRef(cfg, p, lang)
+		if err != nil {
+			return ""
+		}
+		abs, _ := filepath.Abs(ref.Path) // watcher events are absolute
+		return abs
+	}
+	d.Editorial = func(p cf.Problem) (*editorial.Result, error) {
+		return editorial.Load(context.Background(), s, client, p, time.Now())
+	}
+	d.LoadState = func(p cf.Problem) tui.ProblemState {
+		st, _ := s.ProblemState(p.ContestID, p.Index)
+		return tui.ProblemState{Lang: st.Lang, Mode: st.Mode}
+	}
+	d.SaveState = func(p cf.Problem, st tui.ProblemState) error {
+		cur, _ := s.ProblemState(p.ContestID, p.Index)
+		cur.Lang, cur.Mode = st.Lang, st.Mode
+		return s.SaveProblemState(p.ContestID, p.Index, cur, time.Now())
+	}
+	d.SetMark = func(p cf.Problem, on bool) error { return s.SetMark(p.ContestID, p.Index, on) }
+	d.Snippets = func(lang string) []tui.Snippet {
+		var out []tui.Snippet
+		for _, s := range workspace.ListSnippets(cfg.SnippetsPath(), lang, cfg.Lang[lang]) {
+			out = append(out, tui.Snippet{Name: s.Name, Desc: s.Desc, Code: s.Code})
+		}
+		return out
+	}
+	d.Customs = func(p cf.Problem) ([]tui.Case, error) {
+		cs, err := workspace.New(cfg.Workspace).Customs(p.ContestID, p.Index)
+		out := make([]tui.Case, len(cs))
+		for i, c := range cs {
+			out[i] = tui.Case{Name: c.Name, Input: c.Input, Want: c.Want, Custom: true}
+		}
+		return out, err
+	}
+	d.SaveCase = func(p cf.Problem, name, input, want string) (string, error) {
+		return workspace.New(cfg.Workspace).SaveCase(p.ContestID, p.Index, name, input, want)
+	}
+	d.DeleteCase = func(p cf.Problem, name string) error {
+		return workspace.New(cfg.Workspace).DeleteCustom(p.ContestID, p.Index, name)
+	}
+	d.SaveCounterexample = func(p cf.Problem, input, want string) (string, error) {
+		return workspace.New(cfg.Workspace).SaveCustom(p.ContestID, p.Index, input, want)
+	}
+}
+
+// runDeps wires the test and stress runs of the open Solution.
+func runDeps(d *tui.Deps, cfg config.Config, ctrl *editor.Controller) {
+	d.Tests = func(ctx context.Context, p cf.Problem, det *scrape.Detail, o tui.RunOpts) (<-chan runner.Event, error) {
+		ref, err := solutionRef(cfg, p, o.Lang)
+		if err != nil {
+			return nil, err
+		}
+		spec, err := buildSpec(cfg, config.CacheDir(), ref, det, o.Mode)
+		if err != nil {
+			return nil, fmt.Errorf("%w (press {problem.edit} to create one)", err)
+		}
+		spec.Only, spec.Live = o.Only, true
+		return runner.Run(ctx, spec), nil
+	}
+	d.Stress = func(ctx context.Context, p cf.Problem, det *scrape.Detail, o tui.RunOpts) (<-chan stress.Event, error) {
+		ref, err := solutionRef(cfg, p, o.Lang)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := os.Stat(ref.Path); err != nil {
+			return nil, fmt.Errorf("no Solution yet (press {problem.edit} to create one)")
+		}
+		gen, brute, missing := stressHelpers(cfg, ref)
+		spec, err := buildStress(cfg, config.CacheDir(), ref, det, o.Mode, 0, 0, 0, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		if missing { // first time: open the fresh helpers so the user can fill them in
+			if cmd, err := ctrl.OpenPair(gen, brute); err != nil || cmd != nil {
+				return nil, fmt.Errorf("created %s and %s: fill them in, then press {problem.stress} again", gen, brute)
+			}
+			return nil, errors.New("created gen and brute: fill them in, then press {problem.stress} again")
+		}
+		return stress.Run(ctx, spec), nil
+	}
+}
+
+// sessionDeps wires contest sessions and their reports.
+func sessionDeps(d *tui.Deps, cfg config.Config, s *store.Store) {
+	d.StartSession = func(c cf.Contest, mode string) (session.Session, error) {
+		now := time.Now().Unix()
+		x := session.Session{ContestID: c.ID, Name: c.Name, Mode: mode, Start: now}
+		switch mode {
+		case session.Virtual:
+			x.End = now + c.Duration
+		case session.Live: // the real clock
+			x.Start, x.End = c.Start, c.Start+c.Duration
+		}
+		return x, s.SaveSession(x)
+	}
+	d.EndSession = s.EndSession
+	d.SaveSessionStats = s.SaveSessionStats
+	d.SaveReport = func(x session.Session, md string) (string, error) {
+		return saveReport(workspace.New(cfg.Workspace).Dir(x.ContestID, ""), x, md)
+	}
+}
+
+// dataDeps wires the cache, sync, settings and credentials.
+func dataDeps(d *tui.Deps, cfg config.Config, path string, s *store.Store, client *cf.Client, ctx context.Context) {
+	d.SaveKeys = func(ctx, action string, ks []string) error { return config.SetKeys(path, ctx, action, ks) }
+	d.Reload = func() (tui.Data, error) { return loadData(s, cfg.Handle) }
+	d.Sync = func(source string) (string, error) {
+		for _, p := range providers() {
+			if p.source == source {
+				solved, added, err := syncProvider(context.Background(), p, s, nil)
+				if errors.Is(err, errNeedLogin) {
+					return "", fmt.Errorf("run `verd sync %s` once to sign in", p.source)
+				}
+				return fmt.Sprintf("%s: %d solved, %d new marks", p.name, solved, added), err
+			}
+		}
+		return "", fmt.Errorf("no sync for %s", source)
+	}
+	d.ClearCache = s.ClearCache
+	d.SaveCreds = func(cookie, ua string) (string, error) {
+		where, _, err := credStore().Save(creds.Creds{Cookie: cookie, UserAgent: ua})
+		return where, err
+	}
+	d.HasCreds = func() bool { _, err := credStore().Load(); return err == nil }
+	d.FetchContest = func(id int) error {
+		_, err := refresh.ContestProblems(ctx, s, client, id)
+		return err
+	}
+	d.Standings = func(contest int) (*cf.Standing, error) {
+		return client.Standings(context.Background(), contest, cfg.Handle)
+	}
+	// Runs in a Bubble Tea cmd, so the UI renders from cache immediately and stays responsive.
+	d.Refresh = []func() (tui.Data, error){
+		stage(s, cfg.Handle, func() error { return refresh.Core(ctx, s, client, cfg.Handle, time.Now()) }),
+		stage(s, cfg.Handle, func() error { _, err := refresh.Submissions(ctx, s, client, cfg.Handle); return err }),
+		stage(s, cfg.Handle, func() error {
+			// read live: Settings can switch CSES on while verd runs
+			if c, err := config.Load(path); err == nil && c.SourceCSES {
+				_, err := refresh.Source(ctx, s, cf.SourceCSES, time.Now())
+				return err
+			}
+			return nil
+		}),
+	}
+	d.LoadConfig = func() (map[string]string, map[string][]string, error) {
+		c, err := loadConfig(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		keys, err := c.KeyBindings()
+		if err != nil {
+			return nil, nil, err
+		}
+		return buildSettings(c), keys, nil
+	}
+}
+
+// restoreState resumes the last TUI state when resume is on and a saved state exists.
+func restoreState(model tui.Model, statePath string, resume bool) tui.Model {
+	if b, err := os.ReadFile(statePath); err == nil && resume {
+		var st tui.State
+		if json.Unmarshal(b, &st) == nil {
+			return model.WithState(st)
+		}
+	}
+	return model
+}
+
+// saveState keeps the TUI state for the next start. Settings can turn resume off while verd runs,
+// so it reads the config live.
+func saveState(fm tui.Model, path, statePath string) {
+	fm.FlushStats()
+	if c, cerr := config.Load(path); cerr == nil && c.Resume {
+		if b, jerr := json.Marshal(fm.State()); jerr == nil {
+			_ = os.MkdirAll(filepath.Dir(statePath), 0o755)
+			_ = os.WriteFile(statePath, b, 0o644)
+		}
+	}
 }
 
 // stage wraps a sync step: run it, then reload whatever is now cached.

@@ -152,6 +152,30 @@ func (t Tracker) Baseline(ctx context.Context, contest int, index string) (int64
 	return b.ID, nil
 }
 
+// pollUpdate is the Update a successful poll calls for: ok is false when the user's Submission is
+// missing, not new, or unchanged since last.
+func pollUpdate(subs []cf.Submission, contest int, index string, baseline int64, last cf.Submission) (u Update, ok bool) {
+	s, found := newest(subs, contest, index)
+	if !found || s.ID <= baseline {
+		return Update{}, false // nothing new yet
+	}
+	final := s.Verdict != "" && s.Verdict != "TESTING"
+	if !final && s.ID == last.ID && s.PassedTests == last.PassedTests && s.Verdict == last.Verdict {
+		return Update{}, false
+	}
+	return Update{Submission: s, Final: final, Text: Describe(s)}, true
+}
+
+// sendUpdate delivers u unless ctx ends first; false means ctx ended.
+func sendUpdate(ctx context.Context, out chan<- Update, u Update) bool {
+	select {
+	case out <- u:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 // Track polls until the new Submission has a final Verdict, the timeout passes, or ctx ends.
 // The channel closes afterwards.
 func (t Tracker) Track(ctx context.Context, contest int, index string, baseline int64) <-chan Update {
@@ -163,21 +187,13 @@ func (t Tracker) Track(ctx context.Context, contest int, index string, baseline 
 		defer deadline.Stop()
 		tick := time.NewTicker(t.Interval)
 		defer tick.Stop()
-		send := func(u Update) bool {
-			select {
-			case out <- u:
-				return true
-			case <-ctx.Done():
-				return false
-			}
-		}
 		var last cf.Submission
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-deadline.C:
-				send(Update{Final: true, Err: ErrTimeout, Text: ErrTimeout.Error()})
+				sendUpdate(ctx, out, Update{Final: true, Err: ErrTimeout, Text: ErrTimeout.Error()})
 				return
 			case <-tick.C:
 			}
@@ -192,18 +208,14 @@ func (t Tracker) Track(ctx context.Context, contest int, index string, baseline 
 				}
 				continue
 			}
-			s, ok := newest(subs, contest, index)
-			if !ok || s.ID <= baseline {
-				continue // nothing new yet
-			}
-			final := s.Verdict != "" && s.Verdict != "TESTING"
-			if final || s.ID != last.ID || s.PassedTests != last.PassedTests || s.Verdict != last.Verdict {
-				last = s
-				if !send(Update{Submission: s, Final: final, Text: Describe(s)}) {
+			u, ok := pollUpdate(subs, contest, index, baseline, last)
+			if ok {
+				last = u.Submission
+				if !sendUpdate(ctx, out, u) {
 					return
 				}
 			}
-			if final {
+			if u.Final {
 				return
 			}
 		}

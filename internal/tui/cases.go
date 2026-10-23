@@ -136,46 +136,14 @@ func (m Model) openTM(add bool) Model {
 
 func (m Model) updateTM(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	t := m.tm
-	if k := msg.String(); k == "ctrl+c" {
+	if msg.String() == "ctrl+c" {
 		return m, tea.Quit
-	} else if t.ed != nil {
-		switch t.ed.key(msg) {
-		case "cancel":
-			t.ed = nil
-		case "save":
-			p, e := *m.open, t.ed
-			if m.deps.SaveCase == nil {
-				t.note, t.ed = "saving is unavailable", nil
-				break
-			}
-			name, err := m.deps.SaveCase(p, e.name, e.text(0), e.text(1))
-			if err != nil {
-				t.note = "save: " + err.Error()
-				break
-			}
-			t.ed, t.note = nil, "saved "+name
-			m = m.loadCases()
-			for i, c := range m.cases {
-				if c.Name == name {
-					t.sel, m.tsel = i, i
-				}
-			}
-		}
-		return m, nil
+	}
+	if t.ed != nil {
+		return m.tmEditKey(msg), nil
 	}
 	if t.confirmDel {
-		t.confirmDel = false
-		if msg.String() == "y" && t.sel < len(m.cases) && m.cases[t.sel].Custom && m.deps.DeleteCase != nil {
-			name := m.cases[t.sel].Name
-			if err := m.deps.DeleteCase(*m.open, name); err != nil {
-				t.note = "delete: " + err.Error()
-			} else {
-				t.note = "deleted " + name
-				m = m.loadCases()
-				t.sel, m.tsel = min(t.sel, max(0, len(m.cases)-1)), min(t.sel, max(0, len(m.cases)-1))
-			}
-		}
-		return m, nil
+		return m.tmConfirmDelete(msg), nil
 	}
 	t.note = ""
 	cur := Case{}
@@ -194,25 +162,13 @@ func (m Model) updateTM(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "a":
 		t.ed = newEditor("", "", "")
 	case "e", "enter":
-		switch {
-		case len(m.cases) == 0:
-		case !cur.Custom:
-			t.note = m.kx("samples are read-only: press {testmgr.copy} to copy it into an editable Custom Test")
-		default:
-			t.ed = newEditor(cur.Name, cur.Input, cur.Want)
-		}
+		m.tmEdit(cur)
 	case "c":
 		if len(m.cases) > 0 {
 			t.ed = newEditor("", cur.Input, cur.Want)
 		}
 	case "d", "x":
-		switch {
-		case len(m.cases) == 0:
-		case !cur.Custom:
-			t.note = "samples cannot be deleted"
-		default:
-			t.confirmDel = true
-		}
+		m.tmAskDelete(cur)
 	case "E":
 		if m.deps.AddCustom != nil {
 			m.tm = nil
@@ -225,6 +181,81 @@ func (m Model) updateTM(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return nm, cmd
 	}
 	return m, nil
+}
+
+// tmEditKey routes a key to the open editor, saving or closing it on request.
+func (m Model) tmEditKey(msg tea.KeyPressMsg) Model {
+	switch m.tm.ed.key(msg) {
+	case "cancel":
+		m.tm.ed = nil
+	case "save":
+		return m.tmSave()
+	}
+	return m
+}
+
+func (m Model) tmSave() Model {
+	t := m.tm
+	p, e := *m.open, t.ed
+	if m.deps.SaveCase == nil {
+		t.note, t.ed = "saving is unavailable", nil
+		return m
+	}
+	name, err := m.deps.SaveCase(p, e.name, e.text(0), e.text(1))
+	if err != nil {
+		t.note = "save: " + err.Error()
+		return m
+	}
+	t.ed, t.note = nil, "saved "+name
+	m = m.loadCases()
+	for i, c := range m.cases {
+		if c.Name == name {
+			t.sel, m.tsel = i, i
+		}
+	}
+	return m
+}
+
+// tmConfirmDelete deletes the selected Custom Test on "y"; any other key cancels.
+func (m Model) tmConfirmDelete(msg tea.KeyPressMsg) Model {
+	t := m.tm
+	t.confirmDel = false
+	if msg.String() != "y" || t.sel >= len(m.cases) || !m.cases[t.sel].Custom || m.deps.DeleteCase == nil {
+		return m
+	}
+	name := m.cases[t.sel].Name
+	if err := m.deps.DeleteCase(*m.open, name); err != nil {
+		t.note = "delete: " + err.Error()
+		return m
+	}
+	t.note = "deleted " + name
+	m = m.loadCases()
+	t.sel, m.tsel = min(t.sel, max(0, len(m.cases)-1)), min(t.sel, max(0, len(m.cases)-1))
+	return m
+}
+
+// tmEdit opens the editor on a Custom Test; samples are read-only.
+func (m Model) tmEdit(cur Case) {
+	t := m.tm
+	switch {
+	case len(m.cases) == 0:
+	case !cur.Custom:
+		t.note = m.kx("samples are read-only: press {testmgr.copy} to copy it into an editable Custom Test")
+	default:
+		t.ed = newEditor(cur.Name, cur.Input, cur.Want)
+	}
+}
+
+// tmAskDelete arms the delete confirmation on a Custom Test; samples cannot be deleted.
+func (m Model) tmAskDelete(cur Case) {
+	t := m.tm
+	switch {
+	case len(m.cases) == 0:
+	case !cur.Custom:
+		t.note = "samples cannot be deleted"
+	default:
+		t.confirmDel = true
+	}
 }
 
 // tmBox renders the test manager modal.

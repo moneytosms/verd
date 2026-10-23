@@ -27,38 +27,56 @@ type Filter struct {
 func ParseFilter(expr string) (Filter, error) {
 	var f Filter
 	for _, tok := range strings.Fields(expr) {
-		switch {
-		case tok == "unsolved" || tok == "u":
-			f.Unsolved = true
-		case strings.HasPrefix(tok, "src:"):
-			if !slices.Contains(cf.Sources, tok[4:]) {
-				return f, fmt.Errorf("unknown source %q (have %s)", tok[4:], strings.Join(cf.Sources, ", "))
-			}
-			f.Source = tok[4:]
-		case strings.HasPrefix(tok, "+") && len(tok) > 1:
-			f.Include = append(f.Include, tag(tok[1:]))
-		case strings.HasPrefix(tok, "-") && len(tok) > 1 && !isDigit(tok[1]):
-			f.Exclude = append(f.Exclude, tag(tok[1:]))
-		case isDigit(tok[0]) || tok[0] == '-':
-			lo, hi, ok := strings.Cut(tok, "-")
-			if !ok { // single rating, e.g. "1200"
-				hi = lo
-			}
-			var err error
-			if f.MinRating, err = atoi(lo); err != nil {
-				return f, fmt.Errorf("bad rating %q", tok)
-			}
-			if f.MaxRating, err = atoi(hi); err != nil {
-				return f, fmt.Errorf("bad rating %q", tok)
-			}
-			if f.MaxRating != 0 && f.MinRating > f.MaxRating {
-				return f, fmt.Errorf("empty rating range %q", tok)
-			}
-		default:
-			return f, fmt.Errorf("unknown filter %q (use 800-1200, +tag, -tag, unsolved, src:cses)", tok)
+		if err := f.parseTok(tok); err != nil {
+			return f, err
 		}
 	}
 	return f, nil
+}
+
+// parseTok applies one token of a ParseFilter expression to f.
+func (f *Filter) parseTok(tok string) error {
+	switch {
+	case tok == "unsolved" || tok == "u":
+		f.Unsolved = true
+	case strings.HasPrefix(tok, "src:"):
+		return f.setSource(tok[4:])
+	case strings.HasPrefix(tok, "+") && len(tok) > 1:
+		f.Include = append(f.Include, tag(tok[1:]))
+	case strings.HasPrefix(tok, "-") && len(tok) > 1 && !isDigit(tok[1]):
+		f.Exclude = append(f.Exclude, tag(tok[1:]))
+	case isDigit(tok[0]) || tok[0] == '-':
+		return f.setRating(tok)
+	default:
+		return fmt.Errorf("unknown filter %q (use 800-1200, +tag, -tag, unsolved, src:cses)", tok)
+	}
+	return nil
+}
+
+func (f *Filter) setSource(src string) error {
+	if !slices.Contains(cf.Sources, src) {
+		return fmt.Errorf("unknown source %q (have %s)", src, strings.Join(cf.Sources, ", "))
+	}
+	f.Source = src
+	return nil
+}
+
+func (f *Filter) setRating(tok string) error {
+	lo, hi, ok := strings.Cut(tok, "-")
+	if !ok { // single rating, e.g. "1200"
+		hi = lo
+	}
+	var err error
+	if f.MinRating, err = atoi(lo); err != nil {
+		return fmt.Errorf("bad rating %q", tok)
+	}
+	if f.MaxRating, err = atoi(hi); err != nil {
+		return fmt.Errorf("bad rating %q", tok)
+	}
+	if f.MaxRating != 0 && f.MinRating > f.MaxRating {
+		return fmt.Errorf("empty rating range %q", tok)
+	}
+	return nil
 }
 
 func tag(s string) string { return strings.ToLower(strings.ReplaceAll(s, "_", " ")) }
@@ -83,53 +101,54 @@ func hasTagPrefix(p cf.Problem, prefix string) bool {
 
 // Match reports whether p passes every active criterion.
 func (f Filter) Match(p cf.Problem, st store.Status) bool {
-	if (f.MinRating > 0 || f.MaxRating > 0) && (p.Rating == 0 || p.Rating < f.MinRating || (f.MaxRating > 0 && p.Rating > f.MaxRating)) {
+	if !f.matchRating(p) || !f.matchSource(p) || !f.matchTags(p) || !f.matchStatus(st) {
 		return false
 	}
-	if f.Source != "" && p.Source() != f.Source {
-		return false
+	_, ok := f.Score(p)
+	return ok
+}
+
+func (f Filter) matchRating(p cf.Problem) bool {
+	if f.MinRating <= 0 && f.MaxRating <= 0 {
+		return true
 	}
+	return p.Rating != 0 && p.Rating >= f.MinRating && (f.MaxRating <= 0 || p.Rating <= f.MaxRating)
+}
+
+func (f Filter) matchSource(p cf.Problem) bool {
+	return f.Source == "" || p.Source() == f.Source
+}
+
+func (f Filter) matchTags(p cf.Problem) bool {
 	for _, t := range f.Include {
 		if !hasTagPrefix(p, t) {
 			return false
 		}
 	}
-	if len(f.AnyOf) > 0 {
-		any := false
-		for _, t := range f.AnyOf {
-			if hasTagPrefix(p, t) {
-				any = true
-				break
-			}
-		}
-		if !any {
-			return false
-		}
+	if len(f.AnyOf) > 0 && !slices.ContainsFunc(f.AnyOf, func(t string) bool { return hasTagPrefix(p, t) }) {
+		return false
 	}
 	for _, t := range f.Exclude {
 		if hasTagPrefix(p, t) {
 			return false
 		}
 	}
+	return true
+}
+
+func (f Filter) matchStatus(st store.Status) bool {
 	if f.Unsolved && st == store.StatusSolved {
 		return false
 	}
 	switch f.Status {
 	case "unsolved":
-		if st == store.StatusSolved {
-			return false
-		}
+		return st != store.StatusSolved
 	case "solved":
-		if st != store.StatusSolved {
-			return false
-		}
+		return st == store.StatusSolved
 	case "attempted":
-		if st != store.StatusAttempted {
-			return false
-		}
+		return st == store.StatusAttempted
 	}
-	_, ok := f.Score(p)
-	return ok
+	return true
 }
 
 // Score is the fuzzy search score of p (0 with no search) and whether it matches the search.

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/moneytosms/verd/internal/theme"
 )
 
 // keyEditor is the Settings modal that rebinds shortcuts. cap: 0 browsing, 1 waiting for the key
@@ -77,6 +78,33 @@ func (m Model) keyEditorBox() []string {
 	w, h := m.modalSize(96, 36)
 	acts := m.keRows()
 	m.ke.sel = max(0, min(m.ke.sel, len(acts)-1))
+	lines, selAt := m.keyEditorLines(acts, st, w)
+	if len(acts) == 0 {
+		lines = []string{st.Dim.Render("  nothing matches")}
+	}
+	search := st.Dim.Render("/ search shortcuts")
+	if m.ke.typing || m.ke.q != "" {
+		search = st.Accent.Render("/ ") + m.ke.q
+		if m.ke.typing {
+			search += st.Accent.Render("▏")
+		}
+		search += st.Dim.Render(fmt.Sprintf("   %d match", len(acts)))
+	}
+	room := max(3, h-6)
+	start := max(0, min(selAt-room/2, len(lines)-room))
+	body := append([]string{search, ""}, lines[start:min(len(lines), start+room)]...)
+	if msg, ok := m.keyEditorStatus(acts, st); ok {
+		body = append(body, "", msg)
+	}
+	note := "/ search  j/k move  enter rebind  a add a key  backspace reset  R reset all  esc close"
+	if m.ke.typing {
+		note = "type to filter  up/down move  enter done  esc clear"
+	}
+	return box("Keyboard shortcuts  (* = changed, saved to [keys.*] in config.toml)", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+}
+
+// keyEditorLines renders the grouped action rows and returns the index of the selected row.
+func (m Model) keyEditorLines(acts []keyAction, st theme.Styles, w int) ([]string, int) {
 	var lines []string
 	selAt := 0
 	group := ""
@@ -108,39 +136,26 @@ func (m Model) keyEditorBox() []string {
 		}
 		lines = append(lines, line)
 	}
-	if len(acts) == 0 {
-		lines = []string{st.Dim.Render("  nothing matches")}
-	}
-	search := st.Dim.Render("/ search shortcuts")
-	if m.ke.typing || m.ke.q != "" {
-		search = st.Accent.Render("/ ") + m.ke.q
-		if m.ke.typing {
-			search += st.Accent.Render("▏")
-		}
-		search += st.Dim.Render(fmt.Sprintf("   %d match", len(acts)))
-	}
-	room := max(3, h-6)
-	start := max(0, min(selAt-room/2, len(lines)-room))
-	body := append([]string{search, ""}, lines[start:min(len(lines), start+room)]...)
+	return lines, selAt
+}
+
+// keyEditorStatus is the prompt or note shown under the list; ok is false when there is none.
+func (m Model) keyEditorStatus(acts []keyAction, st theme.Styles) (msg string, ok bool) {
 	switch {
 	case m.ke.resetAll:
-		body = append(body, "", st.Accent.Render("reset all shortcuts to defaults? y/n (esc cancels)"))
+		return st.Accent.Render("reset all shortcuts to defaults? y/n (esc cancels)"), true
 	case m.ke.cap == 1:
-		body = append(body, "", st.Accent.Render("press the new key for "+actionID(acts[m.ke.sel])+" (esc cancels)"))
+		return st.Accent.Render("press the new key for " + actionID(acts[m.ke.sel]) + " (esc cancels)"), true
 	case m.ke.cap == 2:
-		body = append(body, "", st.Accent.Render("press a key to add to "+actionID(acts[m.ke.sel])+" (esc cancels)"))
+		return st.Accent.Render("press a key to add to " + actionID(acts[m.ke.sel]) + " (esc cancels)"), true
 	case m.ke.note != "":
 		style := st.Good
 		if !strings.HasPrefix(m.ke.note, "saved") && !strings.HasPrefix(m.ke.note, "reset") && !strings.HasPrefix(m.ke.note, "cleared") {
 			style = st.Bad
 		}
-		body = append(body, "", style.Render(clean(m.ke.note)))
+		return style.Render(clean(m.ke.note)), true
 	}
-	note := "/ search  j/k move  enter rebind  a add a key  backspace reset  R reset all  esc close"
-	if m.ke.typing {
-		note = "type to filter  up/down move  enter done  esc clear"
-	}
-	return box("Keyboard shortcuts  (* = changed, saved to [keys.*] in config.toml)", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+	return "", false
 }
 
 // setKeys saves keys for one action (nil resets it) and rebuilds the keymap; a conflict is refused.
@@ -184,85 +199,137 @@ func (m Model) updateKeyEditor(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	e := m.ke
 	e.sel = max(0, min(e.sel, len(acts)-1))
 	if e.typing {
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "esc":
-			e.q, e.typing = "", false
-		case "enter":
-			e.typing = false
-		case "down":
-			e.sel = min(e.sel+1, len(acts)-1)
-		case "up":
-			e.sel = max(0, e.sel-1)
-		case "backspace":
-			if r := []rune(e.q); len(r) > 0 {
-				e.q, e.sel = string(r[:len(r)-1]), 0
-			}
-		case "ctrl+u":
-			e.q, e.sel = "", 0
-		default:
-			if msg.Text != "" {
-				e.q, e.sel = e.q+clean(msg.Text), 0
-			}
-		}
-		return m, nil
+		return m.updateKeyFilter(msg, len(acts))
 	}
 	if e.resetAll {
-		switch msg.String() {
-		case "y":
-			// Reset all actions by clearing user bindings
-			user := map[string][]string{}
-			for id := range m.km.user {
-				parts := strings.Split(id, ".")
-				if len(parts) != 2 {
-					continue
-				}
-				if err := m.deps.SaveKeys(parts[0], parts[1], nil); err != nil {
-					e.note = err.Error()
-					break
-				}
-			}
-			if e.note == "" {
-				m.km, _ = newKeymap(user)
-				e.note = fmt.Sprintf("cleared all %d custom shortcuts", len(m.km.user))
-			}
-			e.resetAll = false
-		case "n", "esc":
-			e.note = ""
-			e.resetAll = false
-		}
-		return m, nil
+		return m.updateResetAll(msg), nil
 	}
 	if len(acts) == 0 { // nothing matches: only searching or leaving makes sense
-		switch msg.String() {
-		case "/":
-			e.typing = true
-		case "ctrl+c":
-			return m, tea.Quit
-		default:
-			e.q = ""
-		}
-		return m, nil
+		return m.updateKeyNoMatch(msg)
 	}
 	a := acts[e.sel]
 	if e.cap > 0 {
-		key := msg.String()
-		cap := e.cap
-		e.cap = 0
-		switch {
-		case key == "esc":
-			e.note = ""
-		case cap == 1:
-			m = m.setKeys(a, []string{key})
-		case slices.Contains(m.km.keys(a), key):
-			e.note = key + " is already bound to " + actionID(a)
-		default:
-			m = m.setKeys(a, append(slices.Clone(m.km.keys(a)), key))
-		}
-		return m, nil
+		return m.captureKey(msg, a), nil
 	}
 	e.note = ""
+	return m.updateKeyList(msg, a, len(acts))
+}
+
+// moveKeySel returns the selection after a movement key over n rows.
+func moveKeySel(key string, sel, n int) int {
+	switch key {
+	case "j", "down":
+		return min(sel+1, n-1)
+	case "k", "up":
+		return max(0, sel-1)
+	case "pgdown":
+		return min(sel+10, n-1)
+	case "pgup":
+		return max(0, sel-10)
+	case "g", "home":
+		return 0
+	case "G", "end":
+		return n - 1
+	}
+	return sel
+}
+
+// updateKeyFilter handles keys while typing the shortcut search.
+func (m Model) updateKeyFilter(msg tea.KeyPressMsg, n int) (tea.Model, tea.Cmd) {
+	e := m.ke
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc":
+		e.q, e.typing = "", false
+	case "enter":
+		e.typing = false
+	case "down", "up":
+		e.sel = moveKeySel(msg.String(), e.sel, n)
+	case "backspace":
+		if r := []rune(e.q); len(r) > 0 {
+			e.q, e.sel = string(r[:len(r)-1]), 0
+		}
+	case "ctrl+u":
+		e.q, e.sel = "", 0
+	default:
+		if msg.Text != "" {
+			e.q, e.sel = e.q+clean(msg.Text), 0
+		}
+	}
+	return m, nil
+}
+
+// updateResetAll handles the y/n confirmation for resetting every shortcut.
+func (m Model) updateResetAll(msg tea.KeyPressMsg) Model {
+	e := m.ke
+	switch msg.String() {
+	case "y":
+		m = m.clearUserKeys()
+		e.resetAll = false
+	case "n", "esc":
+		e.note = ""
+		e.resetAll = false
+	}
+	return m
+}
+
+// clearUserKeys saves every custom binding as cleared and rebuilds the keymap from defaults.
+func (m Model) clearUserKeys() Model {
+	e := m.ke
+	user := map[string][]string{}
+	for id := range m.km.user {
+		parts := strings.Split(id, ".")
+		if len(parts) != 2 {
+			continue
+		}
+		if err := m.deps.SaveKeys(parts[0], parts[1], nil); err != nil {
+			e.note = err.Error()
+			break
+		}
+	}
+	if e.note == "" {
+		m.km, _ = newKeymap(user)
+		e.note = fmt.Sprintf("cleared all %d custom shortcuts", len(m.km.user))
+	}
+	return m
+}
+
+// updateKeyNoMatch handles keys when the search matches nothing.
+func (m Model) updateKeyNoMatch(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "/":
+		m.ke.typing = true
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		m.ke.q = ""
+	}
+	return m, nil
+}
+
+// captureKey handles the key pressed after enter (rebind) or a (add a key) for action a.
+func (m Model) captureKey(msg tea.KeyPressMsg, a keyAction) Model {
+	e := m.ke
+	key := msg.String()
+	mode := e.cap
+	e.cap = 0
+	switch {
+	case key == "esc":
+		e.note = ""
+	case mode == 1:
+		m = m.setKeys(a, []string{key})
+	case slices.Contains(m.km.keys(a), key):
+		e.note = key + " is already bound to " + actionID(a)
+	default:
+		m = m.setKeys(a, append(slices.Clone(m.km.keys(a)), key))
+	}
+	return m
+}
+
+// updateKeyList handles browsing keys for the selected action a, n rows in the list.
+func (m Model) updateKeyList(msg tea.KeyPressMsg, a keyAction, n int) (tea.Model, tea.Cmd) {
+	e := m.ke
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
@@ -274,18 +341,8 @@ func (m Model) updateKeyEditor(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			break
 		}
 		m.ke = nil
-	case "j", "down":
-		e.sel = min(e.sel+1, len(acts)-1)
-	case "k", "up":
-		e.sel = max(0, e.sel-1)
-	case "pgdown":
-		e.sel = min(e.sel+10, len(acts)-1)
-	case "pgup":
-		e.sel = max(0, e.sel-10)
-	case "g", "home":
-		e.sel = 0
-	case "G", "end":
-		e.sel = len(acts) - 1
+	case "j", "down", "k", "up", "pgdown", "pgup", "g", "home", "G", "end":
+		e.sel = moveKeySel(msg.String(), e.sel, n)
 	case "enter":
 		e.cap = 1
 	case "a":

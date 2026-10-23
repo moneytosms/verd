@@ -30,6 +30,13 @@ func (m Model) modalBox() []string {
 		return m.filterBox()
 	case m.help:
 		return m.helpBox()
+	}
+	return m.screenModalBox()
+}
+
+// screenModalBox is the modal drawn over the current screen, or nil.
+func (m Model) screenModalBox() []string {
+	switch {
 	case m.full && m.viewing():
 		return m.fullBox()
 	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
@@ -38,14 +45,20 @@ func (m Model) modalBox() []string {
 		s := m.strs
 		return m.diffBox(s.counterexample(), &s.diffOff, &s.diffInit, s.saveHint())
 	case m.run != nil && m.run.diff:
-		if row, ok := m.selected(); ok && row.Res != nil {
-			return m.diffBox(*row.Res, &m.run.diffOff, &m.run.diffInit, "")
-		}
-		if m.run.overall == runner.CE {
-			return m.textBox("Compile error", cleanLines(m.run.compile), &m.run.diffOff, true)
-		}
+		return m.runDiffBox()
 	case m.subModal && m.sub != nil:
 		return m.subBox()
+	}
+	return nil
+}
+
+// runDiffBox is the diff of the selected run row, or the compile error; nil when neither applies.
+func (m Model) runDiffBox() []string {
+	if row, ok := m.selected(); ok && row.Res != nil {
+		return m.diffBox(*row.Res, &m.run.diffOff, &m.run.diffInit, "")
+	}
+	if m.run.overall == runner.CE {
+		return m.textBox("Compile error", cleanLines(m.run.compile), &m.run.diffOff, true)
 	}
 	return nil
 }
@@ -58,31 +71,7 @@ func (m Model) modalSize(maxW, maxH int) (w, h int) {
 func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra string) []string {
 	switch res.Verdict {
 	case runner.RE, runner.TLE, runner.MLE:
-		body := []string{res.Detail(), ""}
-		if x := runner.Explain(res); x.Hint != "" {
-			body = append([]string{res.Detail(), "", "why: " + x.Hint}, "")
-			if x.Loc != "" {
-				at := "at:  " + x.Loc
-				if x.Code != "" {
-					at += "  │ " + x.Code
-				}
-				body = append(body[:len(body)-1], at, "")
-			}
-			if x.Trace != "" {
-				body = append(body[:len(body)-1], "via: "+x.Trace, "")
-			}
-		}
-		if strings.TrimSpace(res.Stderr) == "" {
-			body = append(body, "(stderr empty)")
-		} else {
-			body = append(body, "stderr:")
-			body = append(body, cleanLines(runner.Fold(res.Stderr))...)
-		}
-		if strings.TrimSpace(res.Input) != "" {
-			body = append(body, "", "input:")
-			body = append(body, cleanLines(res.Input)...)
-		}
-		return m.textBox(res.Name+"  "+strings.TrimSpace(res.Verdict), body, diffOff, false)
+		return m.textBox(res.Name+"  "+strings.TrimSpace(res.Verdict), runtimeErrLines(res), diffOff, false)
 	}
 	st := m.styles()
 	w, h := m.modalSize(100, 36)
@@ -114,6 +103,36 @@ func (m Model) diffBox(res runner.Result, diffOff *int, diffInit *bool, extra st
 	}
 	note := m.kx(fmt.Sprintf("%d-%d/%d%s  {problem.down}/{problem.up} scroll  {problem.back} close", min(off+1, total), end, total, extra))
 	return box("Diff: "+res.Name+"  "+strings.TrimSpace(res.Verdict), body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+}
+
+// runtimeErrLines is the body of a runtime error: detail, the explain hints when any, then stderr and input.
+func runtimeErrLines(res runner.Result) []string {
+	body := []string{res.Detail(), ""}
+	if x := runner.Explain(res); x.Hint != "" {
+		body = []string{res.Detail(), "", "why: " + x.Hint}
+		if x.Loc != "" {
+			at := "at:  " + x.Loc
+			if x.Code != "" {
+				at += "  │ " + x.Code
+			}
+			body = append(body, at)
+		}
+		if x.Trace != "" {
+			body = append(body, "via: "+x.Trace)
+		}
+		body = append(body, "")
+	}
+	if strings.TrimSpace(res.Stderr) == "" {
+		body = append(body, "(stderr empty)")
+	} else {
+		body = append(body, "stderr:")
+		body = append(body, cleanLines(runner.Fold(res.Stderr))...)
+	}
+	if strings.TrimSpace(res.Input) != "" {
+		body = append(body, "", "input:")
+		body = append(body, cleanLines(res.Input)...)
+	}
+	return body
 }
 
 // textBox is a scrollable plain-text modal (compiler output, runtime errors); hl marks file:line lines.

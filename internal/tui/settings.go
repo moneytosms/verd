@@ -239,55 +239,68 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.updateCred(msg)
 	}
 	if m.setEdit != nil {
-		d := settingDefs[m.setSel]
-		switch msg.String() {
-		case "esc":
-			m.setEdit = nil
-		case "enter":
-			text := strings.TrimSpace(m.setEdit.text)
-			m.setEdit = nil
-			return m.apply(d, text), nil
-		case "backspace":
-			if r := []rune(m.setEdit.text); len(r) > 0 {
-				m.setEdit.text = string(r[:len(r)-1])
-			}
-		case "ctrl+u":
-			m.setEdit.text = ""
-		case "ctrl+c":
-			return m, tea.Quit
-		default:
-			if msg.Text != "" {
-				m.setEdit.text += clean(msg.Text)
-			}
-		}
-		return m, nil
+		return m.updateSettingEdit(msg, settingDefs[m.setSel])
 	}
 	if m.setFind { // typing into the filter
-		switch msg.String() {
-		case "esc":
-			m.setFind, m.setQ = false, ""
-		case "enter", "down":
-			m.setFind = false
-		case "backspace":
-			if r := []rune(m.setQ); len(r) > 0 {
-				m.setQ = string(r[:len(r)-1])
-			}
-		case "ctrl+u":
-			m.setQ = ""
-		case "ctrl+c":
-			return m, tea.Quit
-		default:
-			if msg.Text != "" {
-				m.setQ += clean(msg.Text)
-			}
-		}
-		return m.keepSettingVisible(), nil
+		return m.updateSettingFind(msg)
 	}
 	if m.setQ != "" && msg.String() == "esc" { // first esc clears the filter
 		m.setQ = ""
 		return m, nil
 	}
-	d := settingDefs[m.setSel]
+	return m.updateSettingNav(msg, settingDefs[m.setSel])
+}
+
+// updateSettingEdit handles keys while a text setting is being edited.
+func (m Model) updateSettingEdit(msg tea.KeyPressMsg, d settingDef) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.setEdit = nil
+	case "enter":
+		text := strings.TrimSpace(m.setEdit.text)
+		m.setEdit = nil
+		return m.apply(d, text), nil
+	case "backspace":
+		if r := []rune(m.setEdit.text); len(r) > 0 {
+			m.setEdit.text = string(r[:len(r)-1])
+		}
+	case "ctrl+u":
+		m.setEdit.text = ""
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		if msg.Text != "" {
+			m.setEdit.text += clean(msg.Text)
+		}
+	}
+	return m, nil
+}
+
+// updateSettingFind handles keys while typing into the settings filter.
+func (m Model) updateSettingFind(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.setFind, m.setQ = false, ""
+	case "enter", "down":
+		m.setFind = false
+	case "backspace":
+		if r := []rune(m.setQ); len(r) > 0 {
+			m.setQ = string(r[:len(r)-1])
+		}
+	case "ctrl+u":
+		m.setQ = ""
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		if msg.Text != "" {
+			m.setQ += clean(msg.Text)
+		}
+	}
+	return m.keepSettingVisible(), nil
+}
+
+// updateSettingNav handles list movement and the keys that act on the selected setting.
+func (m Model) updateSettingNav(msg tea.KeyPressMsg, d settingDef) (tea.Model, tea.Cmd) {
 	vis := m.settingIdxs()
 	pos := slices.Index(vis, m.setSel)
 	switch msg.String() {
@@ -299,42 +312,14 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.setFind = true
 	case "q", "ctrl+c":
 		return m, tea.Quit
-	case "j", "down":
-		if pos+1 < len(vis) {
-			m.setSel = vis[pos+1]
-		}
-	case "k", "up":
-		if pos > 0 {
-			m.setSel = vis[pos-1]
-		}
-	case "g", "home":
-		if len(vis) > 0 {
-			m.setSel = vis[0]
-		}
-	case "G", "end":
-		if len(vis) > 0 {
-			m.setSel = vis[len(vis)-1]
-		}
+	case "j", "down", "k", "up", "g", "home", "G", "end":
+		m.setSel = moveSetting(msg.String(), vis, pos, m.setSel)
 	case "right", "l", " ", "space":
 		m = m.step(d, 1)
-		if d.kind == "text" && msg.String() != " " && msg.String() != "space" {
-			break
-		}
 	case "left", "h":
 		m = m.step(d, -1)
 	case "enter":
-		if d.kind == "action" {
-			return m.clearCache()
-		}
-		if d.kind == "snippets" && m.deps.EditTemplate != nil {
-			cmd, err := m.deps.EditTemplate(m.snippetLang())
-			return m.afterOpen(cmd, err, "template")
-		}
-		if d.kind == "text" {
-			m.setEdit = &settingEdit{text: m.setting(d.key)}
-		} else {
-			m = m.step(d, 1)
-		}
+		return m.settingEnter(d)
 	case "L":
 		if d.key == "submit_mode" && m.deps.SaveCreds != nil {
 			m.setEdit, m.setNote = &settingEdit{cred: 1}, "paste your browser session (see docs/submit.md); esc cancels"
@@ -346,6 +331,44 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// moveSetting returns the new selection for a movement key; vis is the visible list, pos the selection's index in it.
+func moveSetting(key string, vis []int, pos, sel int) int {
+	switch key {
+	case "j", "down":
+		if pos+1 < len(vis) {
+			return vis[pos+1]
+		}
+	case "k", "up":
+		if pos > 0 {
+			return vis[pos-1]
+		}
+	case "g", "home":
+		if len(vis) > 0 {
+			return vis[0]
+		}
+	case "G", "end":
+		if len(vis) > 0 {
+			return vis[len(vis)-1]
+		}
+	}
+	return sel
+}
+
+// settingEnter acts on the selected setting: run, edit, open or step.
+func (m Model) settingEnter(d settingDef) (tea.Model, tea.Cmd) {
+	switch {
+	case d.kind == "action":
+		return m.clearCache()
+	case d.kind == "snippets" && m.deps.EditTemplate != nil:
+		cmd, err := m.deps.EditTemplate(m.snippetLang())
+		return m.afterOpen(cmd, err, "template")
+	case d.kind == "text":
+		m.setEdit = &settingEdit{text: m.setting(d.key)}
+		return m, nil
+	}
+	return m.step(d, 1), nil
 }
 
 const clearConfirm = "press enter again to clear the cache"
@@ -457,9 +480,9 @@ func (m Model) settingLines(w int) []settingLine {
 	st := m.styles()
 	var out []settingLine
 	group := ""
-	shown := m.settingIdxs()
+	visible := m.settingIdxs()
 	for i, d := range settingDefs {
-		if !slices.Contains(shown, i) {
+		if !slices.Contains(visible, i) {
 			continue
 		}
 		if d.group != group {
@@ -469,37 +492,9 @@ func (m Model) settingLines(w int) []settingLine {
 			}
 			out = append(out, settingLine{st.Accent2.Render(strings.ToUpper(group)), -1})
 		}
-		val := m.setting(d.key)
-		var shown string
-		switch d.kind {
-		case "keys":
-			shown = st.Dim.Render(fmt.Sprintf("enter to edit (%d changed)", len(m.km.user)))
-		case "snippets":
-			shown = st.Dim.Render("‹ ") + st.Accent.Render(m.snippetLang()) + st.Dim.Render(" ›  enter to edit")
-		case "action":
-			shown = st.Dim.Render("enter to run")
-		case "enum":
-			shown = st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
-		case "bool":
-			if val == "true" {
-				shown = st.Good.Render("● on")
-			} else {
-				shown = st.Dim.Render("○ off")
-			}
-		default:
-			shown = val
-			if m.setEdit != nil && i == m.setSel {
-				shown = m.setEdit.text + st.Accent.Render("▏")
-			} else if val == "" {
-				shown = st.Dim.Render("(not set)")
-			}
-		}
+		shown := m.settingValue(d, i, m.setting(d.key), st)
 		if e := m.setEdit; e != nil && e.cred > 0 && i == m.setSel {
-			if e.cred == 1 {
-				shown = st.Accent.Render("cookie ") + strings.Repeat("•", min(len([]rune(e.text)), 24)) + st.Accent.Render("▏")
-			} else {
-				shown = st.Accent.Render("user-agent ") + e.text + st.Accent.Render("▏")
-			}
+			shown = credValue(e, st)
 		}
 		label := fit(d.label, 18)
 		note := ""
@@ -511,6 +506,40 @@ func (m Model) settingLines(w int) []settingLine {
 	return out
 }
 
+// settingValue renders the value column of a setting row; val is its current value.
+func (m Model) settingValue(d settingDef, i int, val string, st theme.Styles) string {
+	switch d.kind {
+	case "keys":
+		return st.Dim.Render(fmt.Sprintf("enter to edit (%d changed)", len(m.km.user)))
+	case "snippets":
+		return st.Dim.Render("‹ ") + st.Accent.Render(m.snippetLang()) + st.Dim.Render(" ›  enter to edit")
+	case "action":
+		return st.Dim.Render("enter to run")
+	case "enum":
+		return st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
+	case "bool":
+		if val == "true" {
+			return st.Good.Render("● on")
+		}
+		return st.Dim.Render("○ off")
+	}
+	if m.setEdit != nil && i == m.setSel {
+		return m.setEdit.text + st.Accent.Render("▏")
+	}
+	if val == "" {
+		return st.Dim.Render("(not set)")
+	}
+	return val
+}
+
+// credValue renders the value column while a cookie or user-agent is being pasted.
+func credValue(e *settingEdit, st theme.Styles) string {
+	if e.cred == 1 {
+		return st.Accent.Render("cookie ") + strings.Repeat("•", min(len([]rune(e.text)), 24)) + st.Accent.Render("▏")
+	}
+	return st.Accent.Render("user-agent ") + e.text + st.Accent.Render("▏")
+}
+
 func (m Model) viewSettings(b *strings.Builder) string {
 	st := m.styles()
 	h := m.paneHeight()
@@ -518,7 +547,27 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	lw := min(max(46, w*3/5), w-30)
 	rw := w - lw - 1
 	lines := m.settingLines(lw - 4)
-	inner := h - 2
+	body := m.settingRows(lines, lw-4, h-2, st)
+	title := "Settings"
+	if m.setQ != "" || m.setFind {
+		title += "  / " + m.setQ
+		if m.setFind {
+			title += "▏"
+		}
+		if len(lines) == 0 {
+			body = append(body, st.Dim.Render(" no setting matches"))
+		}
+	}
+	left := box(title, body, "", lw, h, true, st, m.borderStyle())
+	right := box("About", m.settingInfo(settingDefs[m.setSel], rw, st), "", rw, h, false, st, m.borderStyle())
+	for _, l := range joinCols(left, lw, right, " ") {
+		b.WriteString(l + "\n")
+	}
+	return "{settings.down}/{settings.up} move  {settings.prev_value}/{settings.next_value} change  {settings.edit} edit  {settings.login} paste login (submit mode)  {settings.edit_config} open config.toml  {common.help} help  {settings.quit} quit"
+}
+
+// settingRows renders the inner-tall window of lines that holds the selection.
+func (m Model) settingRows(lines []settingLine, w, inner int, st theme.Styles) []string {
 	// keep the selected row in view
 	selAt := 0
 	for i, l := range lines {
@@ -531,24 +580,16 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	for i := start; i < min(len(lines), start+inner); i++ {
 		l := lines[i]
 		if l.idx == m.setSel {
-			body = append(body, paintRow(" "+l.text, lw-4, st.Selected))
+			body = append(body, paintRow(" "+l.text, w, st.Selected))
 		} else {
 			body = append(body, " "+l.text)
 		}
 	}
-	title := "Settings"
-	if m.setQ != "" || m.setFind {
-		title += "  / " + m.setQ
-		if m.setFind {
-			title += "▏"
-		}
-		if len(lines) == 0 {
-			body = append(body, st.Dim.Render(" no setting matches"))
-		}
-	}
-	left := box(title, body, "", lw, h, true, st, m.borderStyle())
+	return body
+}
 
-	d := settingDefs[m.setSel]
+// settingInfo fills the About panel for the selected setting.
+func (m Model) settingInfo(d settingDef, rw int, st theme.Styles) []string {
 	var info []string
 	info = append(info, st.Accent.Render(d.label), "")
 	info = append(info, wrap(m.kx(d.desc), rw-4)...)
@@ -558,22 +599,7 @@ func (m Model) viewSettings(b *strings.Builder) string {
 	} else {
 		info = append(info, st.Warn.Render("applies the next time verd starts"))
 	}
-	switch d.kind {
-	case "keys":
-		info = append(info, st.Dim.Render("enter opens the editor"))
-	case "snippets":
-		info = append(info, st.Dim.Render("←/→ language · enter edits its Template"), "", st.Accent2.Render("VARIABLES"))
-		for _, v := range snippetVars {
-			info = append(info, "  "+st.Accent.Render(v[0]), "    "+st.Dim.Render(v[1]))
-		}
-		info = append(info, "", st.Dim.Render("Go text/template: {{if eq .Handle \"x\"}}…{{end}} works too"))
-	case "action":
-		info = append(info, st.Dim.Render("enter, then enter again to confirm"))
-	case "enum", "bool":
-		info = append(info, st.Dim.Render("←/→ or space change · saved on change"))
-	default:
-		info = append(info, st.Dim.Render("enter edits · enter saves · esc cancels"))
-	}
+	info = append(info, settingKindHelp(d.kind, st)...)
 	if d.key == "theme" {
 		info = append(info, "", st.Accent2.Render("THEMES"))
 		info = append(info, m.themeGallery(rw-4)...)
@@ -591,11 +617,26 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			info = append(info, "  "+clean(l))
 		}
 	}
-	right := box("About", info, "", rw, h, false, st, m.borderStyle())
-	for _, l := range joinCols(left, lw, right, " ") {
-		b.WriteString(l + "\n")
+	return info
+}
+
+// settingKindHelp is the hint lines shown under the description, by setting kind.
+func settingKindHelp(kind string, st theme.Styles) []string {
+	switch kind {
+	case "keys":
+		return []string{st.Dim.Render("enter opens the editor")}
+	case "snippets":
+		out := []string{st.Dim.Render("←/→ language · enter edits its Template"), "", st.Accent2.Render("VARIABLES")}
+		for _, v := range snippetVars {
+			out = append(out, "  "+st.Accent.Render(v[0]), "    "+st.Dim.Render(v[1]))
+		}
+		return append(out, "", st.Dim.Render("Go text/template: {{if eq .Handle \"x\"}}…{{end}} works too"))
+	case "action":
+		return []string{st.Dim.Render("enter, then enter again to confirm")}
+	case "enum", "bool":
+		return []string{st.Dim.Render("←/→ or space change · saved on change")}
 	}
-	return "{settings.down}/{settings.up} move  {settings.prev_value}/{settings.next_value} change  {settings.edit} edit  {settings.login} paste login (submit mode)  {settings.edit_config} open config.toml  {common.help} help  {settings.quit} quit"
+	return []string{st.Dim.Render("enter edits · enter saves · esc cancels")}
 }
 
 // themeGallery lists every theme with its palette swatch, the current one marked.

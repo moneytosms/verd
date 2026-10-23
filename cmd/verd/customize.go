@@ -58,6 +58,46 @@ func configSub(out io.Writer, path string, args []string) (bool, error) {
 // keysCmd handles `verd keys [list|set|reset|check|presets|export|import|markdown] [--json] [--write <file>]`.
 func keysCmd(out io.Writer, path string, args []string) error {
 	asJSON := slices.Contains(args, "--json")
+	writeFile := writeFlagValue(args)
+	args = dropKeysFlags(args)
+	sub := "list"
+	if len(args) > 0 {
+		sub = args[0]
+	}
+	// Handle preset commands (may need stdin)
+	switch sub {
+	case "presets": // verd keys presets [list|preset <name>|export|import]
+		return presetsCmd(out, path, os.Stdin, args[1:])
+	case "preset", "export", "import": // shorthand: verd keys preset vim
+		return presetsCmd(out, path, os.Stdin, args)
+	case "markdown":
+		return keysMarkdown(out, writeFile)
+	}
+	// Rest of keys commands
+	user, err := loadBindings(path)
+	if err != nil {
+		return err
+	}
+	switch sub {
+	case "list":
+		return listKeys(out, user, asJSON)
+	case "contexts":
+		for _, c := range tui.KeyContexts() {
+			fmt.Fprintf(out, "%-11s %s\n", c[0], c[1])
+		}
+		return nil
+	case "check":
+		fmt.Fprintf(out, "ok: %d custom shortcuts, no conflicts\n", len(user))
+		return nil
+	case "set", "reset":
+		return setKeyBinding(out, path, user, sub, args)
+	default:
+		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset, presets, export, import, markdown)", sub)
+	}
+}
+
+// writeFlagValue returns the file after --write, or "" when there is none.
+func writeFlagValue(args []string) string {
 	writeFile := ""
 	skipNext := false
 	for idx, a := range args {
@@ -70,126 +110,105 @@ func keysCmd(out io.Writer, path string, args []string) error {
 			skipNext = true
 		}
 	}
-	// Remove --json, --write, and --write targets from args
+	return writeFile
+}
+
+// dropKeysFlags removes --json, --write and the --write target from args.
+func dropKeysFlags(args []string) []string {
 	var cleaned []string
-	skipNext = false
+	skipNext := false
 	for _, a := range args {
 		if skipNext {
 			skipNext = false
 			continue
 		}
-		if a == "--json" || a == "--write" {
-			if a == "--write" {
-				skipNext = true
-			}
+		switch a {
+		case "--write":
+			skipNext = true
+			continue
+		case "--json":
 			continue
 		}
 		cleaned = append(cleaned, a)
 	}
-	args = cleaned
-	sub := "list"
-	if len(args) > 0 {
-		sub = args[0]
-	}
-	// Handle preset commands (may need stdin)
-	switch sub {
-	case "presets": // verd keys presets [list|preset <name>|export|import]
-		return presetsCmd(out, path, os.Stdin, args[1:])
-	case "preset", "export", "import": // shorthand: verd keys preset vim
-		return presetsCmd(out, path, os.Stdin, args)
-	}
-	// Handle markdown
-	if sub == "markdown" {
-		md := tui.KeyTableMarkdown()
-		if writeFile != "" {
-			if err := updateKeysMarkdown(writeFile, md); err != nil {
-				return err
-			}
-			fmt.Fprintf(out, "Updated %s\n", writeFile)
-		} else {
-			fmt.Fprint(out, md)
-		}
+	return cleaned
+}
+
+// keysMarkdown prints the key table, or writes it between the markers of writeFile.
+func keysMarkdown(out io.Writer, writeFile string) error {
+	md := tui.KeyTableMarkdown()
+	if writeFile == "" {
+		fmt.Fprint(out, md)
 		return nil
 	}
-	// Rest of keys commands
-	cfg, err := loadConfig(path)
-	if err != nil {
+	if err := updateKeysMarkdown(writeFile, md); err != nil {
 		return err
 	}
-	user, err := cfg.KeyBindings()
-	if err != nil {
+	fmt.Fprintf(out, "Updated %s\n", writeFile)
+	return nil
+}
+
+// listKeys prints every action with its current keys; changed ones are marked with *.
+func listKeys(out io.Writer, user map[string][]string, asJSON bool) error {
+	infos := tui.KeyActions(user)
+	if asJSON {
+		type row struct {
+			Context  string   `json:"context"`
+			Action   string   `json:"action"`
+			Desc     string   `json:"description"`
+			Default  []string `json:"default"`
+			Current  []string `json:"keys"`
+			Modified bool     `json:"modified"`
+		}
+		rows := make([]row, len(infos))
+		for i, k := range infos {
+			rows[i] = row{k.Context, k.Action, k.Desc, k.Default, k.Current, !slices.Equal(k.Default, k.Current)}
+		}
+		b, _ := json.MarshalIndent(rows, "", "  ")
+		fmt.Fprintln(out, string(b))
+		return nil
+	}
+	for _, k := range infos {
+		mark := " "
+		if !slices.Equal(k.Default, k.Current) {
+			mark = "*"
+		}
+		fmt.Fprintf(out, "%s %-28s %-24s %s\n", mark, k.Context+"."+k.Action, strings.Join(k.Current, " "), k.Desc)
+	}
+	fmt.Fprintln(out, "\n* = changed. Set: verd keys set <context.action> <key>...   Reset: verd keys reset <context.action>")
+	return nil
+}
+
+// setKeyBinding handles `verd keys set <context.action> <key>...` and `verd keys reset <context.action>`.
+func setKeyBinding(out io.Writer, path string, user map[string][]string, sub string, args []string) error {
+	if sub == "reset" && len(args) != 2 || sub == "set" && len(args) < 3 {
+		return fmt.Errorf("usage: verd keys set <context.action> <key>...  |  verd keys reset <context.action>")
+	}
+	ctx, action, ok := strings.Cut(args[1], ".")
+	if !ok {
+		return fmt.Errorf("%q: want context.action (verd keys)", args[1])
+	}
+	keys := args[2:]
+	next := map[string][]string{}
+	for k, v := range user {
+		next[k] = v
+	}
+	if sub == "reset" {
+		delete(next, args[1])
+		keys = nil
+	} else {
+		next[args[1]] = keys
+	}
+	if err := tui.CheckKeys(next); err != nil { // unknown action, bad key or conflict: nothing is written
 		return err
 	}
-	switch sub {
-	case "list":
-		infos := tui.KeyActions(user)
-		if asJSON {
-			type row struct {
-				Context  string   `json:"context"`
-				Action   string   `json:"action"`
-				Desc     string   `json:"description"`
-				Default  []string `json:"default"`
-				Current  []string `json:"keys"`
-				Modified bool     `json:"modified"`
-			}
-			rows := make([]row, len(infos))
-			for i, k := range infos {
-				rows[i] = row{k.Context, k.Action, k.Desc, k.Default, k.Current, !slices.Equal(k.Default, k.Current)}
-			}
-			b, _ := json.MarshalIndent(rows, "", "  ")
-			fmt.Fprintln(out, string(b))
-			return nil
-		}
-		for _, k := range infos {
-			mark := " "
-			if !slices.Equal(k.Default, k.Current) {
-				mark = "*"
-			}
-			fmt.Fprintf(out, "%s %-28s %-24s %s\n", mark, k.Context+"."+k.Action, strings.Join(k.Current, " "), k.Desc)
-		}
-		fmt.Fprintln(out, "\n* = changed. Set: verd keys set <context.action> <key>...   Reset: verd keys reset <context.action>")
-	case "contexts":
-		for _, c := range tui.KeyContexts() {
-			fmt.Fprintf(out, "%-11s %s\n", c[0], c[1])
-		}
-	case "check":
-		fmt.Fprintf(out, "ok: %d custom shortcuts, no conflicts\n", len(user))
-	case "set", "reset":
-		need := 3
-		if sub == "reset" {
-			need = 2
-		}
-		if len(args) < need || (sub == "reset" && len(args) != 2) {
-			return fmt.Errorf("usage: verd keys set <context.action> <key>...  |  verd keys reset <context.action>")
-		}
-		ctx, action, ok := strings.Cut(args[1], ".")
-		if !ok {
-			return fmt.Errorf("%q: want context.action (verd keys)", args[1])
-		}
-		keys := args[2:]
-		next := map[string][]string{}
-		for k, v := range user {
-			next[k] = v
-		}
-		if sub == "reset" {
-			delete(next, args[1])
-			keys = nil
-		} else {
-			next[args[1]] = keys
-		}
-		if err := tui.CheckKeys(next); err != nil { // unknown action, bad key or conflict: nothing is written
-			return err
-		}
-		if err := config.SetKeys(path, ctx, action, keys); err != nil {
-			return err
-		}
-		if sub == "reset" {
-			fmt.Fprintln(out, "reset", args[1])
-		} else {
-			fmt.Fprintf(out, "%s = %s\n", args[1], strings.Join(keys, ", "))
-		}
-	default:
-		return fmt.Errorf("unknown keys command %q (list, contexts, check, set, reset, presets, export, import, markdown)", sub)
+	if err := config.SetKeys(path, ctx, action, keys); err != nil {
+		return err
+	}
+	if sub == "reset" {
+		fmt.Fprintln(out, "reset", args[1])
+	} else {
+		fmt.Fprintf(out, "%s = %s\n", args[1], strings.Join(keys, ", "))
 	}
 	return nil
 }

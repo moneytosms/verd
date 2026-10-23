@@ -47,32 +47,37 @@ func searchScore(query, mode string, p cf.Problem) (int, bool) {
 	id := p.Code()
 	total := 0
 	for _, w := range strings.Fields(query) {
-		field := w
-		wmode := mode
-		if strings.HasPrefix(w, "#") && len(w) > 1 { // "#dp" always searches tags
-			field, wmode = w[1:], "tag"
-		}
-		best, ok := 0, false
-		try := func(target string, bonus int) {
-			if s, hit := fuzzyScore(field, target); hit && (!ok || s+bonus > best) {
-				best, ok = s+bonus, true
-			}
-		}
-		if wmode == "all" || wmode == "id" {
-			try(id, 10)
-		}
-		if wmode == "all" || wmode == "name" {
-			try(p.Name, 0)
-		}
-		if wmode == "all" || wmode == "tag" {
-			for _, t := range p.Tags {
-				try(t, -2)
-			}
-		}
+		best, ok := wordScore(w, mode, id, p)
 		if !ok {
 			return 0, false
 		}
 		total += best
 	}
 	return total, true
+}
+
+// wordScore is the best score of one query word against the fields of p that mode selects.
+func wordScore(w, mode, id string, p cf.Problem) (int, bool) {
+	field := w
+	if strings.HasPrefix(w, "#") && len(w) > 1 { // "#dp" always searches tags
+		field, mode = w[1:], "tag"
+	}
+	best, ok := 0, false
+	try := func(target string, bonus int) {
+		if s, hit := fuzzyScore(field, target); hit && (!ok || s+bonus > best) {
+			best, ok = s+bonus, true
+		}
+	}
+	if mode == "all" || mode == "id" {
+		try(id, 10)
+	}
+	if mode == "all" || mode == "name" {
+		try(p.Name, 0)
+	}
+	if mode == "all" || mode == "tag" {
+		for _, t := range p.Tags {
+			try(t, -2)
+		}
+	}
+	return best, ok
 }

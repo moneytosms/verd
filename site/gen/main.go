@@ -234,15 +234,7 @@ func fixLink(h, section string) string {
 	case h == "", strings.Contains(h, "://"), strings.HasPrefix(h, "mailto:"):
 		return h
 	case section == "guide" && strings.HasSuffix(h, ".md"):
-		base := strings.TrimSuffix(filepath.Base(h), ".md")
-		switch {
-		case strings.HasPrefix(h, "../"): // docs/guide/x.md -> docs/<base>.md; install and usage are site pages
-			if base == "install" || base == "usage" {
-				return "../" + base + ".html"
-			}
-			return "../docs/" + base + ".html"
-		}
-		return base + ".html" // ./other-chapter.md
+		return guideLink(h)
 	case strings.HasSuffix(h, ".md") && (strings.HasPrefix(h, "./guide/") || strings.HasPrefix(h, "guide/")):
 		return "../guide/" + strings.TrimSuffix(filepath.Base(h), ".md") + ".html"
 	case strings.HasPrefix(h, "./adr"), strings.HasPrefix(h, "adr/"), strings.HasPrefix(h, "./docs/adr"):
@@ -255,6 +247,19 @@ func fixLink(h, section string) string {
 		return repo + "/blob/main/" + strings.TrimLeft(strings.TrimPrefix(strings.TrimPrefix(h, "../"), "./"), "/")
 	}
 	return h
+}
+
+// guideLink maps a .md link inside a guide chapter to the page it became.
+func guideLink(h string) string {
+	base := strings.TrimSuffix(filepath.Base(h), ".md")
+	if !strings.HasPrefix(h, "../") {
+		return base + ".html" // ./other-chapter.md
+	}
+	// docs/guide/x.md -> docs/<base>.md; install and usage are site pages
+	if base == "install" || base == "usage" {
+		return "../" + base + ".html"
+	}
+	return "../docs/" + base + ".html"
 }
 
 func decorate(p *page, root, on string) {

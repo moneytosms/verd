@@ -33,7 +33,7 @@ func snippetCmd(out io.Writer, cfg config.Config, args []string) error {
 	list := fs.Bool("list", false, "list snippets")
 	cp := fs.Bool("copy", false, "copy to the clipboard instead of printing")
 	export := fs.Bool("export", false, "print the library as VSCode-style JSON")
-	if err := fs.Parse(args); err != nil || (!*list && !*export && fs.NArg() != 1) || ((*list || *export) && fs.NArg() != 0) {
+	if err := fs.Parse(args); err != nil || !snippetArgsOK(fs, *list || *export) {
 		return &exitError{2, "usage: verd snippet [--lang L] --list | --export | [--copy] <name> | add|edit|rm|open|path (see verd help)"}
 	}
 	l, err := langOf(cfg, *lang)
@@ -41,10 +41,10 @@ func snippetCmd(out io.Writer, cfg config.Config, args []string) error {
 		return &exitError{2, err.Error()}
 	}
 	dir := cfg.SnippetsPath()
-	if *export {
+	switch {
+	case *export:
 		return exportSnippets(out, workspace.ListSnippets(dir, *lang, l))
-	}
-	if *list {
+	case *list:
 		for _, s := range workspace.ListSnippets(dir, *lang, l) {
 			fmt.Fprintf(out, "%-18s %s\n", s.Name, s.Desc)
 		}
@@ -63,6 +63,14 @@ func snippetCmd(out io.Writer, cfg config.Config, args []string) error {
 	}
 	fmt.Fprintf(out, "copied %s (%s)\n", s.Name, *lang)
 	return nil
+}
+
+// snippetArgsOK: --list and --export take no name, a snippet takes exactly one.
+func snippetArgsOK(fs *flag.FlagSet, listing bool) bool {
+	if listing {
+		return fs.NArg() == 0
+	}
+	return fs.NArg() == 1
 }
 
 // copyText puts text on the clipboard with the platform tool, falling back to OSC 52.
@@ -132,64 +140,73 @@ func snippetManage(out io.Writer, cfg config.Config, sub string, args []string) 
 		fmt.Fprintln(out, dir)
 		return nil
 	case "open":
-		if _, err := workspace.InitSnippets(dir, cfg.Lang, false); err != nil {
-			return err
-		}
-		return runEditor(cfg, workspace.LibraryRoot(dir), "")
+		return openLibrary(cfg, dir)
 	}
 	name := fs.Arg(0)
 	if !snippetName.MatchString(name) {
 		return &exitError{2, "snippet name may only contain letters, digits, _ and -"}
 	}
-	path := workspace.SnippetPath(dir, *lang, l, name)
 	switch sub {
 	case "rm":
-		if err := workspace.RemoveSnippet(dir, *lang, l, name); err != nil {
-			return &exitError{2, "no user snippet " + name + " for " + *lang + " (built-ins cannot be removed, override them with edit)"}
-		}
-		fmt.Fprintln(out, "removed", path)
-		return nil
+		return removeSnippet(out, dir, *lang, l, name)
 	case "edit":
-		s, err := workspace.FindSnippet(dir, *lang, l, name)
-		if err != nil {
-			return &exitError{2, err.Error()}
-		}
-		path = workspace.SnippetPath(dir, *lang, l, s.Name)
-		if _, err := os.Stat(path); err != nil { // built-in: write an editable copy first
-			if err := writeSnippet(path, s.Code); err != nil {
-				return err
-			}
-		}
-		return runEditor(cfg, path, path)
+		return editSnippet(cfg, dir, *lang, l, name)
 	}
-	// add
-	for _, e := range workspace.ListSnippets(dir, *lang, l) {
-		if e.Name == name && !*force {
-			return &exitError{2, name + " already exists for " + *lang + ": use `verd snippet edit " + name + "` or --force"}
+	return addSnippet(out, cfg, dir, *lang, l, name, *desc, *force, fs.Arg(1))
+}
+
+// openLibrary opens the snippet library folder in the editor.
+func openLibrary(cfg config.Config, dir string) error {
+	if _, err := workspace.InitSnippets(dir, cfg.Lang, false); err != nil {
+		return err
+	}
+	return runEditor(cfg, workspace.LibraryRoot(dir), "")
+}
+
+// removeSnippet deletes a user snippet; built-ins cannot be removed.
+func removeSnippet(out io.Writer, dir, lang string, l config.Lang, name string) error {
+	if err := workspace.RemoveSnippet(dir, lang, l, name); err != nil {
+		return &exitError{2, "no user snippet " + name + " for " + lang + " (built-ins cannot be removed, override them with edit)"}
+	}
+	fmt.Fprintln(out, "removed", workspace.SnippetPath(dir, lang, l, name))
+	return nil
+}
+
+// editSnippet opens a snippet in the editor, writing an editable copy first if it is a built-in.
+func editSnippet(cfg config.Config, dir, lang string, l config.Lang, name string) error {
+	s, err := workspace.FindSnippet(dir, lang, l, name)
+	if err != nil {
+		return &exitError{2, err.Error()}
+	}
+	path := workspace.SnippetPath(dir, lang, l, s.Name)
+	if _, err := os.Stat(path); err != nil { // built-in: write an editable copy first
+		if err := writeSnippet(path, s.Code); err != nil {
+			return err
 		}
 	}
-	var code string
-	switch src := fs.Arg(1); src {
-	case "":
-		if *desc == "" {
-			*desc = "describe " + name
+	return runEditor(cfg, path, path)
+}
+
+// addSnippet adds a snippet from src ("" opens a template in the editor, "-" reads stdin, else a file).
+func addSnippet(out io.Writer, cfg config.Config, dir, lang string, l config.Lang, name, desc string, force bool, src string) error {
+	path := workspace.SnippetPath(dir, lang, l, name)
+	for _, e := range workspace.ListSnippets(dir, lang, l) {
+		if e.Name == name && !force {
+			return &exitError{2, name + " already exists for " + lang + ": use `verd snippet edit " + name + "` or --force"}
 		}
-		if err := writeSnippet(path, workspace.WithDescription("", name, *desc, l)); err != nil {
+	}
+	if src == "" {
+		if desc == "" {
+			desc = "describe " + name
+		}
+		if err := writeSnippet(path, workspace.WithDescription("", name, desc, l)); err != nil {
 			return err
 		}
 		return runEditor(cfg, path, path)
-	case "-":
-		b, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
-		}
-		code = string(b)
-	default:
-		b, err := os.ReadFile(src)
-		if err != nil {
-			return &exitError{2, err.Error()}
-		}
-		code = string(b)
+	}
+	code, err := readSnippetSource(src)
+	if err != nil {
+		return err
 	}
 	if strings.TrimSpace(code) == "" {
 		return &exitError{2, "nothing to add: the snippet is empty"}
@@ -197,11 +214,27 @@ func snippetManage(out io.Writer, cfg config.Config, sub string, args []string) 
 	if !strings.HasSuffix(code, "\n") {
 		code += "\n"
 	}
-	if err := writeSnippet(path, workspace.WithDescription(code, name, *desc, l)); err != nil {
+	if err := writeSnippet(path, workspace.WithDescription(code, name, desc, l)); err != nil {
 		return err
 	}
 	fmt.Fprintln(out, "added", path)
 	return nil
+}
+
+// readSnippetSource reads a snippet body from stdin ("-") or a file.
+func readSnippetSource(src string) (string, error) {
+	if src == "-" {
+		b, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+	b, err := os.ReadFile(src)
+	if err != nil {
+		return "", &exitError{2, err.Error()}
+	}
+	return string(b), nil
 }
 
 func writeSnippet(path, code string) error {

@@ -273,26 +273,12 @@ func Load(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, now t
 		}
 	}
 	if !ok {
-		res.Status = None
-		for _, m := range ms {
-			if m.Kind == Tutorial && m.Locale == "ru" {
-				res.Status = NotEnglish
-			}
-		}
+		res.Status = noTutorialStatus(ms)
 		return res, nil
 	}
-	b, err := s.Blog(pick.BlogID)
+	b, err := blog(ctx, s, c, pick.BlogID, now)
 	if err != nil {
 		return nil, err
-	}
-	if b == nil {
-		if b, err = c.BlogEntry(ctx, pick.BlogID); err != nil {
-			return nil, err
-		}
-		b.ID = pick.BlogID
-		if err := s.SaveBlog(b, now); err != nil {
-			return nil, err
-		}
 	}
 	if b.Locale == "ru" {
 		res.Status = NotEnglish
@@ -301,6 +287,29 @@ func Load(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, now t
 	res.Status, res.URL, res.Title = OK, pick.URL, titleText(b.Title)
 	res.Blocks, res.Whole, err = Sections(b.Content, p.ContestID, p.Index)
 	return res, err
+}
+
+// noTutorialStatus is None, or NotEnglish when a Russian tutorial is listed.
+func noTutorialStatus(ms []Material) Status {
+	for _, m := range ms {
+		if m.Kind == Tutorial && m.Locale == "ru" {
+			return NotEnglish
+		}
+	}
+	return None
+}
+
+// blog returns the cached blog entry, fetching and caching it on a miss.
+func blog(ctx context.Context, s *store.Store, c *cf.Client, id int, now time.Time) (*cf.BlogEntry, error) {
+	b, err := s.Blog(id)
+	if err != nil || b != nil {
+		return b, err
+	}
+	if b, err = c.BlogEntry(ctx, id); err != nil {
+		return nil, err
+	}
+	b.ID = id
+	return b, s.SaveBlog(b, now)
 }
 
 func materials(ctx context.Context, s *store.Store, c *cf.Client, p cf.Problem, now time.Time) ([]Material, error) {

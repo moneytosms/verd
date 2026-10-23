@@ -11,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moneytosms/verd/internal/runner"
+	"github.com/moneytosms/verd/internal/theme"
 )
 
 // testRun is the state of the latest Test Run for the open Problem.
@@ -288,36 +289,12 @@ func (m Model) testsPanel() []string {
 	case r.overall != "":
 		head += "  " + m.verdictStyle(r.overall)
 	}
-	lines := []string{st.Accent.Render(head)}
-	if r.compile != "" {
-		for i, l := range strings.Split(strings.TrimRight(r.compile, "\n"), "\n") {
-			if i == 0 && (r.compile == "compiling..." || strings.HasPrefix(r.compile, "ok")) {
-				lines = append(lines, "  compile: "+r.compile)
-				break
-			}
-			if i == 0 {
-				lines = append(lines, "  compile: "+m.verdictStyle("CE"))
-			}
-			lines = append(lines, "    "+clean(l))
-		}
-	}
+	lines := append([]string{st.Accent.Render(head)}, m.testCompileLines(r.compile)...)
 	var maxMS int
 	var maxMB float64
 	passed := 0
 	for i, res := range r.results {
-		cur := "  "
-		if i == m.tsel {
-			cur = st.Accent.Render("> ")
-		}
-		line := fmt.Sprintf("%s%s%-10s %s %6d ms %7.1f MB", cur, m.markCol(res.Name), res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
-		if res.Mismatch != nil {
-			line += fmt.Sprintf("  line %d col %d: want %q got %q", res.Mismatch.Line, res.Mismatch.Col, clean(clip(res.Mismatch.Want, 20)), clean(clip(res.Mismatch.Got, 20)))
-		} else if d := res.Detail(); d != "" {
-			line += "  " + clean(d)
-		} else if res.Note != "" {
-			line += "  " + clean(res.Note)
-		}
-		lines = append(lines, line)
+		lines = append(lines, m.resultLine(st, i, res))
 		maxMS, maxMB = max(maxMS, res.TimeMS), max(maxMB, res.MemoryMB)
 		if res.Verdict == runner.AC {
 			passed++
@@ -327,6 +304,41 @@ func (m Model) testsPanel() []string {
 		lines = append(lines, st.Dim.Render(fmt.Sprintf("  %d/%d AC  max %d ms  max %.1f MB   n/p select  d diff  f full  space mark  R run marked  F rerun failed", passed, len(r.results), maxMS, maxMB)))
 	}
 	return lines
+}
+
+// testCompileLines shows the compile output: one line when it is a status, else its first line tagged CE.
+func (m Model) testCompileLines(compile string) []string {
+	if compile == "" {
+		return nil
+	}
+	var lines []string
+	for i, l := range strings.Split(strings.TrimRight(compile, "\n"), "\n") {
+		if i == 0 && (compile == "compiling..." || strings.HasPrefix(compile, "ok")) {
+			return append(lines, "  compile: "+compile)
+		}
+		if i == 0 {
+			lines = append(lines, "  compile: "+m.verdictStyle("CE"))
+		}
+		lines = append(lines, "    "+clean(l))
+	}
+	return lines
+}
+
+// resultLine is one test row: verdict, time, memory and the mismatch or note when there is one.
+func (m Model) resultLine(st theme.Styles, i int, res runner.Result) string {
+	cur := "  "
+	if i == m.tsel {
+		cur = st.Accent.Render("> ")
+	}
+	line := fmt.Sprintf("%s%s%-10s %s %6d ms %7.1f MB", cur, m.markCol(res.Name), res.Name, m.verdictStyle(res.Verdict), res.TimeMS, res.MemoryMB)
+	if res.Mismatch != nil {
+		line += fmt.Sprintf("  line %d col %d: want %q got %q", res.Mismatch.Line, res.Mismatch.Col, clean(clip(res.Mismatch.Want, 20)), clean(clip(res.Mismatch.Got, 20)))
+	} else if d := res.Detail(); d != "" {
+		line += "  " + clean(d)
+	} else if res.Note != "" {
+		line += "  " + clean(res.Note)
+	}
+	return line
 }
 
 func clip(s string, n int) string {

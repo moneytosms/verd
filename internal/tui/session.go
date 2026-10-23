@@ -102,20 +102,7 @@ func (m Model) liveRow() *cf.StandingRow {
 // sessScore is the score text: the Codeforces standings row for a live session, else the local score.
 func (m Model) sessScore() string {
 	if m.sess.Mode == session.Live && m.standing != nil {
-		r := m.standing.Row
-		switch {
-		case r == nil:
-			return "not in the standings (register on the site)"
-		case m.standing.Contest.Type == "ICPC":
-			solved := 0
-			for _, pr := range r.Results {
-				if pr.Solved() {
-					solved++
-				}
-			}
-			return fmt.Sprintf("rank %d  solved %d  penalty %d", r.Rank, solved, r.Penalty)
-		}
-		return fmt.Sprintf("rank %d  %.0f pts", r.Rank, r.Points)
+		return liveScore(m.standing)
 	}
 	line := fmt.Sprintf("solved %d/%d", m.sessResult.Solved, len(m.sessResult.Rows))
 	if m.sess.Mode != session.Practice {
@@ -124,51 +111,37 @@ func (m Model) sessScore() string {
 	return line
 }
 
+// liveScore is the score text of a live session, from the Codeforces standings.
+func liveScore(s *cf.Standing) string {
+	r := s.Row
+	switch {
+	case r == nil:
+		return "not in the standings (register on the site)"
+	case s.Contest.Type == "ICPC":
+		solved := 0
+		for _, pr := range r.Results {
+			if pr.Solved() {
+				solved++
+			}
+		}
+		return fmt.Sprintf("rank %d  solved %d  penalty %d", r.Rank, solved, r.Penalty)
+	}
+	return fmt.Sprintf("rank %d  %.0f pts", r.Rank, r.Points)
+}
+
 // startSession begins a session after a second press of the same key confirms it. A finished
 // contest is replayed (virtual or practice); one that is running or upcoming is joined live.
 func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 	live := !c.Finished()
-	switch {
-	case m.deps.StartSession == nil:
-		return m, nil
-	case m.sess != nil && m.sess.ContestID == c.ID:
-		m.contestNote = "this contest's session is already running"
-		return m, nil
-	case m.sess != nil:
-		m.contestNote = m.kx(fmt.Sprintf("end the running session first (open contest %d and press {contest.end_session})", m.sess.ContestID))
-		return m, nil
-	case live && mode == session.Practice:
-		m.contestNote = "practice replays a finished contest"
-		return m, nil
-	case live && m.handle == "":
-		m.contestNote = "set your handle first: live results come from the standings"
-		return m, nil
-	case !live && len(m.contestProblems(c)) == 0:
-		m.contestNote = ""
-		nm, cmd := m.fetchContest()
-		m = nm.(Model)
-		if cmd != nil {
-			m.contestNote = "fetching Problems: press the key again once they are listed"
-		}
-		return m, cmd
+	if nm, cmd, refused := m.sessPrecheck(c, mode, live); refused {
+		return nm, cmd
 	}
 	if live {
 		mode = session.Live
 	}
 	if m.sessConfirm != mode {
 		m.sessConfirm = mode
-		var what string
-		switch {
-		case mode == session.Practice:
-			what = "practice with no timer"
-		case !live:
-			what = "a virtual contest of " + clockText(time.Duration(c.Duration)*time.Second)
-		case c.Phase == "BEFORE":
-			what = "waiting for the start (register on the site first)"
-		default:
-			what = "the live contest: results come from the standings every minute (register on the site first)"
-		}
-		m.contestNote = m.kx("ratings and tags will be hidden. Press the same key again to start " + what + ", {contest.close} to cancel")
+		m.contestNote = m.kx("ratings and tags will be hidden. Press the same key again to start " + sessWhat(c, mode, live) + ", {contest.close} to cancel")
 		return m, nil
 	}
 	m.sessConfirm = ""
@@ -184,6 +157,49 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 	m.cm = cmState{rail: m.cm.rail, stats: session.Stats{}}
 	m, cmd := m.cmEnsure()
 	return m, tea.Batch(sessTick(), cmd)
+}
+
+// sessPrecheck refuses a session start that cannot run, with a note saying why. refused is false
+// when the start may go ahead.
+func (m Model) sessPrecheck(c cf.Contest, mode string, live bool) (Model, tea.Cmd, bool) {
+	switch {
+	case m.deps.StartSession == nil:
+		return m, nil, true
+	case m.sess != nil && m.sess.ContestID == c.ID:
+		m.contestNote = "this contest's session is already running"
+		return m, nil, true
+	case m.sess != nil:
+		m.contestNote = m.kx(fmt.Sprintf("end the running session first (open contest %d and press {contest.end_session})", m.sess.ContestID))
+		return m, nil, true
+	case live && mode == session.Practice:
+		m.contestNote = "practice replays a finished contest"
+		return m, nil, true
+	case live && m.handle == "":
+		m.contestNote = "set your handle first: live results come from the standings"
+		return m, nil, true
+	case !live && len(m.contestProblems(c)) == 0:
+		m.contestNote = ""
+		nm, cmd := m.fetchContest()
+		m = nm.(Model)
+		if cmd != nil {
+			m.contestNote = "fetching Problems: press the key again once they are listed"
+		}
+		return m, cmd, true
+	}
+	return m, nil, false
+}
+
+// sessWhat names the session being confirmed, for the confirm note.
+func sessWhat(c cf.Contest, mode string, live bool) string {
+	switch {
+	case mode == session.Practice:
+		return "practice with no timer"
+	case !live:
+		return "a virtual contest of " + clockText(time.Duration(c.Duration)*time.Second)
+	case c.Phase == "BEFORE":
+		return "waiting for the start (register on the site first)"
+	}
+	return "the live contest: results come from the standings every minute (register on the site first)"
 }
 
 // endSession saves the session's report, forgets the session and shows everything again.

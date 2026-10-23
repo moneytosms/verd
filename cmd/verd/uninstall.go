@@ -19,26 +19,14 @@ type uninstallPaths struct {
 	exe, config, data, cache, workspace string
 }
 
+const uninstallUsage = "usage: verd uninstall [--all | --keep | --backup DIR] [--yes]"
+
 // uninstallCmd removes verd. Modes: --all (binary, config, data, cache), --backup DIR (archive config and
 // data into DIR first, then --all), --keep (binary only). With no mode it asks. --yes skips the confirmation.
 func uninstallCmd(out io.Writer, in io.Reader, args []string, p uninstallPaths) error {
-	var mode, backupDir string
-	yes := false
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--all", "--keep":
-			mode = args[i][2:]
-		case "--backup":
-			if i+1 >= len(args) {
-				return &exitError{2, "usage: verd uninstall [--all | --keep | --backup DIR] [--yes]"}
-			}
-			mode, backupDir = "backup", args[i+1]
-			i++
-		case "--yes", "-y":
-			yes = true
-		default:
-			return &exitError{2, "usage: verd uninstall [--all | --keep | --backup DIR] [--yes]"}
-		}
+	mode, backupDir, yes, err := parseUninstallArgs(args)
+	if err != nil {
+		return err
 	}
 	for _, d := range []string{p.config, p.data, p.cache} {
 		if filepath.Base(d) != "verd" {
@@ -47,45 +35,18 @@ func uninstallCmd(out io.Writer, in io.Reader, args []string, p uninstallPaths) 
 	}
 	r := bufio.NewReader(in)
 	if mode == "" {
-		fmt.Fprintf(out, "How should verd be removed?\n  1) everything: binary, config, data, cache\n  2) back up config and data first, then remove everything\n  3) binary only: keep config and data\nChoice [1/2/3]: ")
-		line, _ := r.ReadString('\n')
-		switch strings.TrimSpace(line) {
-		case "1":
-			mode = "all"
-		case "2":
-			mode = "backup"
-			def, _ := os.UserHomeDir()
-			fmt.Fprintf(out, "Backup directory [%s]: ", def)
-			line, _ = r.ReadString('\n')
-			if backupDir = strings.TrimSpace(line); backupDir == "" {
-				backupDir = def
-			}
-		case "3":
-			mode = "keep"
-		default:
-			return &exitError{2, "no choice made; nothing removed (or pass --all, --keep, --backup DIR)"}
+		if mode, backupDir, err = chooseUninstallMode(out, r); err != nil {
+			return err
 		}
 	}
 	remove := []string{p.exe}
 	if mode != "keep" {
 		remove = append(remove, p.config, p.data, p.cache)
 	}
-	fmt.Fprintln(out, "will remove:")
-	for _, d := range remove {
-		fmt.Fprintln(out, "  "+d)
-	}
-	if mode == "backup" {
-		fmt.Fprintf(out, "backup of %s and %s goes to %s first\n", p.config, p.data, backupDir)
-	}
-	if p.workspace != "" {
-		fmt.Fprintln(out, "not touched: your Solutions in", p.workspace)
-	}
-	if !yes {
-		fmt.Fprint(out, "Continue? [y/N]: ")
-		if line, _ := r.ReadString('\n'); !slices.Contains([]string{"y", "yes"}, strings.ToLower(strings.TrimSpace(line))) {
-			fmt.Fprintln(out, "cancelled; nothing removed")
-			return &exitError{1, ""}
-		}
+	printUninstallPlan(out, p, remove, mode, backupDir)
+	if !yes && !confirmUninstall(out, r) {
+		fmt.Fprintln(out, "cancelled; nothing removed")
+		return &exitError{1, ""}
 	}
 	if mode == "backup" {
 		file, err := backup(backupDir, p, time.Now())
@@ -106,6 +67,71 @@ func uninstallCmd(out io.Writer, in io.Reader, args []string, p uninstallPaths) 
 	return nil
 }
 
+// parseUninstallArgs reads the flags: a mode, the backup directory and --yes.
+func parseUninstallArgs(args []string) (mode, backupDir string, yes bool, err error) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--all", "--keep":
+			mode = args[i][2:]
+		case "--backup":
+			if i+1 >= len(args) {
+				return "", "", false, &exitError{2, uninstallUsage}
+			}
+			mode, backupDir = "backup", args[i+1]
+			i++
+		case "--yes", "-y":
+			yes = true
+		default:
+			return "", "", false, &exitError{2, uninstallUsage}
+		}
+	}
+	return mode, backupDir, yes, nil
+}
+
+// chooseUninstallMode asks how to remove verd. Returns the mode and, for backup, the directory.
+func chooseUninstallMode(out io.Writer, r *bufio.Reader) (mode, backupDir string, err error) {
+	fmt.Fprintf(out, "How should verd be removed?\n  1) everything: binary, config, data, cache\n  2) back up config and data first, then remove everything\n  3) binary only: keep config and data\nChoice [1/2/3]: ")
+	line, _ := r.ReadString('\n')
+	switch strings.TrimSpace(line) {
+	case "1":
+		return "all", "", nil
+	case "2":
+		def, _ := os.UserHomeDir()
+		fmt.Fprintf(out, "Backup directory [%s]: ", def)
+		line, _ = r.ReadString('\n')
+		backupDir = strings.TrimSpace(line)
+		if backupDir == "" {
+			backupDir = def
+		}
+		return "backup", backupDir, nil
+	case "3":
+		return "keep", "", nil
+	default:
+		return "", "", &exitError{2, "no choice made; nothing removed (or pass --all, --keep, --backup DIR)"}
+	}
+}
+
+// printUninstallPlan lists what will be removed and what is kept.
+func printUninstallPlan(out io.Writer, p uninstallPaths, remove []string, mode, backupDir string) {
+	fmt.Fprintln(out, "will remove:")
+	for _, d := range remove {
+		fmt.Fprintln(out, "  "+d)
+	}
+	if mode == "backup" {
+		fmt.Fprintf(out, "backup of %s and %s goes to %s first\n", p.config, p.data, backupDir)
+	}
+	if p.workspace != "" {
+		fmt.Fprintln(out, "not touched: your Solutions in", p.workspace)
+	}
+}
+
+// confirmUninstall asks "Continue?" and reports whether the answer is yes.
+func confirmUninstall(out io.Writer, r *bufio.Reader) bool {
+	fmt.Fprint(out, "Continue? [y/N]: ")
+	line, _ := r.ReadString('\n')
+	return slices.Contains([]string{"y", "yes"}, strings.ToLower(strings.TrimSpace(line)))
+}
+
 // backup writes verd-backup-<time>.tar.gz into dir with config/ and data/ trees, and returns its path.
 func backup(dir string, p uninstallPaths, now time.Time) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -119,28 +145,7 @@ func backup(dir string, p uninstallPaths, now time.Time) (string, error) {
 	gz := gzip.NewWriter(f)
 	tw := tar.NewWriter(gz)
 	for _, t := range []struct{ name, src string }{{"config", p.config}, {"data", p.data}} {
-		err = filepath.WalkDir(t.src, func(path string, d fs.DirEntry, werr error) error {
-			if werr != nil {
-				return werr
-			}
-			if !d.IsDir() && !d.Type().IsRegular() {
-				return nil // sockets, symlinks
-			}
-			info, _ := d.Info()
-			h, _ := tar.FileInfoHeader(info, "")
-			rel, _ := filepath.Rel(t.src, path)
-			h.Name = filepath.ToSlash(filepath.Join(t.name, rel))
-			if werr = tw.WriteHeader(h); werr != nil || d.IsDir() {
-				return werr
-			}
-			src, werr := os.Open(path)
-			if werr != nil {
-				return werr
-			}
-			defer src.Close()
-			_, werr = io.Copy(tw, src)
-			return werr
-		})
+		err = addTree(tw, t.name, t.src)
 		if err != nil && !os.IsNotExist(err) {
 			break
 		}
@@ -156,4 +161,35 @@ func backup(dir string, p uninstallPaths, now time.Time) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// addTree writes the tree at src into tw, with every name under name/.
+func addTree(tw *tar.Writer, name, src string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, werr error) error {
+		return addTarEntry(tw, name, src, path, d, werr)
+	})
+}
+
+// addTarEntry writes one walked path into tw. Sockets and symlinks are skipped.
+func addTarEntry(tw *tar.Writer, name, src, path string, d fs.DirEntry, werr error) error {
+	if werr != nil {
+		return werr
+	}
+	if !d.IsDir() && !d.Type().IsRegular() {
+		return nil
+	}
+	info, _ := d.Info()
+	h, _ := tar.FileInfoHeader(info, "")
+	rel, _ := filepath.Rel(src, path)
+	h.Name = filepath.ToSlash(filepath.Join(name, rel))
+	if err := tw.WriteHeader(h); err != nil || d.IsDir() {
+		return err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(tw, f)
+	return err
 }

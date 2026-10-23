@@ -32,50 +32,62 @@ func LineChart(values []int, width, height int) []string {
 		}
 		return (H - 1) - (v-lo)*(H-1)/(hi-lo)
 	}
-	plot := func(x0, y0, x1, y1 int) { // Bresenham
-		dx, dy := abs(x1-x0), -abs(y1-y0)
-		sx, sy := sign(x1-x0), sign(y1-y0)
-		for err := dx + dy; ; {
-			grid[y0][x0] = true
-			if x0 == x1 && y0 == y1 {
-				return
-			}
-			e2 := 2 * err
-			if e2 >= dy {
-				err += dy
-				x0 += sx
-			}
-			if e2 <= dx {
-				err += dx
-				y0 += sy
-			}
-		}
-	}
 	for i := range values {
 		x, y := px(i), py(values[i])
 		if i == 0 {
 			grid[y][x] = true
 			continue
 		}
-		plot(px(i-1), py(values[i-1]), x, y)
+		bresenham(grid, px(i-1), py(values[i-1]), x, y)
 	}
+	return brailleRows(grid, width, height)
+}
+
+// bresenham sets every grid cell on the line from (x0, y0) to (x1, y1).
+func bresenham(grid [][]bool, x0, y0, x1, y1 int) {
+	dx, dy := abs(x1-x0), -abs(y1-y0)
+	sx, sy := sign(x1-x0), sign(y1-y0)
+	for err := dx + dy; ; {
+		grid[y0][x0] = true
+		if x0 == x1 && y0 == y1 {
+			return
+		}
+		e2 := 2 * err
+		if e2 >= dy {
+			err += dy
+			x0 += sx
+		}
+		if e2 <= dx {
+			err += dx
+			y0 += sy
+		}
+	}
+}
+
+// brailleRows packs the dot grid into height rows of width braille cells.
+func brailleRows(grid [][]bool, width, height int) []string {
 	out := make([]string, height)
 	for r := 0; r < height; r++ {
 		var b strings.Builder
 		for c := 0; c < width; c++ {
-			var bits rune
-			for dx := 0; dx < 2; dx++ {
-				for dy := 0; dy < 4; dy++ {
-					if grid[r*4+dy][c*2+dx] {
-						bits |= brailleBit[dx][dy]
-					}
-				}
-			}
-			b.WriteRune(0x2800 + bits)
+			b.WriteRune(brailleCell(grid, r, c))
 		}
 		out[r] = b.String()
 	}
 	return out
+}
+
+// brailleCell is the braille character for the 2x4 dots of cell (r, c).
+func brailleCell(grid [][]bool, r, c int) rune {
+	var bits rune
+	for dx := 0; dx < 2; dx++ {
+		for dy := 0; dy < 4; dy++ {
+			if grid[r*4+dy][c*2+dx] {
+				bits |= brailleBit[dx][dy]
+			}
+		}
+	}
+	return 0x2800 + bits
 }
 
 func abs(x int) int {

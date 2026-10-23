@@ -95,6 +95,20 @@ func Rank(r int) string {
 	return "legendary grandmaster"
 }
 
+// hist is one Problem's Submission history.
+type hist struct {
+	firstOK  bool
+	solved   bool
+	attempts int
+	last     time.Time
+}
+
+// tagAgg sums the solved Problems of one tag.
+type tagAgg struct {
+	solved, firstTry, rated int
+	ratingSum               float64
+}
+
 // Compute derives Profile Stats. Submissions still TESTING are ignored.
 func Compute(in Input) Stats {
 	loc := in.Loc
@@ -107,20 +121,51 @@ func Compute(in Input) Stats {
 		byID[key{p.ContestID, p.Index}] = p
 	}
 
+	h, days := tallySubmissions(&st, in.Submissions, loc)
+
+	// Rating.
+	if n := len(in.Rating); n > 0 {
+		st.Rating = in.Rating[n-1].NewRating
+		for _, r := range in.Rating {
+			st.MaxRating = max(st.MaxRating, r.NewRating)
+		}
+	}
+	st.Rank = Rank(st.Rating)
+	lo, hi := unratedBandL, unratedBandH
+	if st.Rating > 0 {
+		lo, hi = st.Rating-bandBelow, st.Rating+bandAbove
+	}
+	st.Band = [2]int{lo, hi}
+
+	solvedKeys, tags := tallyProblems(&st, h, byID)
+	sortUnsolved(st.Unsolved)
+
+	inBand, solvedInBand := bandCoverage(in.Problems, lo, hi, solvedKeys)
+	st.Tags = tagStats(tags, inBand, solvedInBand)
+	sort.Slice(st.Tags, func(i, j int) bool {
+		a, b := st.Tags[i], st.Tags[j]
+		if a.Solved != b.Solved {
+			return a.Solved > b.Solved
+		}
+		return a.Tag < b.Tag
+	})
+	st.Strengths, st.Weaknesses = pickTags(st.Tags)
+
+	st.Streak, st.MaxStreak = streaks(days, in.Now.In(loc))
+	return st
+}
+
+// tallySubmissions folds the final Submissions into st (verdicts, days, AC rate) and returns
+// the per-Problem history and the days with an AC.
+func tallySubmissions(st *Stats, submissions []cf.Submission, loc *time.Location) (map[key]*hist, map[string]bool) {
 	// Per-Problem history, oldest first (Submission ids grow with time).
-	subs := make([]cf.Submission, 0, len(in.Submissions))
-	for _, s := range in.Submissions {
+	subs := make([]cf.Submission, 0, len(submissions))
+	for _, s := range submissions {
 		if final(s.Verdict) {
 			subs = append(subs, s)
 		}
 	}
 	sort.Slice(subs, func(i, j int) bool { return subs[i].ID < subs[j].ID })
-	type hist struct {
-		firstOK  bool
-		solved   bool
-		attempts int
-		last     time.Time
-	}
 	h := map[key]*hist{}
 	days := map[string]bool{}
 	st.Days = map[string]int{}
@@ -147,66 +192,62 @@ func Compute(in Input) Stats {
 	if len(subs) > 0 {
 		st.ACRate = float64(ok) / float64(len(subs))
 	}
+	return h, days
+}
 
-	// Rating.
-	if n := len(in.Rating); n > 0 {
-		st.Rating = in.Rating[n-1].NewRating
-		for _, r := range in.Rating {
-			st.MaxRating = max(st.MaxRating, r.NewRating)
-		}
-	}
-	st.Rank = Rank(st.Rating)
-	lo, hi := unratedBandL, unratedBandH
-	if st.Rating > 0 {
-		lo, hi = st.Rating-bandBelow, st.Rating+bandAbove
-	}
-	st.Band = [2]int{lo, hi}
-
-	// Totals, difficulty buckets, unsolved attempts.
-	type tagAgg struct {
-		solved, firstTry, rated int
-		ratingSum               float64
-	}
+// tallyProblems sets the totals and difficulty buckets in st, collects unsolved attempts,
+// and returns the solved Problem keys and the per-tag sums.
+func tallyProblems(st *Stats, h map[key]*hist, byID map[key]cf.Problem) (map[key]bool, map[string]*tagAgg) {
 	tags := map[string]*tagAgg{}
 	solvedKeys := map[key]bool{}
 	for k, x := range h {
 		p, known := byID[k]
-		if x.solved {
-			st.Solved++
-			solvedKeys[k] = true
-			if known && p.Rating > 0 {
-				st.SolvedByRating[p.Rating/100*100]++
-			} else {
-				st.SolvedUnrated++
-			}
+		if !x.solved {
+			st.Attempted++
+			name := ""
 			if known {
-				for _, t := range p.Tags {
-					a := tags[t]
-					if a == nil {
-						a = &tagAgg{}
-						tags[t] = a
-					}
-					a.solved++
-					if x.firstOK {
-						a.firstTry++
-					}
-					if p.Rating > 0 {
-						a.rated++
-						a.ratingSum += float64(p.Rating)
-					}
-				}
+				name = p.Name
 			}
+			st.Unsolved = append(st.Unsolved, Attempt{k.contest, k.index, name, x.attempts, x.last})
 			continue
 		}
-		st.Attempted++
-		name := ""
-		if known {
-			name = p.Name
+		st.Solved++
+		solvedKeys[k] = true
+		if known && p.Rating > 0 {
+			st.SolvedByRating[p.Rating/100*100]++
+		} else {
+			st.SolvedUnrated++
 		}
-		st.Unsolved = append(st.Unsolved, Attempt{k.contest, k.index, name, x.attempts, x.last})
+		if known {
+			addTagSums(tags, p, x.firstOK)
+		}
 	}
-	sort.Slice(st.Unsolved, func(i, j int) bool {
-		a, b := st.Unsolved[i], st.Unsolved[j]
+	return solvedKeys, tags
+}
+
+// addTagSums adds one solved Problem to the sums of each of its tags.
+func addTagSums(tags map[string]*tagAgg, p cf.Problem, firstOK bool) {
+	for _, t := range p.Tags {
+		a := tags[t]
+		if a == nil {
+			a = &tagAgg{}
+			tags[t] = a
+		}
+		a.solved++
+		if firstOK {
+			a.firstTry++
+		}
+		if p.Rating > 0 {
+			a.rated++
+			a.ratingSum += float64(p.Rating)
+		}
+	}
+}
+
+// sortUnsolved orders attempts most recently attempted first.
+func sortUnsolved(u []Attempt) {
+	sort.Slice(u, func(i, j int) bool {
+		a, b := u[i], u[j]
 		if !a.Last.Equal(b.Last) {
 			return a.Last.After(b.Last)
 		}
@@ -215,11 +256,13 @@ func Compute(in Input) Stats {
 		}
 		return a.Index < b.Index
 	})
+}
 
-	// Band coverage per tag.
+// bandCoverage counts Problems per tag inside the rating band [lo, hi], and how many are solved.
+func bandCoverage(problems []cf.Problem, lo, hi int, solvedKeys map[key]bool) (map[string]int, map[string]int) {
 	inBand := map[string]int{}
 	solvedInBand := map[string]int{}
-	for _, p := range in.Problems {
+	for _, p := range problems {
 		if p.Rating < lo || p.Rating > hi {
 			continue
 		}
@@ -230,40 +273,44 @@ func Compute(in Input) Stats {
 			}
 		}
 	}
-	seen := map[string]bool{}
-	add := func(t string) {
-		if seen[t] {
-			return
-		}
-		seen[t] = true
-		ts := TagStat{Tag: t, InBand: inBand[t], SolvedInBand: solvedInBand[t]}
-		if a := tags[t]; a != nil {
-			ts.Solved = a.solved
-			ts.FirstTryRate = float64(a.firstTry) / float64(a.solved)
-			if a.rated > 0 {
-				ts.AvgRating = a.ratingSum / float64(a.rated)
-			}
-		}
-		if ts.InBand > 0 {
-			ts.Coverage = float64(ts.SolvedInBand) / float64(ts.InBand)
-		}
-		st.Tags = append(st.Tags, ts)
-	}
-	for t := range tags {
-		add(t)
+	return inBand, solvedInBand
+}
+
+// tagStats returns one TagStat per tag seen in solves or in the band, unsorted.
+func tagStats(tags map[string]*tagAgg, inBand, solvedInBand map[string]int) []TagStat {
+	var out []TagStat
+	for t, a := range tags {
+		out = append(out, tagStat(t, a, inBand, solvedInBand))
 	}
 	for t := range inBand {
-		add(t)
-	}
-	sort.Slice(st.Tags, func(i, j int) bool {
-		a, b := st.Tags[i], st.Tags[j]
-		if a.Solved != b.Solved {
-			return a.Solved > b.Solved
+		if tags[t] == nil {
+			out = append(out, tagStat(t, nil, inBand, solvedInBand))
 		}
-		return a.Tag < b.Tag
-	})
+	}
+	return out
+}
+
+// tagStat builds one TagStat; a is nil when the tag has no solves.
+func tagStat(t string, a *tagAgg, inBand, solvedInBand map[string]int) TagStat {
+	ts := TagStat{Tag: t, InBand: inBand[t], SolvedInBand: solvedInBand[t]}
+	if a != nil {
+		ts.Solved = a.solved
+		ts.FirstTryRate = float64(a.firstTry) / float64(a.solved)
+		if a.rated > 0 {
+			ts.AvgRating = a.ratingSum / float64(a.rated)
+		}
+	}
+	if ts.InBand > 0 {
+		ts.Coverage = float64(ts.SolvedInBand) / float64(ts.InBand)
+	}
+	return ts
+}
+
+// pickTags returns the top 3 coverage tags (strengths) and the 3 weakest of the rest (weakest first).
+// Only tags with enough Problems in the band qualify.
+func pickTags(all []TagStat) (strengths, weaknesses []TagStat) {
 	var eligible []TagStat
-	for _, t := range st.Tags {
+	for _, t := range all {
 		if t.InBand >= minBandTag {
 			eligible = append(eligible, t)
 		}
@@ -276,15 +323,13 @@ func Compute(in Input) Stats {
 		return a.Tag < b.Tag
 	})
 	n := min(3, len(eligible))
-	st.Strengths = append([]TagStat(nil), eligible[:n]...)
+	strengths = append([]TagStat(nil), eligible[:n]...)
 	rest := eligible[n:] // disjoint from strengths when few tags qualify
 	w := min(3, len(rest))
 	for i := len(rest) - 1; i >= len(rest)-w; i-- {
-		st.Weaknesses = append(st.Weaknesses, rest[i]) // weakest first
+		weaknesses = append(weaknesses, rest[i])
 	}
-
-	st.Streak, st.MaxStreak = streaks(days, in.Now.In(loc))
-	return st
+	return strengths, weaknesses
 }
 
 // streaks counts consecutive days with at least one solve. The current streak is still alive if

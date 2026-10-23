@@ -318,33 +318,11 @@ func Fold(stderr string) string {
 		run = nil
 	}
 	for _, l := range strings.Split(stderr, "\n") {
-		switch {
-		case block == "sig" && strings.TrimSpace(l) == "",
-			block == "objects" && !strings.HasPrefix(l, " "),
-			block == "shadow" && strings.HasPrefix(l, "=="),
-			block == "regs" && !regLine.MatchString(l) && !strings.HasPrefix(l, "AddressSanitizer can not"):
-			block = ""
-		}
-		switch {
-		case libHeader.MatchString(l) || l == "In function:":
-			block = "sig"
-		case l == "Objects involved in the operation:":
-			block = "objects"
-		case strings.HasPrefix(l, "Shadow bytes around"):
-			block = "shadow"
-		case strings.HasSuffix(l, "Register values:"):
-			block = "regs"
-		}
-		lab := map[string]string{"sig": "lines of library function signature", "objects": "lines of debug-mode object details",
-			"shadow": "lines of shadow memory", "regs": "lines of register dump"}[block]
+		block = nextBlock(block, l)
+		lab := blockLabels[block]
 		if m := frameRe.FindStringSubmatch(l); m != nil && block == "" {
 			key := funcName(m[1]) + " " + m[2] + ":" + m[3]
-			switch {
-			case m[3] == "" || system(m[2]):
-				lab = "library frames"
-			case key == prev:
-				lab = "repeats of the frame above (recursion)"
-			}
+			lab = frameLabel(m, key == prev)
 			prev = key
 		} else if block == "" {
 			prev = ""
@@ -364,4 +342,41 @@ func Fold(stderr string) string {
 	}
 	flush()
 	return strings.TrimRight(strings.Join(out, "\n"), "\n")
+}
+
+// blockLabels name the multi-line sanitizer blocks Fold collapses.
+var blockLabels = map[string]string{"sig": "lines of library function signature", "objects": "lines of debug-mode object details",
+	"shadow": "lines of shadow memory", "regs": "lines of register dump"}
+
+// nextBlock is the block a stderr line is in, given the block before it.
+func nextBlock(block, l string) string {
+	switch {
+	case block == "sig" && strings.TrimSpace(l) == "",
+		block == "objects" && !strings.HasPrefix(l, " "),
+		block == "shadow" && strings.HasPrefix(l, "=="),
+		block == "regs" && !regLine.MatchString(l) && !strings.HasPrefix(l, "AddressSanitizer can not"):
+		block = ""
+	}
+	switch {
+	case libHeader.MatchString(l) || l == "In function:":
+		return "sig"
+	case l == "Objects involved in the operation:":
+		return "objects"
+	case strings.HasPrefix(l, "Shadow bytes around"):
+		return "shadow"
+	case strings.HasSuffix(l, "Register values:"):
+		return "regs"
+	}
+	return block
+}
+
+// frameLabel names a stack frame line for Fold: library and repeated frames collapse, others stay "".
+func frameLabel(m []string, repeat bool) string {
+	switch {
+	case m[3] == "" || system(m[2]):
+		return "library frames"
+	case repeat:
+		return "repeats of the frame above (recursion)"
+	}
+	return ""
 }

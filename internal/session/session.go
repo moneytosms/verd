@@ -66,15 +66,31 @@ type Result struct {
 // ignored verdicts do not count as an attempt: still judging, or not the contestant's fault.
 var ignored = map[string]bool{"": true, "TESTING": true, "COMPILATION_ERROR": true, "SKIPPED": true, "CHALLENGED": true, "REJECTED": true}
 
+// inWindow reports whether x is a Submission on the session's contest, made inside its window.
+func (s Session) inWindow(x cf.Submission) bool {
+	return x.Problem.ContestID == s.ContestID && x.Created >= s.Start && (s.End <= 0 || x.Created <= s.End)
+}
+
+// take applies one counted Submission: the first accepted one solves the row, wrong ones before it add up.
+func (r *Row) take(s Session, x cf.Submission) {
+	if r.Solved || ignored[x.Verdict] {
+		return
+	}
+	if x.Verdict == "OK" {
+		r.Solved, r.Minute = true, int((x.Created-s.Start)/60)
+		return
+	}
+	r.Wrong++
+}
+
 // Score computes a session's result for the contest's problem indexes. Only Submissions made inside the
 // session window count, so a replay never sees what was solved before it.
 func Score(s Session, indexes []string, subs []cf.Submission) Result {
 	mine := make([]cf.Submission, 0, len(subs))
 	for _, x := range subs {
-		if x.Problem.ContestID != s.ContestID || x.Created < s.Start || (s.End > 0 && x.Created > s.End) {
-			continue
+		if s.inWindow(x) {
+			mine = append(mine, x)
 		}
-		mine = append(mine, x)
 	}
 	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Created < mine[j].Created })
 	byIndex := map[string]*Row{}
@@ -84,15 +100,9 @@ func Score(s Session, indexes []string, subs []cf.Submission) Result {
 		byIndex[idx] = &res.Rows[i]
 	}
 	for _, x := range mine {
-		r := byIndex[x.Problem.Index]
-		if r == nil || r.Solved || ignored[x.Verdict] {
-			continue
+		if r := byIndex[x.Problem.Index]; r != nil {
+			r.take(s, x)
 		}
-		if x.Verdict == "OK" {
-			r.Solved, r.Minute = true, int((x.Created-s.Start)/60)
-			continue
-		}
-		r.Wrong++
 	}
 	for _, r := range res.Rows {
 		if r.Solved {

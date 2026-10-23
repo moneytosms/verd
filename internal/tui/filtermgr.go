@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/moneytosms/verd/internal/theme"
 )
 
 // Fields of the filter modal.
@@ -148,95 +149,106 @@ func (m Model) updateFilters(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	switch f.field {
 	case ffMin, ffMax:
-		cur := &m.filter.MinRating
-		if f.field == ffMax {
-			cur = &m.filter.MaxRating
-		}
-		switch k {
-		case "up":
-			f.field = max(0, f.field-1)
-		case "down", "enter":
-			f.field++
-		case "right", "+":
-			*cur = min(3500, ((*cur)/100+1)*100)
-			if *cur < 800 && *cur > 0 {
-				*cur = 800
-			}
-		case "left", "-":
-			if *cur > 0 {
-				*cur = max(0, ((*cur-1)/100)*100)
-				if *cur < 800 {
-					*cur = 0
-				}
-			}
-		case "backspace":
-			*cur /= 10
-		case "q":
-			m.fm = nil
-			return m, nil
-		default:
-			if len(msg.Text) == 1 && msg.Text[0] >= '0' && msg.Text[0] <= '9' && *cur < 10000 {
-				n, _ := strconv.Atoi(strconv.Itoa(*cur) + msg.Text)
-				*cur = n
-			}
-		}
-		return m.applyFilter(), nil
-	case ffStatus:
-		switch k {
-		case "up":
-			f.field--
-		case "down", "enter":
-			f.field++
-		case "right", "l", " ":
-			m.filter.Status = statusChoice(nextOf(statusOpts, orAny(m.filter.Status)))
-		case "left", "h":
-			m.filter.Status = statusChoice(prevOf(statusOpts, orAny(m.filter.Status)))
-		case "q":
-			m.fm = nil
-			return m, nil
-		}
-		return m.applyFilter(), nil
-	case ffSource:
-		opts := m.sourceOpts()
-		switch k {
-		case "up":
-			f.field--
-		case "down", "enter":
-			f.field++
-		case "right", "l", " ":
-			m.filter.Source = statusChoice(nextOf(opts, orAny(m.filter.Source)))
-		case "left", "h":
-			m.filter.Source = statusChoice(prevOf(opts, orAny(m.filter.Source)))
-		case "q":
-			m.fm = nil
-			return m, nil
-		}
-		return m.applyFilter(), nil
+		return m.updateRatingField(msg, k)
+	case ffStatus, ffSource:
+		return m.updateChoiceField(k)
 	case ffSort:
-		cur := m.sortBy
-		if cur == "" {
-			cur = "default"
-		}
-		switch k {
-		case "up":
-			f.field--
-		case "down", "enter":
-			f.field++
-		case "right", "l", " ":
-			cur = nextOf(sortOpts, cur)
-		case "left", "h":
-			cur = prevOf(sortOpts, cur)
-		case "q":
-			m.fm = nil
-			return m, nil
-		}
-		m.sortBy = cur
-		if cur == "default" {
-			m.sortBy = ""
-		}
-		return m.applyFilter(), nil
+		return m.updateSortField(k)
 	}
-	// tags
+	return m.updateTagField(msg, k)
+}
+
+// updateRatingField handles keys on the min or max rating.
+func (m Model) updateRatingField(msg tea.KeyPressMsg, k string) (tea.Model, tea.Cmd) {
+	f := m.fm
+	cur := &m.filter.MinRating
+	if f.field == ffMax {
+		cur = &m.filter.MaxRating
+	}
+	switch k {
+	case "up":
+		f.field = max(0, f.field-1)
+	case "down", "enter":
+		f.field++
+	case "right", "+":
+		*cur = min(3500, ((*cur)/100+1)*100)
+		if *cur < 800 && *cur > 0 {
+			*cur = 800
+		}
+	case "left", "-":
+		if *cur > 0 {
+			*cur = max(0, ((*cur-1)/100)*100)
+			if *cur < 800 {
+				*cur = 0
+			}
+		}
+	case "backspace":
+		*cur /= 10
+	case "q":
+		m.fm = nil
+		return m, nil
+	default:
+		if len(msg.Text) == 1 && msg.Text[0] >= '0' && msg.Text[0] <= '9' && *cur < 10000 {
+			n, _ := strconv.Atoi(strconv.Itoa(*cur) + msg.Text)
+			*cur = n
+		}
+	}
+	return m.applyFilter(), nil
+}
+
+// updateChoiceField handles keys on the status or source field, which cycle through their options.
+func (m Model) updateChoiceField(k string) (tea.Model, tea.Cmd) {
+	f := m.fm
+	opts, cur := statusOpts, &m.filter.Status
+	if f.field == ffSource {
+		opts, cur = m.sourceOpts(), &m.filter.Source
+	}
+	switch k {
+	case "up":
+		f.field--
+	case "down", "enter":
+		f.field++
+	case "right", "l", " ":
+		*cur = statusChoice(nextOf(opts, orAny(*cur)))
+	case "left", "h":
+		*cur = statusChoice(prevOf(opts, orAny(*cur)))
+	case "q":
+		m.fm = nil
+		return m, nil
+	}
+	return m.applyFilter(), nil
+}
+
+// updateSortField handles keys on the sort field.
+func (m Model) updateSortField(k string) (tea.Model, tea.Cmd) {
+	f := m.fm
+	cur := m.sortBy
+	if cur == "" {
+		cur = "default"
+	}
+	switch k {
+	case "up":
+		f.field--
+	case "down", "enter":
+		f.field++
+	case "right", "l", " ":
+		cur = nextOf(sortOpts, cur)
+	case "left", "h":
+		cur = prevOf(sortOpts, cur)
+	case "q":
+		m.fm = nil
+		return m, nil
+	}
+	m.sortBy = cur
+	if cur == "default" {
+		m.sortBy = ""
+	}
+	return m.applyFilter(), nil
+}
+
+// updateTagField handles keys on the tag picker: the search text and the tag grid.
+func (m Model) updateTagField(msg tea.KeyPressMsg, k string) (tea.Model, tea.Cmd) {
+	f := m.fm
 	shown := f.shownTags()
 	switch k {
 	case "up":
@@ -343,8 +355,17 @@ func (m Model) filterBox() []string {
 		q += "▏"
 	}
 	body = append(body, tagHead+"   "+st.Accent2.Render(q))
+	body = append(body, m.tagGridLines(st)...)
+	note := fmt.Sprintf("%d match  tab field  ctrl+u reset  esc close", len(m.visible))
+	return box("Filters", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+}
+
+// tagGridLines renders the tag grid, filling each column top to bottom from the first visible tag.
+func (m Model) tagGridLines(st theme.Styles) []string {
+	f := m.fm
 	shown := f.shownTags()
 	cols, cw, perCol, start := m.fmGrid()
+	var out []string
 	for r := 0; r < perCol; r++ {
 		var line string
 		for c := 0; c < cols; c++ {
@@ -368,10 +389,9 @@ func (m Model) filterBox() []string {
 			}
 			line += cell + " "
 		}
-		body = append(body, "  "+line)
+		out = append(out, "  "+line)
 	}
-	note := fmt.Sprintf("%d match  tab field  ctrl+u reset  esc close", len(m.visible))
-	return box("Filters", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+	return out
 }
 
 // fmGrid is the tag grid's geometry: columns, cell width, rows per column and the first tag shown.

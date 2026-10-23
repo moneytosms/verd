@@ -80,106 +80,131 @@ func indexRune(rs []rune, r rune) int {
 func tex(s string) string {
 	r := []rune(s)
 	var b strings.Builder
-	// arg reads one argument starting at r[i]: a {group}, a \command, or a single rune.
-	arg := func(i int) (string, int) {
-		for i < len(r) && r[i] == ' ' {
-			i++
-		}
-		if i >= len(r) {
-			return "", i
-		}
-		switch r[i] {
-		case '{':
-			depth, j := 1, i+1
-			for ; j < len(r) && depth > 0; j++ {
-				if r[j] == '{' {
-					depth++
-				} else if r[j] == '}' {
-					depth--
-				}
-			}
-			return string(r[i+1 : j-1]), j
-		case '\\':
-			j := i + 1
-			for j < len(r) && isLetter(r[j]) {
-				j++
-			}
-			if j == i+1 && j < len(r) {
-				j++
-			}
-			return string(r[i:j]), j
-		}
-		return string(r[i]), i + 1
-	}
 	for i := 0; i < len(r); {
 		switch c := r[i]; c {
 		case '{', '}':
 			i++
 		case '^', '_':
-			a, j := arg(i + 1)
-			a = tex(a)
-			if c == '^' {
-				b.WriteString(script(a, supFrom, supTo, "^"))
-			} else {
-				b.WriteString(script(a, subFrom, subTo, "_"))
-			}
-			i = j
+			i = texScript(r, i, &b)
 		case '\\':
-			j := i + 1
-			for j < len(r) && isLetter(r[j]) {
-				j++
-			}
-			if j == i+1 && j < len(r) {
-				j++
-			}
-			name := string(r[i+1 : j])
-			i = j
-			switch {
-			case name == "left" || name == "right":
-				if i < len(r) && r[i] == '.' {
-					i++
-				}
-			case name == "frac" || name == "dfrac":
-				n, k := arg(i)
-				d, k := arg(k)
-				i = k
-				b.WriteString(paren(tex(n)) + "/" + paren(tex(d)))
-			case name == "binom":
-				n, k := arg(i)
-				d, k := arg(k)
-				i = k
-				b.WriteString("C(" + tex(n) + ", " + tex(d) + ")")
-			case name == "sqrt":
-				a, k := arg(i)
-				i = k
-				b.WriteString("√" + paren(tex(a)))
-			case name == "color":
-				_, i = arg(i)
-				for i < len(r) && r[i] == ' ' {
-					i++
-				}
-			case name == "textcolor":
-				_, k := arg(i)
-				a, k := arg(k)
-				i = k
-				b.WriteString(tex(a))
-			case passthrough[name]:
-				a, k := arg(i)
-				i = k
-				b.WriteString(tex(a))
-			default:
-				if v, ok := symbols[name]; ok {
-					b.WriteString(v)
-				} else {
-					b.WriteString(name) // unknown command: keep its name, drop the backslash
-				}
-			}
+			i = texCommand(r, i, &b)
 		default:
 			b.WriteRune(c)
 			i++
 		}
 	}
 	return b.String()
+}
+
+// texScript writes the superscript or subscript at r[i] and returns the index after its argument.
+func texScript(r []rune, i int, b *strings.Builder) int {
+	a, j := readArg(r, i+1)
+	a = tex(a)
+	if r[i] == '^' {
+		b.WriteString(script(a, supFrom, supTo, "^"))
+	} else {
+		b.WriteString(script(a, subFrom, subTo, "_"))
+	}
+	return j
+}
+
+// texCommand writes the command at the backslash r[i] and returns the index after it.
+func texCommand(r []rune, i int, b *strings.Builder) int {
+	j := cmdEnd(r, i)
+	name := string(r[i+1 : j])
+	switch name {
+	case "left", "right":
+		if j < len(r) && r[j] == '.' {
+			j++
+		}
+		return j
+	case "frac", "dfrac":
+		n, d, k := readTwo(r, j)
+		b.WriteString(paren(tex(n)) + "/" + paren(tex(d)))
+		return k
+	case "binom":
+		n, d, k := readTwo(r, j)
+		b.WriteString("C(" + tex(n) + ", " + tex(d) + ")")
+		return k
+	case "sqrt":
+		a, k := readArg(r, j)
+		b.WriteString("√" + paren(tex(a)))
+		return k
+	case "color":
+		_, k := readArg(r, j)
+		return skipSpace(r, k)
+	case "textcolor":
+		_, a, k := readTwo(r, j)
+		b.WriteString(tex(a))
+		return k
+	}
+	if passthrough[name] {
+		a, k := readArg(r, j)
+		b.WriteString(tex(a))
+		return k
+	}
+	if v, ok := symbols[name]; ok {
+		b.WriteString(v)
+	} else {
+		b.WriteString(name) // unknown command: keep its name, drop the backslash
+	}
+	return j
+}
+
+// readArg reads one argument starting at r[i]: a {group}, a \command, or a single rune.
+func readArg(r []rune, i int) (string, int) {
+	i = skipSpace(r, i)
+	if i >= len(r) {
+		return "", i
+	}
+	switch r[i] {
+	case '{':
+		return readGroup(r, i)
+	case '\\':
+		j := cmdEnd(r, i)
+		return string(r[i:j]), j
+	}
+	return string(r[i]), i + 1
+}
+
+// readTwo reads two arguments in a row starting at r[i].
+func readTwo(r []rune, i int) (string, string, int) {
+	a, j := readArg(r, i)
+	b, k := readArg(r, j)
+	return a, b, k
+}
+
+// readGroup reads the {group} starting at r[i] and returns its contents.
+func readGroup(r []rune, i int) (string, int) {
+	depth, j := 1, i+1
+	for ; j < len(r) && depth > 0; j++ {
+		switch r[j] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+		}
+	}
+	return string(r[i+1 : j-1]), j
+}
+
+// cmdEnd returns the index just past the command whose backslash is r[i].
+func cmdEnd(r []rune, i int) int {
+	j := i + 1
+	for j < len(r) && isLetter(r[j]) {
+		j++
+	}
+	if j == i+1 && j < len(r) {
+		j++
+	}
+	return j
+}
+
+func skipSpace(r []rune, i int) int {
+	for i < len(r) && r[i] == ' ' {
+		i++
+	}
+	return i
 }
 
 func isLetter(r rune) bool { return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' }

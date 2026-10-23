@@ -56,20 +56,7 @@ func (m Model) result(row caseRow) *runner.Result {
 // fullRows lays out the four sections for a content width cw (wrapped, or left as is when
 // wrap is off) and returns the first row of each section.
 func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts [4]int) {
-	texts := [4]string{row.Input, row.Want, "", ""}
-	var bw, bg []bool
-	var tones []byte
-	if res := m.result(row); res != nil {
-		texts[2], texts[3] = res.Output, res.Stderr
-		if !m.fullRaw {
-			texts[3] = runner.Fold(res.Stderr)
-		}
-		sol, _, _ := strings.Cut(runner.Explain(*res).Loc, ":")
-		tones = stderrTones(cleanLines(texts[3]), sol)
-		if res.Verdict != "" && res.Verdict != runner.AC { // "" is a test still running
-			bw, bg = diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
-		}
-	}
+	texts, bw, bg, tones := m.fullTexts(row)
 	for s, name := range fullSecs {
 		starts[s] = len(rows)
 		rows = append(rows, fullRow{text: name, head: true})
@@ -91,32 +78,58 @@ func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts 
 		case 3:
 			tone = tones
 		}
-		for i, l := range cleanLines(texts[s]) {
-			b := i < len(bad) && bad[i]
-			var tn byte
-			if i < len(tone) {
-				tn = tone[i]
-			}
-			r := []rune(l)
-			for first := true; first || (wrap && len(r) > 0); first = false {
-				n := len(r)
-				if wrap {
-					n = min(n, cw)
-				}
-				rows = append(rows, fullRow{text: string(r[:n]), bad: b, tone: tn})
-				r = r[n:]
-			}
-			if b && s == 2 {
-				w := cleanLines(row.Want)
-				hint := "(not in expected)"
-				if i < len(w) {
-					hint = "want: " + w[i]
-				}
-				rows = append(rows, fullRow{text: "  " + hint, note: true})
-			}
-		}
+		rows = append(rows, fullSectionRows(row, s, texts[s], bad, tone, cw, wrap)...)
 	}
 	return
+}
+
+// fullSectionRows lays out one section's text, wrapped to cw when wrap. A wrong Output line is
+// followed by the Expected line it should match.
+func fullSectionRows(row caseRow, s int, text string, bad []bool, tone []byte, cw int, wrap bool) []fullRow {
+	var rows []fullRow
+	for i, l := range cleanLines(text) {
+		b := i < len(bad) && bad[i]
+		var tn byte
+		if i < len(tone) {
+			tn = tone[i]
+		}
+		r := []rune(l)
+		for first := true; first || (wrap && len(r) > 0); first = false {
+			n := len(r)
+			if wrap {
+				n = min(n, cw)
+			}
+			rows = append(rows, fullRow{text: string(r[:n]), bad: b, tone: tn})
+			r = r[n:]
+		}
+		if b && s == 2 {
+			w := cleanLines(row.Want)
+			hint := "(not in expected)"
+			if i < len(w) {
+				hint = "want: " + w[i]
+			}
+			rows = append(rows, fullRow{text: "  " + hint, note: true})
+		}
+	}
+	return rows
+}
+
+// fullTexts is the four sections' text for row, stderr folded unless raw. bw and bg mark the lines
+// of Expected and Output that differ; tones colors the stderr lines.
+func (m Model) fullTexts(row caseRow) (texts [4]string, bw, bg []bool, tones []byte) {
+	texts = [4]string{row.Input, row.Want, "", ""}
+	if res := m.result(row); res != nil {
+		texts[2], texts[3] = res.Output, res.Stderr
+		if !m.fullRaw {
+			texts[3] = runner.Fold(res.Stderr)
+		}
+		sol, _, _ := strings.Cut(runner.Explain(*res).Loc, ":")
+		tones = stderrTones(cleanLines(texts[3]), sol)
+		if res.Verdict != "" && res.Verdict != runner.AC { // "" is a test still running
+			bw, bg = diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
+		}
+	}
+	return texts, bw, bg, tones
 }
 
 // fullBox is the selected test (input, expected, stdout, stderr) in a near full-screen modal.
@@ -134,39 +147,7 @@ func (m Model) fullBox() []string {
 	var head []string
 	if res := m.result(row); res != nil {
 		title += "  " + strings.TrimSpace(res.Verdict) + fmt.Sprintf("  %d ms  %.1f MB", res.TimeMS, res.MemoryMB)
-		switch {
-		case res.Mismatch != nil:
-			mm := res.Mismatch
-			_, bg := diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
-			n := 0
-			for _, b := range bg {
-				if b {
-					n++
-				}
-			}
-			head = append(head, st.Bad.Render(fmt.Sprintf("first difference: line %d col %d (%d/%d lines differ): want %q got %q", mm.Line, mm.Col, n, len(bg), clip(clean(mm.Want), 30), clip(clean(mm.Got), 30))))
-		case res.Note != "":
-			head = append(head, st.Warn.Render(clean(res.Note)))
-		}
-		if d := res.Detail(); d != "" {
-			head = append(head, st.Bad.Render(clean(d)))
-		}
-		if x := runner.Explain(*res); x.Hint != "" {
-			for i, l := range strings.Split(xansi.Wordwrap(clean(x.Hint), cw-5, ""), "\n") {
-				head = append(head, st.Warn.Render([]string{"why: ", "     "}[min(i, 1)]+l))
-			}
-			if x.Loc != "" {
-				file, _, _ := strings.Cut(x.Loc, ":")
-				at := st.Warn.Render("at:  ") + st.Accent.Render(filepath.Base(clean(x.Loc)))
-				if x.Code != "" {
-					at += st.Dim.Render("  │ ") + hlCode(st, file, clean(x.Code))
-				}
-				head = append(head, at)
-			}
-			if x.Trace != "" {
-				head = append(head, st.Warn.Render("via: ")+st.Dim.Render(clean(x.Trace)))
-			}
-		}
+		head = m.fullHead(row, res, cw)
 	}
 	if m.run != nil && m.run.running {
 		title += "  running..."
@@ -181,8 +162,69 @@ func (m Model) fullBox() []string {
 		x = 0
 	}
 	end := min(len(rows), off+room)
-	body := head
-	for _, r := range rows[off:end] {
+	body := append(head, m.fullLines(rows[off:end], x, cw)...)
+	return box(title, body, m.fullNote(off, end, len(rows)), w, min(h, len(body)+2), true, st, m.borderStyle())
+}
+
+// fullHead is the result's lines above the rows: the mismatch or note, the detail, then the why.
+func (m Model) fullHead(row caseRow, res *runner.Result, cw int) []string {
+	st := m.styles()
+	var head []string
+	switch {
+	case res.Mismatch != nil:
+		head = append(head, st.Bad.Render(m.fullMismatch(row, res)))
+	case res.Note != "":
+		head = append(head, st.Warn.Render(clean(res.Note)))
+	}
+	if d := res.Detail(); d != "" {
+		head = append(head, st.Bad.Render(clean(d)))
+	}
+	return append(head, m.fullWhy(res, cw)...)
+}
+
+// fullMismatch is the first differing line and how many lines differ.
+func (m Model) fullMismatch(row caseRow, res *runner.Result) string {
+	mm := res.Mismatch
+	_, bg := diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
+	n := 0
+	for _, b := range bg {
+		if b {
+			n++
+		}
+	}
+	return fmt.Sprintf("first difference: line %d col %d (%d/%d lines differ): want %q got %q", mm.Line, mm.Col, n, len(bg), clip(clean(mm.Want), 30), clip(clean(mm.Got), 30))
+}
+
+// fullWhy is why the test failed: the hint, the failing location with its code, and the trace.
+func (m Model) fullWhy(res *runner.Result, cw int) []string {
+	st := m.styles()
+	x := runner.Explain(*res)
+	if x.Hint == "" {
+		return nil
+	}
+	var head []string
+	for i, l := range strings.Split(xansi.Wordwrap(clean(x.Hint), cw-5, ""), "\n") {
+		head = append(head, st.Warn.Render([]string{"why: ", "     "}[min(i, 1)]+l))
+	}
+	if x.Loc != "" {
+		file, _, _ := strings.Cut(x.Loc, ":")
+		at := st.Warn.Render("at:  ") + st.Accent.Render(filepath.Base(clean(x.Loc)))
+		if x.Code != "" {
+			at += st.Dim.Render("  │ ") + hlCode(st, file, clean(x.Code))
+		}
+		head = append(head, at)
+	}
+	if x.Trace != "" {
+		head = append(head, st.Warn.Render("via: ")+st.Dim.Render(clean(x.Trace)))
+	}
+	return head
+}
+
+// fullLines styles the visible rows: panned left by x and cut to cw.
+func (m Model) fullLines(rows []fullRow, x, cw int) []string {
+	st := m.styles()
+	var body []string
+	for _, r := range rows {
 		t := []rune(r.text)
 		t = t[min(x, len(t)):]
 		if len(t) > cw {
@@ -203,6 +245,11 @@ func (m Model) fullBox() []string {
 			body = append(body, "  "+string(t))
 		}
 	}
+	return body
+}
+
+// fullNote is the modal's footer: the rows shown out of n, and the keys.
+func (m Model) fullNote(off, end, n int) string {
 	wrap := "wrap"
 	if m.fullWrap {
 		wrap = "pan"
@@ -211,8 +258,7 @@ func (m Model) fullBox() []string {
 	if m.fullRaw {
 		raw = "fold stderr"
 	}
-	note := m.kx(fmt.Sprintf("%d-%d/%d  {full.down}/{full.up} scroll  {full.pan_left}/{full.pan_right} pan  {full.wrap} %s  {full.raw} %s  {full.next}/{full.prev} test  {full.copy} copy  {full.rerun} rerun  {full.close} close", min(off+1, len(rows)), end, len(rows), wrap, raw))
-	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+	return m.kx(fmt.Sprintf("%d-%d/%d  {full.down}/{full.up} scroll  {full.pan_left}/{full.pan_right} pan  {full.wrap} %s  {full.raw} %s  {full.next}/{full.prev} test  {full.copy} copy  {full.rerun} rerun  {full.close} close", min(off+1, n), end, n, wrap, raw))
 }
 
 // fullSection is the section the top visible row belongs to.

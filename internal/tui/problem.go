@@ -223,26 +223,7 @@ func (m Model) infoLines(w int) []string {
 		}
 		lines = append(lines, st.Dim.Render("limits ")+lim)
 	}
-	if len(p.Tags) > 0 && !m.showTags {
-		lines = append(lines, st.Dim.Render("tags   click or v to show"))
-	} else if len(p.Tags) > 0 {
-		cur := st.Dim.Render("tags   ")
-		first := true
-		for _, t := range p.Tags {
-			chip := clean(t)
-			if !first && lenPlain(cur)+len(chip)+3 > w {
-				lines = append(lines, cur)
-				cur = "       "
-				first = true
-			}
-			if !first {
-				cur += st.Dim.Render(" · ")
-			}
-			cur += st.Accent.Render(chip)
-			first = false
-		}
-		lines = append(lines, cur)
-	}
+	lines = append(lines, m.tagLines(w)...)
 	if m.deps.Note != nil {
 		if first := firstLine(m.deps.Note(p)); first != "" {
 			lines = append(lines, st.Dim.Render("note   ")+clip(clean(first), max(8, w-7)))
@@ -250,6 +231,35 @@ func (m Model) infoLines(w int) []string {
 	}
 	lines = append(lines, m.submissionLines()...)
 	return lines
+}
+
+// tagLines are the Problem's tags, chips wrapped to w, or a hint while they are hidden.
+func (m Model) tagLines(w int) []string {
+	st := m.styles()
+	p := *m.open
+	if len(p.Tags) == 0 {
+		return nil
+	}
+	if !m.showTags {
+		return []string{st.Dim.Render("tags   click or v to show")}
+	}
+	var lines []string
+	cur := st.Dim.Render("tags   ")
+	first := true
+	for _, t := range p.Tags {
+		chip := clean(t)
+		if !first && lenPlain(cur)+len(chip)+3 > w {
+			lines = append(lines, cur)
+			cur = "       "
+			first = true
+		}
+		if !first {
+			cur += st.Dim.Render(" · ")
+		}
+		cur += st.Accent.Render(chip)
+		first = false
+	}
+	return append(lines, cur)
 }
 
 func lenPlain(s string) int { return len([]rune(xansiStrip(s))) }
@@ -266,34 +276,65 @@ func (m Model) compileLines() int {
 func (m Model) testsLines(w, h int) ([]string, string, []int) {
 	st := m.styles()
 	r := m.run
-	var lines []string
-	note := ""
-	if r != nil {
-		switch {
-		case r.running:
-			note = "running..."
-		case r.overall != "":
-			note = strings.TrimSpace(r.overall)
-		}
-		if r.compile != "" {
-			for i, l := range strings.Split(strings.TrimRight(r.compile, "\n"), "\n") {
-				if i == 0 && (r.compile == "compiling..." || strings.HasPrefix(r.compile, "ok")) {
-					lines = append(lines, st.Dim.Render("compile: "+r.compile))
-					break
-				}
-				if i == 0 {
-					lines = append(lines, "compile: "+m.verdictStyle("CE"))
-				}
-				if len(lines) < 5 {
-					lines = append(lines, st.Dim.Render(clean(l)))
-				}
-			}
-		}
-	}
+	note := m.testsStatus()
+	lines := m.compileTestLines()
 	rows := m.rows()
 	if len(rows) == 0 {
 		lines = append(lines, st.Dim.Render("no tests yet: T to add one"))
 	}
+	list, passed := m.testRowLines(rows)
+	room := max(1, h-len(lines))
+	start := max(0, min(m.tsel-room/2, len(list)-room))
+	end := min(len(list), start+room)
+	lines = append(lines, list[start:end]...)
+	if r != nil && !r.running && len(r.results) > 0 {
+		note = fmt.Sprintf("%d/%d AC", passed, len(r.results))
+		if r.overall != "" && r.overall != runner.AC {
+			note += " " + strings.TrimSpace(r.overall)
+		}
+	}
+	return lines, note, testRowAt(len(lines), start, end)
+}
+
+// testsStatus is the Tests pane's note while a run goes on or has an overall verdict.
+func (m Model) testsStatus() string {
+	switch r := m.run; {
+	case r == nil:
+		return ""
+	case r.running:
+		return "running..."
+	case r.overall != "":
+		return strings.TrimSpace(r.overall)
+	}
+	return ""
+}
+
+// compileTestLines is the compile status at the top of the Tests pane, at most five lines.
+func (m Model) compileTestLines() []string {
+	st := m.styles()
+	r := m.run
+	if r == nil || r.compile == "" {
+		return nil
+	}
+	var lines []string
+	for i, l := range strings.Split(strings.TrimRight(r.compile, "\n"), "\n") {
+		if i == 0 && (r.compile == "compiling..." || strings.HasPrefix(r.compile, "ok")) {
+			lines = append(lines, st.Dim.Render("compile: "+r.compile))
+			break
+		}
+		if i == 0 {
+			lines = append(lines, "compile: "+m.verdictStyle("CE"))
+		}
+		if len(lines) < 5 {
+			lines = append(lines, st.Dim.Render(clean(l)))
+		}
+	}
+	return lines
+}
+
+// testRowLines lists every row with its verdict and timing, and counts the ones that passed.
+func (m Model) testRowLines(rows []caseRow) ([]string, int) {
+	st := m.styles()
 	var list []string
 	passed := 0
 	for i, row := range rows {
@@ -317,24 +358,19 @@ func (m Model) testsLines(w, h int) ([]string, string, []int) {
 		}
 		list = append(list, line)
 	}
-	room := max(1, h-len(lines))
-	start := max(0, min(m.tsel-room/2, len(list)-room))
-	end := min(len(list), start+room)
-	lines = append(lines, list[start:end]...)
-	if r != nil && !r.running && len(r.results) > 0 {
-		note = fmt.Sprintf("%d/%d AC", passed, len(r.results))
-		if r.overall != "" && r.overall != runner.AC {
-			note += " " + strings.TrimSpace(r.overall)
-		}
-	}
-	rowAt := make([]int, len(lines))
+	return list, passed
+}
+
+// testRowAt maps each Tests pane line to its row index, -1 for the lines above the list.
+func testRowAt(n, start, end int) []int {
+	rowAt := make([]int, n)
 	for i := range rowAt {
 		rowAt[i] = -1
 	}
 	for i := start; i < end; i++ {
-		rowAt[len(lines)-(end-start)+(i-start)] = i
+		rowAt[n-(end-start)+(i-start)] = i
 	}
-	return lines, note, rowAt
+	return rowAt
 }
 
 // detailLines shows the selected test: input, expected, actual output and any mismatch.

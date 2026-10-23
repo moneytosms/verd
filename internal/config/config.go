@@ -194,92 +194,128 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return c, err
 	}
-	// Track which Lang entries were in the TOML before unmarshaling.
-	var userLangs map[string]bool
-	var raw map[string]interface{}
-	if err := toml.Unmarshal(b, &raw); err == nil {
-		if langMap, ok := raw["lang"].(map[string]interface{}); ok {
-			userLangs = make(map[string]bool)
-			for k := range langMap {
-				userLangs[k] = true
-			}
-		}
-	}
+	userLangs := userLangTables(b)
 	if err := toml.Unmarshal(b, &c); err != nil {
 		return c, err
 	}
+	if err := c.validate(); err != nil {
+		return c, err
+	}
+	c.inheritLangs(userLangs)
+	return c, nil
+}
+
+// userLangTables names the [lang.x] tables in b. It returns nil if b does not parse.
+func userLangTables(b []byte) map[string]bool {
+	var raw map[string]any
+	if err := toml.Unmarshal(b, &raw); err != nil {
+		return nil
+	}
+	langs, ok := raw["lang"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]bool, len(langs))
+	for k := range langs {
+		out[k] = true
+	}
+	return out
+}
+
+// validate checks the decoded config and returns the first problem, in a fixed order.
+func (c *Config) validate() error {
 	if c.Background != "auto" && c.Background != "dark" && c.Background != "light" {
-		return c, fmt.Errorf("background %q: want auto, dark or light", c.Background)
+		return fmt.Errorf("background %q: want auto, dark or light", c.Background)
 	}
 	for name, spec := range c.Themes {
 		if err := theme.Register(name, spec); err != nil {
-			return c, fmt.Errorf("themes.%s: %w", name, err)
+			return fmt.Errorf("themes.%s: %w", name, err)
 		}
 	}
+	if err := c.checkTabs(); err != nil {
+		return err
+	}
+	if !slices.Contains([]string{"rounded", "square", "heavy", "double", "ascii", "none"}, c.Border) {
+		return fmt.Errorf("border %q: want rounded, square, heavy, double, ascii or none", c.Border)
+	}
+	if err := c.checkEmbed(); err != nil {
+		return err
+	}
+	if err := c.checkReading(); err != nil {
+		return err
+	}
+	return rangeErr("wheel_lines", int64(c.WheelLines), 1, 20)
+}
+
+// checkTabs lowercases the tab names, rejects unknown ones and requires the settings tab.
+func (c *Config) checkTabs() error {
 	hasSettings := false
 	for i, t := range c.Tabs {
 		t = strings.ToLower(strings.TrimSpace(t))
 		c.Tabs[i] = t
 		if !slices.Contains([]string{"problems", "contests", "stats", "picker", "settings"}, t) {
-			return c, fmt.Errorf("tabs: %q is not a tab (problems, contests, stats, picker, settings)", t)
+			return fmt.Errorf("tabs: %q is not a tab (problems, contests, stats, picker, settings)", t)
 		}
 		hasSettings = hasSettings || t == "settings"
 	}
 	if !hasSettings {
-		return c, fmt.Errorf("tabs: the settings tab cannot be hidden")
+		return fmt.Errorf("tabs: the settings tab cannot be hidden")
 	}
-	if !slices.Contains([]string{"rounded", "square", "heavy", "double", "ascii", "none"}, c.Border) {
-		return c, fmt.Errorf("border %q: want rounded, square, heavy, double, ascii or none", c.Border)
-	}
+	return nil
+}
+
+// checkEmbed checks embed_side and submit_mode.
+func (c *Config) checkEmbed() error {
 	if c.EmbedSide != "left" && c.EmbedSide != "right" {
-		return c, fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
+		return fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
 	}
 	if c.SubmitMode != "browser" && c.SubmitMode != "direct" {
-		return c, fmt.Errorf("submit_mode %q: want browser or direct", c.SubmitMode)
+		return fmt.Errorf("submit_mode %q: want browser or direct", c.SubmitMode)
 	}
 	if c.EmbedSide != "" && c.EmbedSide != "left" && c.EmbedSide != "right" {
-		return c, fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
+		return fmt.Errorf("embed_side %q: want left or right", c.EmbedSide)
 	}
-	if c.ReadingWidth != 0 && (c.ReadingWidth < 40 || c.ReadingWidth > 200) {
-		return c, fmt.Errorf("reading_width: %d is outside 40 to 200", c.ReadingWidth)
+	return nil
+}
+
+// checkReading checks the reading_* and images keys. Empty enum values keep the default.
+func (c *Config) checkReading() error {
+	if c.ReadingWidth != 0 {
+		if err := rangeErr("reading_width", int64(c.ReadingWidth), 40, 200); err != nil {
+			return err
+		}
 	}
-	if c.Images != "" && c.Images != "auto" && c.Images != "kitty" && c.Images != "blocks" && c.Images != "off" {
-		return c, fmt.Errorf("images %q: want auto, kitty, blocks or off", c.Images)
+	if !allowed(c.Images, "auto", "kitty", "blocks", "off") {
+		return fmt.Errorf("images %q: want auto, kitty, blocks or off", c.Images)
 	}
-	if c.ReadingMargin < 0 || c.ReadingMargin > 8 {
-		return c, fmt.Errorf("reading_margin: %d is outside 0 to 8", c.ReadingMargin)
+	if err := rangeErr("reading_margin", int64(c.ReadingMargin), 0, 8); err != nil {
+		return err
 	}
-	if c.ReadingSpacing != "" && c.ReadingSpacing != "compact" && c.ReadingSpacing != "normal" && c.ReadingSpacing != "relaxed" {
-		return c, fmt.Errorf("reading_spacing %q: want compact, normal or relaxed", c.ReadingSpacing)
+	if !allowed(c.ReadingSpacing, "compact", "normal", "relaxed") {
+		return fmt.Errorf("reading_spacing %q: want compact, normal or relaxed", c.ReadingSpacing)
 	}
-	if c.ReadingHeadings != "" && c.ReadingHeadings != "plain" && c.ReadingHeadings != "bold" && c.ReadingHeadings != "bar" && c.ReadingHeadings != "underline" {
-		return c, fmt.Errorf("reading_headings %q: want plain, bold, bar or underline", c.ReadingHeadings)
+	if !allowed(c.ReadingHeadings, "plain", "bold", "bar", "underline") {
+		return fmt.Errorf("reading_headings %q: want plain, bold, bar or underline", c.ReadingHeadings)
 	}
-	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "latex" && c.ReadingMath != "raw" {
-		return c, fmt.Errorf("reading_math %q: want unicode, latex or raw", c.ReadingMath)
+	if !allowed(c.ReadingMath, "unicode", "latex", "raw") {
+		return fmt.Errorf("reading_math %q: want unicode, latex or raw", c.ReadingMath)
 	}
-	if c.ReadingSplit != "" && c.ReadingSplit != "full" && c.ReadingSplit != "cap" {
-		return c, fmt.Errorf("reading_split %q: want full or cap", c.ReadingSplit)
+	if !allowed(c.ReadingSplit, "full", "cap") {
+		return fmt.Errorf("reading_split %q: want full or cap", c.ReadingSplit)
 	}
-	if c.ReadingPalette != "" && !slices.Contains(ReadingPalettes, c.ReadingPalette) {
-		return c, fmt.Errorf("reading_palette %q: want %s", c.ReadingPalette, strings.Join(ReadingPalettes, ", "))
+	if !allowed(c.ReadingPalette, ReadingPalettes...) {
+		return fmt.Errorf("reading_palette %q: want %s", c.ReadingPalette, strings.Join(ReadingPalettes, ", "))
 	}
-	if c.ReadingNightFrom < 0 || c.ReadingNightFrom > 23 {
-		return c, fmt.Errorf("reading_night_from: %d is outside 0 to 23", c.ReadingNightFrom)
-	}
-	if c.WheelLines < 1 || c.WheelLines > 20 {
-		return c, fmt.Errorf("wheel_lines: %d is outside 1 to 20", c.WheelLines)
-	}
-	// A user's [lang.x] table replaces the default wholesale: re-inherit what they left out.
-	// Only apply this logic to Lang entries explicitly set by the user in the TOML.
+	return rangeErr("reading_night_from", int64(c.ReadingNightFrom), 0, 23)
+}
+
+// inheritLangs fills what a user's [lang.x] table left out from the default of the same name.
+// Only tables the user wrote in the TOML (user) are touched.
+func (c *Config) inheritLangs(user map[string]bool) {
 	def := Default().Lang
 	for k, l := range c.Lang {
-		// Skip inheritance if userLangs wasn't detected (parse error) or if this key isn't in it.
-		if userLangs == nil || !userLangs[k] {
-			continue
-		}
 		d, ok := def[k]
-		if !ok {
+		if !user[k] || !ok {
 			continue
 		}
 		if l.Ext == "" {
@@ -303,7 +339,17 @@ func Load(path string) (Config, error) {
 		}
 		c.Lang[k] = l
 	}
-	return c, nil
+}
+
+// allowed reports whether v is unset (keeps the default) or one of opts.
+func allowed(v string, opts ...string) bool { return v == "" || slices.Contains(opts, v) }
+
+// rangeErr reports key's value v when it is outside lo to hi.
+func rangeErr(key string, v, lo, hi int64) error {
+	if v < lo || v > hi {
+		return fmt.Errorf("%s: %d is outside %d to %d", key, v, lo, hi)
+	}
+	return nil
 }
 
 // Get returns a top-level settable key's value as text.

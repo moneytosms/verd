@@ -173,99 +173,142 @@ func (m Model) clickProblem(x, y int) (tea.Model, tea.Cmd) {
 		m.pane = paneStatement
 		return m, nil
 	}
+	return m.clickRight(y, g), nil
+}
+
+// clickRight handles a click in the right column: the tags line, the tests table or the detail.
+func (m Model) clickRight(y int, g splitGeom) Model {
 	top := m.contentTop()
 	ty := top + g.infoH
 	switch {
 	case y < ty:
 		m.showTags = !m.showTags
-	case y >= ty && y < ty+g.testsH:
+	case y < ty+g.testsH:
 		m.pane = paneTests
-		_, _, rowAt := m.testsLines(g.rw-4, g.testsH-2)
-		if r := y - ty - 1; r >= 0 && r < len(rowAt) && rowAt[r] >= 0 {
-			if rowAt[r] == m.tsel {
-				if row, ok := m.selected(); ok && row.Res != nil && row.Res.Verdict != "AC" && m.run != nil {
-					m.run.diff, m.run.diffInit = true, false // a second click opens the diff
-				}
-			}
-			m.tsel, m.detScroll = rowAt[r], 0
-		}
-	case y >= ty+g.testsH:
+		return m.clickTest(y-ty-1, g)
+	default:
 		m.pane = paneDetail
 	}
-	return m, nil
+	return m
+}
+
+// clickTest selects the test on row r of the tests table; a second click on it opens the diff.
+func (m Model) clickTest(r int, g splitGeom) Model {
+	_, _, rowAt := m.testsLines(g.rw-4, g.testsH-2)
+	if r >= 0 && r < len(rowAt) && rowAt[r] >= 0 {
+		if rowAt[r] == m.tsel {
+			if row, ok := m.selected(); ok && row.Res != nil && row.Res.Verdict != "AC" && m.run != nil {
+				m.run.diff, m.run.diffInit = true, false // a second click opens the diff
+			}
+		}
+		m.tsel, m.detScroll = rowAt[r], 0
+	}
+	return m
 }
 
 func (m Model) clickInModal(rx, ry int) (tea.Model, tea.Cmd) {
 	switch {
 	case m.help && ry == 1:
-		x := 1
-		for i, p := range helpPages {
-			w := len([]rune(p)) + 2
-			if rx >= x && rx < x+w+2 {
-				m.helpPage, m.helpScroll = i, 0
-			}
-			x += w + 1
-		}
+		return m.clickHelpTabs(rx), nil
 	case m.tm != nil && m.tm.ed == nil:
-		lw := min(30, min(m.width-4, 100)/3)
-		if rx > 0 && rx <= lw+1 && ry >= 1 {
-			inner := min(m.height-4, 30) - 2
-			start := max(0, min(m.tm.sel-inner/2, len(m.cases)-inner))
-			if i := start + ry - 1; i < len(m.cases) {
-				m.tm.sel, m.tsel, m.tm.confirmDel = i, i, false
-			}
-		}
+		return m.clickTestMgr(rx, ry), nil
 	case m.fm != nil:
-		f := m.fm
-		switch {
-		case ry == 1:
-			f.field = ffMin
-			if rx >= 26 {
-				f.field = ffMax
-			}
-		case ry == 2:
-			if f.field == ffStatus {
-				m.filter.Status = statusChoice(nextOf(statusOpts, orAny(m.filter.Status)))
-				return m.applyFilter(), nil
-			}
-			f.field = ffStatus
-		case ry == 3:
-			if f.field == ffSort {
-				cur := m.sortBy
-				if cur == "" {
-					cur = "default"
-				}
-				if cur = nextOf(sortOpts, cur); cur == "default" {
-					cur = ""
-				}
-				m.sortBy = cur
-				return m.applyFilter(), nil
-			}
-			f.field = ffSort
-		case ry == 4:
-			if f.field == ffSource {
-				m.filter.Source = statusChoice(nextOf(m.sourceOpts(), orAny(m.filter.Source)))
-				return m.applyFilter(), nil
-			}
-			f.field = ffSource
-		case ry >= 7:
-			f.field = ffTags
-			cols, cw, perCol, start := m.fmGrid()
-			col := (rx - 3) / cw
-			i := start + col*perCol + (ry - 7)
-			if shown := f.shownTags(); col >= 0 && col < cols && i >= 0 && i < len(shown) {
-				f.tsel = i
-				return m.cycleTag(shown[i].name).applyFilter(), nil
-			}
-		}
+		return m.clickFilterModal(rx, ry)
 	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
-		ps := m.contestProblems(*m.contestOpen)
-		if i := ry - 1; i >= 0 && i < len(ps) {
-			if i == m.cpCursor {
-				return m.openProblem(ps[i])
-			}
-			m.cpCursor = i
+		return m.clickContestProblem(ry)
+	}
+	return m, nil
+}
+
+// clickHelpTabs opens the help page whose tab is at column rx.
+func (m Model) clickHelpTabs(rx int) Model {
+	x := 1
+	for i, p := range helpPages {
+		w := len([]rune(p)) + 2
+		if rx >= x && rx < x+w+2 {
+			m.helpPage, m.helpScroll = i, 0
 		}
+		x += w + 1
+	}
+	return m
+}
+
+// clickTestMgr selects the test on row ry of the test manager list.
+func (m Model) clickTestMgr(rx, ry int) Model {
+	lw := min(30, min(m.width-4, 100)/3)
+	if rx > 0 && rx <= lw+1 && ry >= 1 {
+		inner := min(m.height-4, 30) - 2
+		start := max(0, min(m.tm.sel-inner/2, len(m.cases)-inner))
+		if i := start + ry - 1; i < len(m.cases) {
+			m.tm.sel, m.tsel, m.tm.confirmDel = i, i, false
+		}
+	}
+	return m
+}
+
+// clickFilterModal handles a click in the filter form: a field row, or a tag cell in the grid.
+func (m Model) clickFilterModal(rx, ry int) (tea.Model, tea.Cmd) {
+	if ry >= 7 {
+		return m.clickFilterTag(rx, ry)
+	}
+	f := m.fm
+	switch ry {
+	case 1:
+		f.field = ffMin
+		if rx >= 26 {
+			f.field = ffMax
+		}
+	case 2:
+		if f.field == ffStatus {
+			m.filter.Status = statusChoice(nextOf(statusOpts, orAny(m.filter.Status)))
+			return m.applyFilter(), nil
+		}
+		f.field = ffStatus
+	case 3:
+		if f.field == ffSort {
+			cur := m.sortBy
+			if cur == "" {
+				cur = "default"
+			}
+			if cur = nextOf(sortOpts, cur); cur == "default" {
+				cur = ""
+			}
+			m.sortBy = cur
+			return m.applyFilter(), nil
+		}
+		f.field = ffSort
+	case 4:
+		if f.field == ffSource {
+			m.filter.Source = statusChoice(nextOf(m.sourceOpts(), orAny(m.filter.Source)))
+			return m.applyFilter(), nil
+		}
+		f.field = ffSource
+	}
+	return m, nil
+}
+
+// clickFilterTag toggles the tag cell under (rx, ry) of the filter's tag grid.
+func (m Model) clickFilterTag(rx, ry int) (tea.Model, tea.Cmd) {
+	f := m.fm
+	f.field = ffTags
+	cols, cw, perCol, start := m.fmGrid()
+	col := (rx - 3) / cw
+	i := start + col*perCol + (ry - 7)
+	if shown := f.shownTags(); col >= 0 && col < cols && i >= 0 && i < len(shown) {
+		f.tsel = i
+		return m.cycleTag(shown[i].name).applyFilter(), nil
+	}
+	return m, nil
+}
+
+// clickContestProblem selects, then opens on a second click, the contest problem on row ry.
+func (m Model) clickContestProblem(ry int) (tea.Model, tea.Cmd) {
+	ps := m.contestProblems(*m.contestOpen)
+	if i := ry - 1; i >= 0 && i < len(ps) {
+		if i == m.cpCursor {
+			return m.openProblem(ps[i])
+		}
+		m.cpCursor = i
 	}
 	return m, nil
 }
@@ -275,50 +318,16 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 	if up {
 		d = -d
 	}
-	switch {
-	case m.tm != nil && m.tm.ed == nil:
-		m.tm.sel = max(0, min(m.tm.sel+d/3, len(m.cases)-1))
-		m.tsel = m.tm.sel
-		return m, nil
-	case m.fm != nil:
-		if m.fm.field == ffTags {
-			m.fm.tsel = max(0, min(m.fm.tsel+d, len(m.fm.shownTags())-1))
-		}
-		return m, nil
-	case m.full:
-		m.fullOff = max(0, m.fullOff+d)
-		return m, nil
-	case m.run != nil && m.run.diff:
-		m.run.diffOff = max(0, m.run.diffOff+d)
-		return m, nil
-	case m.strs != nil && m.strs.diff:
-		m.strs.diffOff = max(0, m.strs.diffOff+d)
-		return m, nil
-	case m.help:
-		m.helpScroll = max(0, m.helpScroll+d/3)
-		return m, nil
-	case m.subModal:
-		return m, nil
-	case m.tab == 1 && m.contestOpen != nil && !m.viewing():
+	if nm, scrolled := m.wheelModal(d); scrolled {
+		return nm, nil
+	}
+	if m.tab == 1 && m.contestOpen != nil && !m.viewing() {
 		ps := m.contestProblems(*m.contestOpen)
 		m.cpCursor = max(0, min(m.cpCursor+d/3, len(ps)-1))
 		return m, nil
 	}
 	if m.viewing() {
-		if g, ok := m.splitGeom(); ok && x >= g.lw {
-			top := m.contentTop()
-			ty := top + g.infoH
-			switch {
-			case y >= ty && y < ty+g.testsH:
-				m.tsel = max(0, min(m.tsel+d/3, len(m.rows())-1))
-				m.detScroll = 0
-			case y >= ty+g.testsH:
-				m.detScroll = max(0, m.detScroll+d)
-			}
-			return m, nil
-		}
-		m.scroll = max(0, min(m.scroll+d, m.maxScroll()))
-		return m, nil
+		return m.wheelViewing(x, y, d), nil
 	}
 	switch m.tab {
 	case 0:
@@ -331,4 +340,47 @@ func (m Model) onWheel(x, y int, up bool) (tea.Model, tea.Cmd) {
 		m.setSel = max(0, min(m.setSel+d/3, len(settingDefs)-1))
 	}
 	return m, nil
+}
+
+// wheelModal scrolls the open modal, if one takes the wheel; scrolled reports whether one did.
+func (m Model) wheelModal(d int) (Model, bool) {
+	switch {
+	case m.tm != nil && m.tm.ed == nil:
+		m.tm.sel = max(0, min(m.tm.sel+d/3, len(m.cases)-1))
+		m.tsel = m.tm.sel
+	case m.fm != nil:
+		if m.fm.field == ffTags {
+			m.fm.tsel = max(0, min(m.fm.tsel+d, len(m.fm.shownTags())-1))
+		}
+	case m.full:
+		m.fullOff = max(0, m.fullOff+d)
+	case m.run != nil && m.run.diff:
+		m.run.diffOff = max(0, m.run.diffOff+d)
+	case m.strs != nil && m.strs.diff:
+		m.strs.diffOff = max(0, m.strs.diffOff+d)
+	case m.help:
+		m.helpScroll = max(0, m.helpScroll+d/3)
+	case m.subModal:
+	default:
+		return m, false
+	}
+	return m, true
+}
+
+// wheelViewing scrolls the problem view: the tests table or detail pane on the right, else the statement.
+func (m Model) wheelViewing(x, y, d int) Model {
+	g, ok := m.splitGeom()
+	if !ok || x < g.lw {
+		m.scroll = max(0, min(m.scroll+d, m.maxScroll()))
+		return m
+	}
+	ty := m.contentTop() + g.infoH
+	switch {
+	case y >= ty && y < ty+g.testsH:
+		m.tsel = max(0, min(m.tsel+d/3, len(m.rows())-1))
+		m.detScroll = 0
+	case y >= ty+g.testsH:
+		m.detScroll = max(0, m.detScroll+d)
+	}
+	return m
 }

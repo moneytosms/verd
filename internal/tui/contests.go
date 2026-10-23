@@ -69,36 +69,7 @@ func (m Model) fetchContest() (tea.Model, tea.Cmd) {
 
 func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.contestOpen != nil {
-		ps := m.contestProblems(*m.contestOpen)
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "esc", "q":
-			m.contestOpen, m.cpCursor, m.contestNote, m.sessConfirm = nil, 0, "", ""
-		case "r", "ctrl+r":
-			return m.fetchContest()
-		case "s":
-			return m.startSession(*m.contestOpen, session.Virtual)
-		case "p":
-			return m.startSession(*m.contestOpen, session.Practice)
-		case "e":
-			if m.sess != nil && m.sess.ContestID == m.contestOpen.ID {
-				m.sessSum = true
-			}
-		case "H":
-			if len(ps) > 0 {
-				return m.openEditorial(ps[m.cpCursor])
-			}
-		case "up", "k":
-			m.cpCursor = max(0, m.cpCursor-1)
-		case "down", "j":
-			m.cpCursor = min(len(ps)-1, m.cpCursor+1)
-		case "enter":
-			if len(ps) > 0 {
-				return m.openProblem(ps[m.cpCursor])
-			}
-		}
-		return m, nil
+		return m.updateContestOpen(msg)
 	}
 	if m.conFind {
 		return m.contestFilterKey(msg)
@@ -107,6 +78,57 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.conQ = ""
 		return m.keepContestVisible(), nil
 	}
+	return m.updateContestList(msg)
+}
+
+// updateContestOpen handles keys while one contest's Problem list is open.
+func (m Model) updateContestOpen(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	ps := m.contestProblems(*m.contestOpen)
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.contestOpen, m.cpCursor, m.contestNote, m.sessConfirm = nil, 0, "", ""
+	case "r", "ctrl+r":
+		return m.fetchContest()
+	case "s":
+		return m.startSession(*m.contestOpen, session.Virtual)
+	case "p":
+		return m.startSession(*m.contestOpen, session.Practice)
+	case "e":
+		m = m.contestSummary()
+	case "H", "enter":
+		return m.openContestProblem(ps, msg.String() == "H")
+	case "up", "k":
+		m.cpCursor = max(0, m.cpCursor-1)
+	case "down", "j":
+		m.cpCursor = min(len(ps)-1, m.cpCursor+1)
+	}
+	return m, nil
+}
+
+// contestSummary shows the session summary when the open contest is the running session's.
+func (m Model) contestSummary() Model {
+	if m.sess != nil && m.sess.ContestID == m.contestOpen.ID {
+		m.sessSum = true
+	}
+	return m
+}
+
+// openContestProblem opens the cursor's Problem, or its editorial when editorial. None when the
+// contest has no cached Problems.
+func (m Model) openContestProblem(ps []cf.Problem, editorial bool) (tea.Model, tea.Cmd) {
+	if len(ps) == 0 {
+		return m, nil
+	}
+	if editorial {
+		return m.openEditorial(ps[m.cpCursor])
+	}
+	return m.openProblem(ps[m.cpCursor])
+}
+
+// updateContestList handles keys on the contest list.
+func (m Model) updateContestList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "/":
 		m.conFind = true
@@ -123,20 +145,32 @@ func (m Model) updateContests(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "a", "u", "p", "r", "s":
 		m = m.setChip(msg.String())
 	case "o":
-		if m.conSort == "" {
-			m.conSort = "least"
-		} else {
-			m.conSort = ""
-		}
-		m = m.keepContestVisible()
+		m = m.toggleContestSort()
 	case "enter":
-		if slices.Contains(m.contestIdxs(), m.contestCursor) {
-			c := m.contests[m.contestCursor]
-			m.contestOpen, m.cpCursor, m.contestNote = &c, 0, ""
-			if len(m.contestProblems(c)) == 0 && c.Phase != "BEFORE" {
-				return m.fetchContest()
-			}
-		}
+		return m.openContest()
+	}
+	return m, nil
+}
+
+// toggleContestSort turns the least solved first sort on or off.
+func (m Model) toggleContestSort() Model {
+	if m.conSort == "" {
+		m.conSort = "least"
+	} else {
+		m.conSort = ""
+	}
+	return m.keepContestVisible()
+}
+
+// openContest opens the highlighted contest's Problem list, fetching its Problems when none are cached.
+func (m Model) openContest() (tea.Model, tea.Cmd) {
+	if !slices.Contains(m.contestIdxs(), m.contestCursor) {
+		return m, nil
+	}
+	c := m.contests[m.contestCursor]
+	m.contestOpen, m.cpCursor, m.contestNote = &c, 0, ""
+	if len(m.contestProblems(c)) == 0 && c.Phase != "BEFORE" {
+		return m.fetchContest()
 	}
 	return m, nil
 }
@@ -357,16 +391,15 @@ func (m Model) viewContests(b *strings.Builder) string {
 	if len(m.contests) == 0 {
 		b.WriteString("  no contests cached\n")
 	}
-	st := m.styles()
 	vis, start := m.contestWindow()
 	rows := m.contestRows()
 	if len(vis) == 0 && len(m.contests) > 0 {
 		b.WriteString("  no contest matches\n")
 	}
+	st := m.styles()
 	now := m.clock()
 	lastSection := ""
 	for _, i := range vis[start:min(start+rows, len(vis))] {
-		c := m.contests[i]
 		section := "Past"
 		if i < m.upcoming {
 			section = "Upcoming"
@@ -375,53 +408,53 @@ func (m Model) viewContests(b *strings.Builder) string {
 			b.WriteString(" " + st.Accent2.Render(strings.ToUpper(section)) + "\n")
 			lastSection = section
 		}
-		when := ""
-		whenStyle := st.Dim
-		switch {
-		case c.Finished():
-			when = time.Unix(c.Start, 0).Format("2006-01-02")
-		case c.Phase == "BEFORE":
-			d := time.Unix(c.Start, 0).Sub(now)
-			when = countdown(d)
-			whenStyle = st.Good
-			if d < 24*time.Hour {
-				whenStyle = st.Warn
-			}
-		default:
-			when, whenStyle = "running", st.Bad
-		}
-		ps := m.contestProblems(c)
-		hit, _ := m.contestMatch(c, ps)
-		nameW := max(30, min(72, m.contentWidth()-30))
-		hitText := ""
-		if hit != nil { // room for the matched Problem at the end
-			nameW = max(12, nameW-26)
-			hitText = "  " + st.Dim.Render(xansi.Truncate(clean(hit.Index)+"  "+clean(hit.Name), 24, "…"))
-		}
-		line := "  " + whenStyle.Render(fmt.Sprintf("%-12s", when)) + " " + fmt.Sprintf("%5s", m.progressText(c, ps)) + " " + fit(clean(c.Name), nameW) + " " + st.Dim.Render(fmt.Sprint(c.ID))
-		if m.sess != nil && m.sess.ContestID == c.ID {
-			line += " " + st.Warn.Render("● session")
-		}
-		line += hitText
-		if i == m.contestCursor {
-			line = paintRow(st.Accent.Render("▌")+" "+strings.TrimPrefix(line, "  "), m.contentWidth(), st.Selected)
-		}
-		b.WriteString(line + "\n")
+		b.WriteString(m.contestLine(i, now) + "\n")
 	}
+	return m.contestFooter()
+}
+
+// contestLine is one row of the contest list: when, progress, name, id, and the Problem a search
+// word hit.
+func (m Model) contestLine(i int, now time.Time) string {
+	st := m.styles()
+	c := m.contests[i]
+	when, whenStyle := "running", st.Bad
+	switch {
+	case c.Finished():
+		when, whenStyle = time.Unix(c.Start, 0).Format("2006-01-02"), st.Dim
+	case c.Phase == "BEFORE":
+		d := time.Unix(c.Start, 0).Sub(now)
+		when, whenStyle = countdown(d), st.Good
+		if d < 24*time.Hour {
+			whenStyle = st.Warn
+		}
+	}
+	ps := m.contestProblems(c)
+	hit, _ := m.contestMatch(c, ps)
+	nameW := max(30, min(72, m.contentWidth()-30))
+	hitText := ""
+	if hit != nil { // room for the matched Problem at the end
+		nameW = max(12, nameW-26)
+		hitText = "  " + st.Dim.Render(xansi.Truncate(clean(hit.Index)+"  "+clean(hit.Name), 24, "…"))
+	}
+	line := "  " + whenStyle.Render(fmt.Sprintf("%-12s", when)) + " " + fmt.Sprintf("%5s", m.progressText(c, ps)) + " " + fit(clean(c.Name), nameW) + " " + st.Dim.Render(fmt.Sprint(c.ID))
+	if m.sess != nil && m.sess.ContestID == c.ID {
+		line += " " + st.Warn.Render("● session")
+	}
+	line += hitText
+	if i == m.contestCursor {
+		line = paintRow(st.Accent.Render("▌")+" "+strings.TrimPrefix(line, "  "), m.contentWidth(), st.Selected)
+	}
+	return line
+}
+
+// contestFooter is the line under the contest list: the search, chip and sort in force, or the keys.
+func (m Model) contestFooter() string {
 	if m.conFind {
 		return "/ " + m.conQ + "▏  type to filter  enter keep  esc clear"
 	}
 	chip := m.conChip != "" && m.conChip != "all"
-	var parts []string
-	if m.conQ != "" {
-		parts = append(parts, "/ "+m.conQ)
-	}
-	if chip {
-		parts = append(parts, "chip: "+m.conChip)
-	}
-	if m.conSort == "least" {
-		parts = append(parts, "sort: least solved")
-	}
+	parts := m.contestParts(chip)
 	if len(parts) == 0 {
 		return fmt.Sprintf("%d contests  enter Problems  / search  ? help  q quit", len(m.contests))
 	}
@@ -436,6 +469,21 @@ func (m Model) viewContests(b *strings.Builder) string {
 		hint += "  a all"
 	}
 	return strings.Join(append(parts, hint), "  ")
+}
+
+// contestParts names the search, chip and sort in force.
+func (m Model) contestParts(chip bool) []string {
+	var parts []string
+	if m.conQ != "" {
+		parts = append(parts, "/ "+m.conQ)
+	}
+	if chip {
+		parts = append(parts, "chip: "+m.conChip)
+	}
+	if m.conSort == "least" {
+		parts = append(parts, "sort: least solved")
+	}
+	return parts
 }
 
 func (m Model) markOf(s store.Status) string {

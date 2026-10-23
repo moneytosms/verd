@@ -113,45 +113,53 @@ func (m Model) withImages(lines []string, w int) ([]string, string) {
 			out = append(out, l)
 			continue
 		}
-		i, _ := strconv.Atoi(tm[1])
-		var pic image.Image
-		if i < len(urls) && mode != img.Off {
-			pic = m.imgs[urls[i]]
-		}
-		if pic == nil {
-			note := "[image]"
-			if i < len(urls) && m.imgErr[urls[i]] != "" {
-				note += " (could not load: " + m.imgErr[urls[i]] + ")"
-			}
-			out = append(out, strings.Replace(plain, tm[0], note, 1))
-			continue
-		}
-		margin := len(plain) - len(strings.TrimLeft(plain, " "))
-		b := pic.Bounds()
-		cols, rows := img.Fit(b.Dx(), b.Dy(), max(8, w-margin-2), max(6, min(20, m.paneHeight()-6)))
-		var rowsText []string
-		if mode == img.Kitty {
-			id := img.ID(urls[i])
-			if !m.imgSent[urls[i]] {
-				raw.WriteString(img.Transmit(id, pic))
-				m.imgSent[urls[i]] = true
-			}
-			if key := urls[i] + "@" + strconv.Itoa(cols) + "x" + strconv.Itoa(rows); !m.imgSent[key] {
-				raw.WriteString(img.Place(id, cols, rows))
-				m.imgSent[key] = true
-			}
-			rowsText = img.Placeholders(id, cols, rows)
-		} else {
-			rowsText = img.BlockLines(pic, cols, rows)
-		}
-		pad := strings.Repeat(" ", margin)
-		out = append(out, "")
-		for _, r := range rowsText {
-			out = append(out, pad+r)
-		}
-		out = append(out, "")
+		picLines, cmds := m.imageLines(plain, tm, urls, mode, w)
+		out = append(out, picLines...)
+		raw.WriteString(cmds)
 	}
 	return out, raw.String()
+}
+
+// imageLines draws one image token line: the picture in its place, or a note while it is not
+// loaded. It also returns the terminal commands the picture needs.
+func (m Model) imageLines(plain string, tm, urls []string, mode img.Mode, w int) ([]string, string) {
+	i, _ := strconv.Atoi(tm[1])
+	var pic image.Image
+	if i < len(urls) && mode != img.Off {
+		pic = m.imgs[urls[i]]
+	}
+	if pic == nil {
+		note := "[image]"
+		if i < len(urls) && m.imgErr[urls[i]] != "" {
+			note += " (could not load: " + m.imgErr[urls[i]] + ")"
+		}
+		return []string{strings.Replace(plain, tm[0], note, 1)}, ""
+	}
+	margin := len(plain) - len(strings.TrimLeft(plain, " "))
+	b := pic.Bounds()
+	cols, rows := img.Fit(b.Dx(), b.Dy(), max(8, w-margin-2), max(6, min(20, m.paneHeight()-6)))
+	var raw strings.Builder
+	var rowsText []string
+	if mode == img.Kitty {
+		id := img.ID(urls[i])
+		if !m.imgSent[urls[i]] {
+			raw.WriteString(img.Transmit(id, pic))
+			m.imgSent[urls[i]] = true
+		}
+		if key := urls[i] + "@" + strconv.Itoa(cols) + "x" + strconv.Itoa(rows); !m.imgSent[key] {
+			raw.WriteString(img.Place(id, cols, rows))
+			m.imgSent[key] = true
+		}
+		rowsText = img.Placeholders(id, cols, rows)
+	} else {
+		rowsText = img.BlockLines(pic, cols, rows)
+	}
+	pad := strings.Repeat(" ", margin)
+	out := []string{""}
+	for _, r := range rowsText {
+		out = append(out, pad+r)
+	}
+	return append(out, ""), raw.String()
 }
 
 // scrimText is a line with colours removed for the dimmed background of a modal; picture cells

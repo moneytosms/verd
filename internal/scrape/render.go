@@ -113,92 +113,131 @@ func Render(statementHTML string, width int, style string, o Options) (string, e
 	}
 	st := doc.Find(".problem-statement")
 	st.Find(".header, .sample-tests").Remove() // shown separately
-	st.Find(".section-title").Each(func(_ int, s *goquery.Selection) {
-		s.ReplaceWithHtml("<h3>" + s.Text() + "</h3>")
-	})
-	// HTML <sup>/<sub> (10<sup>9</sup>) would flatten to "109": use Unicode scripts like the TeX path.
-	st.Find("sup").Each(func(_ int, s *goquery.Selection) {
-		s.ReplaceWithHtml(html.EscapeString(script(s.Text(), supFrom, supTo, "^")))
-	})
-	st.Find("sub").Each(func(_ int, s *goquery.Selection) {
-		s.ReplaceWithHtml(html.EscapeString(script(s.Text(), subFrom, subTo, "_")))
-	})
-	// Images are not text: leave a token paragraph (see below).
-	// Each image becomes its own paragraph holding ImageToken(i), so the caller can draw the i-th
-	// image (ImageURLs) there, or turn the token into "[image]" when it cannot.
-	st.Find("img").Each(func(i int, s *goquery.Selection) {
-		src, _ := s.Attr("src")
-		s.ReplaceWithHtml("<p><a href=\"" + html.EscapeString(absImage(src)) + "\">" + ImageToken(i) + "</a></p>")
-	})
-	// Tables (Codeforces tex-tabular) lose their cell boundaries as text: one paragraph per row instead.
-	st.Find("table").Each(func(_ int, t *goquery.Selection) {
-		var rows strings.Builder
-		t.Find("tr").Each(func(_ int, tr *goquery.Selection) {
-			var cells []string
-			tr.Find("td, th").Each(func(_ int, td *goquery.Selection) {
-				cells = append(cells, strings.TrimSpace(td.Text()))
-			})
-			rows.WriteString("<p>" + strings.Join(cells, " ") + "</p>")
-		})
-		t.ReplaceWithHtml(rows.String())
-	})
+	prepStatement(st)
 	body, err := st.Html()
 	if err != nil {
 		return "", err
 	}
 	// Maths becomes inline code, so the terminal draws it in its own colour and background.
-	// unicode shows the symbols; latex and raw show the TeX source.
-	texBody := convertTeX(body, func(latex string) string {
-		text := latex
-		if o.Math != "latex" && o.Math != "raw" {
-			text = unicodeMath(latex)
-		}
-		return "<code>" + html.EscapeString(text) + "</code>"
-	})
+	texBody := convertTeX(body, mathCode(o.Math))
 	markdown, err := md.ConvertString(texBody)
 	if err != nil {
 		return "", err
 	}
-	// Server text must not smuggle terminal escapes past glamour.
-	markdown = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' {
-			return -1
-		}
-		return r
-	}, markdown)
+	markdown = stripControl(markdown)
 
 	// Apply spacing preference by adding/removing blank lines between blocks
 	markdown = applySpacing(markdown, o.Spacing)
 
 	// Determine render width
 	renderWidth := width
-	if o.Width > 0 && o.Width < width {
+	if capped(width, o) {
 		renderWidth = o.Width
 	}
+	out, err := renderGlamour(markdown, renderWidth, style, o)
+	if err != nil {
+		return "", err
+	}
 
+	// Center narrow content if width was capped
+	if capped(width, o) {
+		out = centerText(out, width, o.Width, o.Margin)
+	}
+
+	return strings.TrimRight(out, "\n"), nil
+}
+
+// capped reports whether the statement is narrower than the pane.
+func capped(width int, o Options) bool { return o.Width > 0 && o.Width < width }
+
+// scriptTags maps HTML sup/sub to the Unicode scripts used by the TeX path.
+var scriptTags = []struct{ tag, from, to, mark string }{
+	{"sup", supFrom, supTo, "^"},
+	{"sub", subFrom, subTo, "_"},
+}
+
+// prepStatement rewrites statement HTML that markdown cannot carry as is.
+func prepStatement(st *goquery.Selection) {
+	st.Find(".section-title").Each(func(_ int, s *goquery.Selection) {
+		s.ReplaceWithHtml("<h3>" + s.Text() + "</h3>")
+	})
+	// HTML <sup>/<sub> (10<sup>9</sup>) would flatten to "109": use Unicode scripts like the TeX path.
+	for _, sc := range scriptTags {
+		st.Find(sc.tag).Each(func(_ int, s *goquery.Selection) {
+			s.ReplaceWithHtml(html.EscapeString(script(s.Text(), sc.from, sc.to, sc.mark)))
+		})
+	}
+	replaceImages(st)
+	flattenTables(st)
+}
+
+// replaceImages leaves a token paragraph where each image goes.
+// Each image becomes its own paragraph holding ImageToken(i), so the caller can draw the i-th
+// image (ImageURLs) there, or turn the token into "[image]" when it cannot.
+func replaceImages(st *goquery.Selection) {
+	st.Find("img").Each(func(i int, s *goquery.Selection) {
+		src, _ := s.Attr("src")
+		s.ReplaceWithHtml("<p><a href=\"" + html.EscapeString(absImage(src)) + "\">" + ImageToken(i) + "</a></p>")
+	})
+}
+
+// flattenTables turns each table into one paragraph per row (Codeforces tex-tabular):
+// cell boundaries are lost as text.
+func flattenTables(st *goquery.Selection) {
+	st.Find("table").Each(func(_ int, t *goquery.Selection) {
+		var rows strings.Builder
+		t.Find("tr").Each(func(_ int, tr *goquery.Selection) {
+			rows.WriteString("<p>" + rowText(tr) + "</p>")
+		})
+		t.ReplaceWithHtml(rows.String())
+	})
+}
+
+// rowText joins the trimmed cell texts of a table row.
+func rowText(tr *goquery.Selection) string {
+	var cells []string
+	tr.Find("td, th").Each(func(_ int, td *goquery.Selection) {
+		cells = append(cells, strings.TrimSpace(td.Text()))
+	})
+	return strings.Join(cells, " ")
+}
+
+// mathCode renders one maths span as inline code. unicode shows the symbols; latex and raw show the TeX source.
+func mathCode(math string) func(latex string) string {
+	return func(latex string) string {
+		text := latex
+		if math != "latex" && math != "raw" {
+			text = unicodeMath(latex)
+		}
+		return "<code>" + html.EscapeString(text) + "</code>"
+	}
+}
+
+// stripControl drops terminal control characters (keeps newline and tab): server text must not smuggle escapes past glamour.
+func stripControl(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+// renderGlamour styles markdown for the terminal, wrapped to width.
+func renderGlamour(markdown string, width int, style string, o Options) (string, error) {
 	var rendererOpts []glamour.TermRendererOption
 	if cfg := getStyleConfig(style, o); cfg != nil {
 		rendererOpts = append(rendererOpts, glamour.WithStyles(*cfg))
 	} else {
 		rendererOpts = append(rendererOpts, glamour.WithStylePath(style))
 	}
-	rendererOpts = append(rendererOpts, glamour.WithWordWrap(renderWidth))
+	rendererOpts = append(rendererOpts, glamour.WithWordWrap(width))
 
 	r, err := glamour.NewTermRenderer(rendererOpts...)
 	if err != nil {
 		return "", err
 	}
-	out, err := r.Render(markdown)
-	if err != nil {
-		return "", err
-	}
-
-	// Center narrow content if width was capped
-	if o.Width > 0 && o.Width < width {
-		out = centerText(out, width, o.Width, o.Margin)
-	}
-
-	return strings.TrimRight(out, "\n"), nil
+	return r.Render(markdown)
 }
 
 // applySpacing adjusts blank lines between paragraphs based on preference.

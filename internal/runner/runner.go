@@ -271,13 +271,7 @@ func (r *run) runTest(t workspace.Test) Result {
 		return Result{Name: t.Name, Verdict: RE, Note: err.Error()}
 	}
 	defer in.Close()
-	if head, _ := io.ReadAll(io.LimitReader(in, inputCap+1)); len(head) > 0 {
-		res.Input = string(head[:min(len(head), inputCap)])
-		if len(head) > inputCap {
-			res.Input += "\n... (input truncated at 16 KiB)\n"
-		}
-		in.Seek(0, io.SeekStart)
-	}
+	res.Input = inputHead(in)
 
 	argv := expand(r.spec.Lang.Run, r.vars())
 	cmd := exec.Command(argv[0], argv[1:]...)
@@ -319,21 +313,7 @@ func (r *run) runTest(t workspace.Test) Result {
 		}
 	}()
 	if r.live != nil {
-		stop, fin := make(chan struct{}), make(chan struct{})
-		defer func() { close(stop); <-fin }() // no snapshot may outlive the test (the channel closes after Done)
-		go func() {
-			defer close(fin)
-			tk := time.NewTicker(liveEvery)
-			defer tk.Stop()
-			for {
-				select {
-				case <-tk.C:
-					r.live(Result{Name: t.Name, TimeMS: int(time.Since(start) / time.Millisecond), Output: stdout.tail(liveCap), Stderr: stderr.tail(liveCap)})
-				case <-stop:
-					return
-				}
-			}
-		}()
+		defer r.startLive(t, start, stdout, stderr)()
 	}
 	killedByUs := false
 	var mu sync.Mutex
@@ -355,10 +335,50 @@ func (r *run) runTest(t workspace.Test) Result {
 	killed := killedByUs
 	mu.Unlock()
 
+	timedOut := killed || (r.spec.TimeLimitMS > 0 && elapsed > limit)
+	r.judge(t, &res, timedOut, stdout.overflow, waitErr, outCap)
+	return res
+}
+
+// inputHead is the start of a test's input for the Result, cut at inputCap, and rewinds in. "" if empty.
+func inputHead(in *os.File) string {
+	head, _ := io.ReadAll(io.LimitReader(in, inputCap+1))
+	if len(head) == 0 {
+		return ""
+	}
+	s := string(head[:min(len(head), inputCap)])
+	if len(head) > inputCap {
+		s += "\n... (input truncated at 16 KiB)\n"
+	}
+	in.Seek(0, io.SeekStart)
+	return s
+}
+
+// startLive emits Output snapshots every liveEvery. The returned func stops them and waits for the last one.
+func (r *run) startLive(t workspace.Test, start time.Time, stdout, stderr *capBuffer) func() {
+	stop, fin := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(fin)
+		tk := time.NewTicker(liveEvery)
+		defer tk.Stop()
+		for {
+			select {
+			case <-tk.C:
+				r.live(Result{Name: t.Name, TimeMS: int(time.Since(start) / time.Millisecond), Output: stdout.tail(liveCap), Stderr: stderr.tail(liveCap)})
+			case <-stop:
+				return
+			}
+		}
+	}()
+	return func() { close(stop); <-fin } // no snapshot may outlive the test (the channel closes after Done)
+}
+
+// judge sets res.Verdict (and Note, Mismatch) for a finished run.
+func (r *run) judge(t workspace.Test, res *Result, timedOut, overflow bool, waitErr error, outCap int) {
 	switch {
-	case killed || (r.spec.TimeLimitMS > 0 && elapsed > limit):
+	case timedOut:
 		res.Verdict = TLE
-	case stdout.overflow:
+	case overflow:
 		res.Verdict, res.Note = RE, fmt.Sprintf("output limit exceeded (%d bytes)", outCap)
 	case waitErr != nil:
 		res.Verdict = RE
@@ -368,27 +388,31 @@ func (r *run) runTest(t workspace.Test) Result {
 	case r.spec.MemoryMB > 0 && res.MemoryMB > float64(r.spec.MemoryMB):
 		res.Verdict = MLE
 	default:
-		eps := r.spec.FloatEps
-		if eps == 0 {
-			eps = 1e-6
-		}
-		mode := r.spec.Mode
-		if mode == "" {
-			mode = Tokens
-		}
-		ok, mm := Compare(mode, res.Expected, res.Output, eps)
-		switch {
-		case len(r.spec.Checker) > 0:
-			res.Verdict, res.Note = r.check(t, res.Output)
-		case mode == None, strings.HasPrefix(t.Name, "custom-") && strings.TrimSpace(res.Expected) == "": // no answer yet: just show the output
-			res.Verdict = Unk
-		case ok:
-			res.Verdict = AC
-		default:
-			res.Verdict, res.Mismatch = WA, mm
-		}
+		r.judgeOutput(t, res)
 	}
-	return res
+}
+
+// judgeOutput compares a run that finished within its limits: the checker, the Comparison Mode, or no judgement.
+func (r *run) judgeOutput(t workspace.Test, res *Result) {
+	eps := r.spec.FloatEps
+	if eps == 0 {
+		eps = 1e-6
+	}
+	mode := r.spec.Mode
+	if mode == "" {
+		mode = Tokens
+	}
+	ok, mm := Compare(mode, res.Expected, res.Output, eps)
+	switch {
+	case len(r.spec.Checker) > 0:
+		res.Verdict, res.Note = r.check(t, res.Output)
+	case mode == None, strings.HasPrefix(t.Name, "custom-") && strings.TrimSpace(res.Expected) == "": // no answer yet: just show the output
+		res.Verdict = Unk
+	case ok:
+		res.Verdict = AC
+	default:
+		res.Verdict, res.Mismatch = WA, mm
+	}
 }
 
 // check runs the custom checker on a finished test: checker <input> <output> <answer>, exit 0 = AC.

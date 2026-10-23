@@ -58,16 +58,26 @@ func editorialCmd(out io.Writer, cfg config.Config, load func(cf.Problem) (*edit
 	case editorial.Unsupported:
 		return &exitError{1, "only Codeforces problems have editorials"}
 	case editorial.NotEnglish, editorial.None:
-		msg := "no editorial is published for " + p.Code()
-		if res.Status == editorial.NotEnglish {
-			msg = "only a Russian editorial exists for " + p.Code()
-		}
-		fmt.Fprintln(out, msg)
-		for _, l := range res.Links {
-			fmt.Fprintf(out, "%-22s %s\n", l.Label, l.URL)
-		}
-		return &exitError{1, ""}
+		return noEditorial(out, p, res)
 	}
+	return printEditorial(out, p, res, *reveal, *all)
+}
+
+// noEditorial says why there is no English editorial and lists any links, then exits 1.
+func noEditorial(out io.Writer, p cf.Problem, res *editorial.Result) error {
+	msg := "no editorial is published for " + p.Code()
+	if res.Status == editorial.NotEnglish {
+		msg = "only a Russian editorial exists for " + p.Code()
+	}
+	fmt.Fprintln(out, msg)
+	for _, l := range res.Links {
+		fmt.Fprintf(out, "%-22s %s\n", l.Label, l.URL)
+	}
+	return &exitError{1, ""}
+}
+
+// printEditorial prints the title and blocks. Spoiler blocks past reveal stay hidden unless all is set.
+func printEditorial(out io.Writer, p cf.Problem, res *editorial.Result, reveal int, all bool) error {
 	style, tty := "notty", false
 	if f, ok := out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
 		style, tty = "dark", true
@@ -81,7 +91,7 @@ func editorialCmd(out io.Writer, cfg config.Config, load func(cf.Problem) (*edit
 	for _, b := range res.Blocks {
 		if b.Spoiler {
 			n++
-			if !*all && n > *reveal {
+			if !all && n > reveal {
 				fmt.Fprintf(out, "\n> %s (hidden: --reveal %d)\n", b.Title, n)
 				continue
 			}

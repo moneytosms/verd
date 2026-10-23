@@ -174,7 +174,6 @@ func (m Model) cmSave() Model {
 	return m
 }
 
-// cmKey handles contest mode's keys, which work even while the embedded editor has the keyboard.
 func (m Model) cmKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	k := msg.String()
 	if m.km != nil {
@@ -187,27 +186,9 @@ func (m Model) cmKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	ps, cur := m.cmProblems(), m.cmCurrent()
 	switch {
 	case k == "alt+n" || k == "alt+p":
-		if len(ps) == 0 {
-			return m, nil, true
-		}
-		d := 1
-		if k == "alt+p" {
-			d = len(ps) - 1
-		}
-		next := 0 // no session Problem open: next is A, previous the last
-		if cur >= 0 {
-			next = (cur + d) % len(ps)
-		} else if k == "alt+p" {
-			next = len(ps) - 1
-		}
-		nm, cmd := m.cmSwitch(ps[next])
-		return nm, cmd, true
+		return m.cmStep(k == "alt+p", ps, cur)
 	case len(k) == 5 && strings.HasPrefix(k, "alt+") && k[4] >= '1' && k[4] <= '9':
-		if i := int(k[4] - '1'); i < len(ps) && i != cur {
-			nm, cmd := m.cmSwitch(ps[i])
-			return nm, cmd, true
-		}
-		return m, nil, true
+		return m.cmJump(int(k[4]-'1'), ps, cur)
 	case k == "alt+b":
 		m.cm.rail = map[int]int{railFull: railCompact, railCompact: railOff, railOff: railFull}[m.railEffective(m.verdWidth())]
 		return m, m.relayout(), true
@@ -216,6 +197,35 @@ func (m Model) cmKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 		return m, nil, true
 	}
 	return m, nil, false
+}
+
+// cmStep moves to the next session Problem, or the previous one when back. With none open, next is
+// the first and previous the last.
+func (m Model) cmStep(back bool, ps []cf.Problem, cur int) (Model, tea.Cmd, bool) {
+	if len(ps) == 0 {
+		return m, nil, true
+	}
+	d := 1
+	if back {
+		d = len(ps) - 1
+	}
+	next := 0
+	if cur >= 0 {
+		next = (cur + d) % len(ps)
+	} else if back {
+		next = len(ps) - 1
+	}
+	nm, cmd := m.cmSwitch(ps[next])
+	return nm, cmd, true
+}
+
+// cmJump opens session Problem i (alt+1 to alt+9) unless it is missing or already open.
+func (m Model) cmJump(i int, ps []cf.Problem, cur int) (Model, tea.Cmd, bool) {
+	if i < len(ps) && i != cur {
+		nm, cmd := m.cmSwitch(ps[i])
+		return nm, cmd, true
+	}
+	return m, nil, true
 }
 
 // railEffective is the rail mode in force for a verd column w wide (auto resolved).
@@ -259,7 +269,6 @@ func (m Model) verdWidth() int {
 	return m.width
 }
 
-// railLines draws the rail, w wide and h tall.
 func (m Model) railLines(w, h int) []string {
 	st := m.styles()
 	s, now := m.sess, m.clock()
@@ -270,19 +279,39 @@ func (m Model) railLines(w, h int) []string {
 	case s.End > 0:
 		clock = clockText(s.Left(now))
 	}
-	var out []string
-	add := func(l string) { out = append(out, l) }
-	rule := st.Dim.Render(strings.Repeat("─", w))
-	ps, cur := m.cmProblems(), m.cmCurrent()
 	compact := w < railFullW
-	if compact {
-		add(st.Warn.Render(clock))
-	} else {
-		add(st.Accent.Render(fit(clean(s.Name), w)))
-		add(st.Warn.Render(s.Mode + "  " + clock))
-		add(fit(m.sessScore(), w))
+	rule := st.Dim.Render(strings.Repeat("─", w))
+	out := append(m.railHead(w, clock, compact), rule)
+	out = append(out, m.railProblems(w, compact)...)
+	if sd := m.standing; sd != nil && s.Mode == session.Live && sd.Row != nil {
+		out = append(out, rule)
+		out = append(out, m.railStanding(w, compact)...)
 	}
-	add(rule)
+	if !compact {
+		out = m.railHints(out, w, h)
+	}
+	return out
+}
+
+// railHead is the rail's top: the clock alone when compact, else the contest name, mode and clock,
+// and the score.
+func (m Model) railHead(w int, clock string, compact bool) []string {
+	st := m.styles()
+	if compact {
+		return []string{st.Warn.Render(clock)}
+	}
+	return []string{
+		st.Accent.Render(fit(clean(m.sess.Name), w)),
+		st.Warn.Render(m.sess.Mode + "  " + clock),
+		fit(m.sessScore(), w),
+	}
+}
+
+// railProblems is one row per session Problem, then a placeholder while there are none.
+func (m Model) railProblems(w int, compact bool) []string {
+	st := m.styles()
+	ps, cur := m.cmProblems(), m.cmCurrent()
+	var out []string
 	for i, p := range ps {
 		mark := " "
 		if i == cur {
@@ -296,46 +325,55 @@ func (m Model) railLines(w, h int) []string {
 		if compact {
 			cell = m.railGlyph(p)
 		}
-		add(mark + idx + " " + cell)
+		out = append(out, mark+idx+" "+cell)
 	}
 	if len(ps) == 0 {
-		add(st.Dim.Render(fit("waiting for problems", w)))
+		out = append(out, st.Dim.Render(fit("waiting for problems", w)))
 	}
-	if sd := m.standing; sd != nil && s.Mode == session.Live && sd.Row != nil {
-		add(rule)
-		if compact {
-			add(st.Warn.Render(fmt.Sprintf("#%d", sd.Row.Rank)))
-		} else {
-			add(st.Warn.Render(fmt.Sprintf("rank %d/%d", sd.Row.Rank, sd.Total)))
-			last := 0
-			for _, rows := range [][]cf.StandingRow{sd.Top, sd.Near} {
-				for _, r := range rows {
-					if r.Rank <= last {
-						continue // the top rows and the neighbours can overlap
-					}
-					if last > 0 && r.Rank > last+1 {
-						add(st.Dim.Render("  ⋯"))
-					}
-					last = r.Rank
-					l := fit(fmt.Sprintf("%5d %s", r.Rank, clean(r.Handle)), w)
-					if r.Rank == sd.Row.Rank && r.Handle == sd.Row.Handle {
-						l = st.Accent.Bold(true).Render(l)
-					}
-					add(l)
-				}
+	return out
+}
+
+// railStanding is the live standing: the rank alone when compact, else the rank with the top and
+// neighbour rows.
+func (m Model) railStanding(w int, compact bool) []string {
+	st := m.styles()
+	sd := m.standing
+	if compact {
+		return []string{st.Warn.Render(fmt.Sprintf("#%d", sd.Row.Rank))}
+	}
+	out := []string{st.Warn.Render(fmt.Sprintf("rank %d/%d", sd.Row.Rank, sd.Total))}
+	last := 0
+	for _, rows := range [][]cf.StandingRow{sd.Top, sd.Near} {
+		for _, r := range rows {
+			if r.Rank <= last {
+				continue // the top rows and the neighbours can overlap
 			}
+			if last > 0 && r.Rank > last+1 {
+				out = append(out, st.Dim.Render("  ⋯"))
+			}
+			last = r.Rank
+			l := fit(fmt.Sprintf("%5d %s", r.Rank, clean(r.Handle)), w)
+			if r.Rank == sd.Row.Rank && r.Handle == sd.Row.Handle {
+				l = st.Accent.Bold(true).Render(l)
+			}
+			out = append(out, l)
 		}
 	}
-	if !compact {
-		hints := []string{"{contest_mode.next}/{contest_mode.prev} problem", "{contest_mode.jump_1}-9 jump", "{contest_mode.rail} rail", "{contest_mode.exit} end"}
-		if len(out)+len(hints)+1 < h {
-			for len(out)+len(hints) < h {
-				add("")
-			}
-			for _, l := range hints {
-				add(st.Dim.Render(fit(m.kx(l), w)))
-			}
-		}
+	return out
+}
+
+// railHints pads the rail down to h and adds the key hints, when there is room for them.
+func (m Model) railHints(out []string, w, h int) []string {
+	st := m.styles()
+	hints := []string{"{contest_mode.next}/{contest_mode.prev} problem", "{contest_mode.jump_1}-9 jump", "{contest_mode.rail} rail", "{contest_mode.exit} end"}
+	if len(out)+len(hints)+1 >= h {
+		return out
+	}
+	for len(out)+len(hints) < h {
+		out = append(out, "")
+	}
+	for _, l := range hints {
+		out = append(out, st.Dim.Render(fit(m.kx(l), w)))
 	}
 	return out
 }

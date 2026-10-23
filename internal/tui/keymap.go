@@ -264,13 +264,8 @@ func newKeymap(user map[string][]string) (*keymap, error) {
 		if !ok {
 			return nil, fmt.Errorf("keys: unknown shortcut %q (see the Keyboard shortcuts editor in Settings)", id)
 		}
-		for _, key := range keys {
-			if _, err := parseKey(key); err != nil {
-				return nil, fmt.Errorf("keys.%s: %w", id, err)
-			}
-			if key == "ctrl+c" {
-				return nil, fmt.Errorf("keys.%s: ctrl+c always quits and cannot be rebound", id)
-			}
+		if err := checkUserKeys(id, keys); err != nil {
+			return nil, err
 		}
 		if len(keys) == 0 {
 			continue
@@ -288,6 +283,27 @@ func newKeymap(user map[string][]string) (*keymap, error) {
 			}
 		}
 	}
+	if err := checkKeyConflicts(k); err != nil {
+		return nil, err
+	}
+	return k, nil
+}
+
+// checkUserKeys rejects keys that do not parse or that are ctrl+c.
+func checkUserKeys(id string, keys []string) error {
+	for _, key := range keys {
+		if _, err := parseKey(key); err != nil {
+			return fmt.Errorf("keys.%s: %w", id, err)
+		}
+		if key == "ctrl+c" {
+			return fmt.Errorf("keys.%s: ctrl+c always quits and cannot be rebound", id)
+		}
+	}
+	return nil
+}
+
+// checkKeyConflicts rejects a key bound to two actions of the same group.
+func checkKeyConflicts(k *keymap) error {
 	for ctx, groups := range keyGroups {
 		seen := map[string]string{}
 		for _, a := range keyActions {
@@ -296,13 +312,13 @@ func newKeymap(user map[string][]string) (*keymap, error) {
 			}
 			for _, key := range k.keys(a) {
 				if other, dup := seen[key]; dup && other != actionID(a) {
-					return nil, fmt.Errorf("key %q is bound to both %s and %s (in %s)", key, other, actionID(a), keyGroupTitle[ctx])
+					return fmt.Errorf("key %q is bound to both %s and %s (in %s)", key, other, actionID(a), keyGroupTitle[ctx])
 				}
 				seen[key] = actionID(a)
 			}
 		}
 	}
-	return k, nil
+	return nil
 }
 
 // keys are the action's current keys: the user's, else the defaults.
@@ -338,35 +354,12 @@ func CheckKeys(user map[string][]string) error {
 
 // keyCtx is the context a key press lands in right now; "" means a text field has the keys.
 func (m Model) keyCtx() string {
+	if ctx, ok := m.modalKeyCtx(); ok {
+		return ctx
+	}
 	switch {
-	case m.pal != nil:
-		return ""
-	case m.edv != nil:
-		return "editorial"
-	case m.sp != nil, m.sessSum:
-		return ""
-	case m.tm != nil:
-		if m.tm.ed != nil || m.tm.confirmDel {
-			return ""
-		}
-		return "testmgr"
-	case m.fm != nil:
-		return ""
-	case m.subModal:
-		return "submission"
-	case m.help:
-		if m.helpFind {
-			return ""
-		}
-		return "help"
 	case m.viewing():
-		switch {
-		case m.confirm:
-			return ""
-		case m.full:
-			return "full"
-		}
-		return "problem"
+		return m.viewKeyCtx()
 	case m.input != nil:
 		return ""
 	case m.tab == 4 && (m.setEdit != nil || m.setFind):
@@ -375,6 +368,44 @@ func (m Model) keyCtx() string {
 		return ""
 	}
 	return m.screenCtx()
+}
+
+// modalKeyCtx is the context of the open modal, if one takes the keys.
+func (m Model) modalKeyCtx() (string, bool) {
+	switch {
+	case m.pal != nil:
+		return "", true
+	case m.edv != nil:
+		return "editorial", true
+	case m.sp != nil, m.sessSum:
+		return "", true
+	case m.tm != nil:
+		if m.tm.ed != nil || m.tm.confirmDel {
+			return "", true
+		}
+		return "testmgr", true
+	case m.fm != nil:
+		return "", true
+	case m.subModal:
+		return "submission", true
+	case m.help:
+		if m.helpFind {
+			return "", true
+		}
+		return "help", true
+	}
+	return "", false
+}
+
+// viewKeyCtx is the context while a problem is open.
+func (m Model) viewKeyCtx() string {
+	switch {
+	case m.confirm:
+		return ""
+	case m.full:
+		return "full"
+	}
+	return "problem"
 }
 
 // screenCtx is the screen under any modal.
