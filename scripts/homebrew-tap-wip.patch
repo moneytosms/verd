@@ -1,0 +1,36 @@
+diff --git a/.github/workflows/release-check.yml b/.github/workflows/release-check.yml
+index 76fa24a..88b465e 100644
+--- a/.github/workflows/release-check.yml
++++ b/.github/workflows/release-check.yml
+@@ -16,3 +16,5 @@ jobs:
+       - uses: goreleaser/goreleaser-action@v6
+         with:
+           args: release --snapshot --clean
++        env:
++          HOMEBREW_TAP_TOKEN: dummy
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 471b7fc..63a446c 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -17,3 +17,4 @@ jobs:
+           args: release --clean
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+diff --git a/.goreleaser.yaml b/.goreleaser.yaml
+index 999f7ac..00c0cb1 100644
+--- a/.goreleaser.yaml
++++ b/.goreleaser.yaml
+@@ -15,3 +15,12 @@ checksum:
+   name_template: checksums.txt
+ changelog:
+   use: github
++brews:
++  - name: verd
++    homepage: https://github.com/moneytosms/verd
++    description: Codeforces TUI with local tests, stress testing and live verdicts
++    license: MIT
++    repository:
++      owner: moneytosms
++      name: homebrew-tap
++      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
