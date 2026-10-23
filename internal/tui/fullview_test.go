@@ -43,6 +43,30 @@ func TestFullTestView(t *testing.T) {
 	}
 }
 
+func TestFullViewNextPrev(t *testing.T) {
+	m, ch := openWithTests(t, []runner.Event{
+		{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-1", Verdict: runner.AC, Output: "ONE\n"}},
+		{Kind: runner.TestFinished, Result: runner.Result{Name: "sample-2", Verdict: runner.AC, Output: "TWO\n"}},
+		{Kind: runner.Done, Verdict: runner.AC},
+	})
+	m, cmd := send(m, "t")
+	for range 3 {
+		m, cmd = step(t, m, cmd)
+	}
+	close(ch)
+	m, _ = send(m, "f")
+	m, _ = send(m, "j")
+	m, _ = send(m, "n")
+	if !strings.Contains(plain(m), "TWO") || m.fullOff != 0 {
+		t.Fatalf("n should show the next test from the top, off=%d:\n%s", m.fullOff, plain(m))
+	}
+	m, _ = send(m, "n") // stays on the last
+	m, _ = send(m, "p")
+	if !strings.Contains(plain(m), "ONE") {
+		t.Fatalf("p should go back:\n%s", plain(m))
+	}
+}
+
 func TestDiffLines(t *testing.T) {
 	want := []string{"1 2", "3.0", "x"}
 	got := []string{"1  2", "3.0000001", "y", "extra"}
@@ -86,10 +110,6 @@ func TestFullViewPanAndSections(t *testing.T) {
 	m, _ = send(m, "w")
 	if !m.fullWrap || m.fullX != 0 {
 		t.Fatal("w should switch to wrap")
-	}
-	m, _ = send(m, "3")
-	if m.fullOff == 0 {
-		t.Fatal("3 should jump to the Output section")
 	}
 }
 
@@ -346,5 +366,13 @@ func idle(cmd tea.Cmd) bool {
 		return msg == nil || fade
 	case <-time.After(150 * time.Millisecond):
 		return true
+	}
+}
+
+func TestStderrTones(t *testing.T) {
+	lines := []string{"[verd: rerun with sanitizers]", "⋯ 6 lines of library function signature", "", "Error: attempt to subscript container with out-of-bounds index 4, but",
+		"container only holds 4 elements.", "", "    #5 0x1 in dfs(int) /w/main.cpp:22", "    #9 0x1 in other /w/lib.cpp:3"}
+	if got := string(stderrTones(lines, "/w/main.cpp")); got != "ff\x00ee\x00s\x00" {
+		t.Errorf("got %q", got)
 	}
 }

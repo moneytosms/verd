@@ -1,0 +1,40 @@
+/usr/include/c++/16/debug/vector:523:
+In function:
+    constexpr std::debug::vector<_Tp, _Allocator>::reference std::
+    debug::vector<_Tp, _Allocator>::operator[](size_type) [with _Tp = int; 
+    _Allocator = std::allocator<int>; reference = int&; size_type = long 
+    unsigned int]
+
+Error: attempt to subscript container with out-of-bounds index 4, but 
+container only holds 4 elements.
+
+Objects involved in the operation:
+    sequence "this" @ 0x6ce1254f0040 {
+      type = std::debug::vector<int, std::allocator<int> >;
+    }
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==2088708==ERROR: AddressSanitizer: ABRT on unknown address 0x03e8001fdf04 (pc 0x70e12769a17c bp 0x7ffff1213180 sp 0x7ffff1213150 T0)
+    #0 0x70e12769a17c  (/usr/lib/libc.so.6+0x9a17c) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #1 0x70e12763e5cf in gsignal (/usr/lib/libc.so.6+0x3e5cf) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #2 0x70e127625684 in abort (/usr/lib/libc.so.6+0x25684) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #3 0x70e12829ed9e in __gnu_debug::_Error_formatter::_M_error() const (/usr/lib/libstdc++.so.6+0x9ed9e) (BuildId: 5b8d3de442de987b24d0e3679533068f2ae62497)
+    #4 0x60083dc806fe in std::__debug::vector<int, std::allocator<int> >::operator[](unsigned long) /usr/include/c++/16/debug/vector:523
+    #5 0x60083dc806fe in dfs(int, std::__debug::vector<int, std::allocator<int> >&) /w/dbg.cpp:5
+    #6 0x60083dc80566 in dfs(int, std::__debug::vector<int, std::allocator<int> >&) /w/dbg.cpp:6
+    #7 0x60083dc80566 in dfs(int, std::__debug::vector<int, std::allocator<int> >&) /w/dbg.cpp:6
+    #8 0x60083dc80566 in dfs(int, std::__debug::vector<int, std::allocator<int> >&) /w/dbg.cpp:6
+    #9 0x60083dc80566 in dfs(int, std::__debug::vector<int, std::allocator<int> >&) /w/dbg.cpp:6
+    #10 0x60083dc80f90 in main /w/dbg.cpp:8
+    #11 0x70e127627780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #12 0x70e1276278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #13 0x60083dc80244 in _start (/w/dbg+0x4244) (BuildId: 70f5fbbb5932c14243b4b273bf6ffb487142f361)
+
+==2088708==Register values:
+rax = 0x0000000000000000  rbx = 0x00000000001fdf04  rcx = 0x000070e12769a17c  rdx = 0x0000000000000006  
+rdi = 0x00000000001fdf04  rsi = 0x00000000001fdf04  rbp = 0x00007ffff1213180  rsp = 0x00007ffff1213150  
+ r8 = 0x0000000000000002   r9 = 0x0000000000000000  r10 = 0x0000000000000000  r11 = 0x0000000000000246  
+r12 = 0x000060083dc89000  r13 = 0x0000000000000003  r14 = 0x0000000000000006  r15 = 0x00006ce1254f0060  
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: ABRT (/usr/lib/libc.so.6+0x9a17c) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372) 
+==2088708==ABORTING

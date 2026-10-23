@@ -1,0 +1,6 @@
+ub.cpp:2:55: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+    #0 0x5d4d811c824a in main /w/ub.cpp:2
+    #1 0x70ab38a27780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #2 0x70ab38a278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #3 0x5d4d811c80c4 in _start (/w/ub+0x10c4) (BuildId: 4dd1a89b126ff9d7c6eb06531f7a719b39b2dddb)
+

@@ -1,0 +1,37 @@
+/usr/include/c++/16/bits/stl_algo.h:4847:
+In function:
+    constexpr void std::sort(_RAIter, _RAIter, _Compare) [with _RAIter = 
+    gnu_debug::_Safe_iterator<gnu_cxx::normal_iterator<int*, vector<int, 
+    allocator<int> > >, debug::vector<int>, random_access_iterator_tag>; 
+    _Compare = main()::<lambda(int, int)>]
+
+Error: comparison doesn't meet irreflexive requirements, assert(!(a < a)).
+
+Objects involved in the operation:
+    instance "functor" @ 0x782cfbaf0030 {
+      type = main::{lambda(int, int)#1};
+    }
+    iterator::value_type "ordered type"  {
+      type = int;
+    }
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==2088710==ERROR: AddressSanitizer: ABRT on unknown address 0x03e8001fdf06 (pc 0x7c2cfd89a17c bp 0x7ffc91a7a100 sp 0x7ffc91a7a0d0 T0)
+    #0 0x7c2cfd89a17c  (/usr/lib/libc.so.6+0x9a17c) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #1 0x7c2cfd83e5cf in gsignal (/usr/lib/libc.so.6+0x3e5cf) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #2 0x7c2cfd825684 in abort (/usr/lib/libc.so.6+0x25684) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #3 0x7c2cfe49ed9e in __gnu_debug::_Error_formatter::_M_error() const (/usr/lib/libstdc++.so.6+0x9ed9e) (BuildId: 5b8d3de442de987b24d0e3679533068f2ae62497)
+    #4 0x5eb750b7dc63 in sort<__gnu_debug::_Safe_iterator<__gnu_cxx::__normal_iterator<int*, std::__cxx1998::vector<int, std::allocator<int> > >, std::__debug::vector<int>, std::random_access_iterator_tag>, main()::<lambda(int, int)> > /usr/include/c++/16/bits/stl_algo.h:4847
+    #5 0x5eb750b7dc63 in main /w/cmp.cpp:2
+    #6 0x7c2cfd827780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #7 0x7c2cfd8278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #8 0x5eb750b6a404 in _start (/w/cmp+0x25404) (BuildId: 73a179fc7593a8cf25dde0a6cd09292e88437697)
+
+==2088710==Register values:
+rax = 0x0000000000000000  rbx = 0x00000000001fdf06  rcx = 0x00007c2cfd89a17c  rdx = 0x0000000000000006  
+rdi = 0x00000000001fdf06  rsi = 0x00000000001fdf06  rbp = 0x00007ffc91a7a100  rsp = 0x00007ffc91a7a0d0  
+ r8 = 0x0000000000000002   r9 = 0x0000000000000000  r10 = 0x0000000000000000  r11 = 0x0000000000000246  
+r12 = 0x00005eb750bc55e0  r13 = 0x0000000000000002  r14 = 0x0000000000000006  r15 = 0x00005eb750b9db50  
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: ABRT (/usr/lib/libc.so.6+0x9a17c) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372) 
+==2088710==ABORTING

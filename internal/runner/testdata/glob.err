@@ -1,0 +1,6 @@
+glob.cpp:3:37: runtime error: index 5 out of bounds for type 'int [4]'
+    #0 0x60bbc3ef7295 in main /w/glob.cpp:3
+    #1 0x75eba8427780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #2 0x75eba84278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #3 0x60bbc3ef70f4 in _start (/w/glob+0x10f4) (BuildId: 720a1bd92ec9404c9e327ce61b2463863fa54aac)
+

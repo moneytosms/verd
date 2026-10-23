@@ -2,9 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/moneytosms/verd/internal/runner"
 )
 
@@ -13,6 +16,7 @@ type fullRow struct {
 	text      string
 	bad, head bool
 	note      bool // an inline hint under a wrong line (what was expected)
+	tone      byte // stderr coloring, see stderrTones
 }
 
 var fullSecs = [4]string{"Input", "Expected", "Output", "Stderr (never compared)"}
@@ -54,8 +58,14 @@ func (m Model) result(row caseRow) *runner.Result {
 func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts [4]int) {
 	texts := [4]string{row.Input, row.Want, "", ""}
 	var bw, bg []bool
+	var tones []byte
 	if res := m.result(row); res != nil {
 		texts[2], texts[3] = res.Output, res.Stderr
+		if !m.fullRaw {
+			texts[3] = runner.Fold(res.Stderr)
+		}
+		sol, _, _ := strings.Cut(runner.Explain(*res).Loc, ":")
+		tones = stderrTones(cleanLines(texts[3]), sol)
 		if res.Verdict != "" && res.Verdict != runner.AC { // "" is a test still running
 			bw, bg = diffLines(runner.Mode(m.mode()), cleanLines(row.Want), cleanLines(res.Output))
 		}
@@ -72,21 +82,28 @@ func (m Model) fullRows(row caseRow, cw int, wrap bool) (rows []fullRow, starts 
 			continue
 		}
 		var bad []bool
+		var tone []byte
 		switch s {
 		case 1:
 			bad = bw
 		case 2:
 			bad = bg
+		case 3:
+			tone = tones
 		}
 		for i, l := range cleanLines(texts[s]) {
 			b := i < len(bad) && bad[i]
+			var tn byte
+			if i < len(tone) {
+				tn = tone[i]
+			}
 			r := []rune(l)
 			for first := true; first || (wrap && len(r) > 0); first = false {
 				n := len(r)
 				if wrap {
 					n = min(n, cw)
 				}
-				rows = append(rows, fullRow{text: string(r[:n]), bad: b})
+				rows = append(rows, fullRow{text: string(r[:n]), bad: b, tone: tn})
 				r = r[n:]
 			}
 			if b && s == 2 {
@@ -135,9 +152,19 @@ func (m Model) fullBox() []string {
 			head = append(head, st.Bad.Render(clean(d)))
 		}
 		if x := runner.Explain(*res); x.Hint != "" {
-			head = append(head, st.Warn.Render("why: "+clean(x.Hint)))
+			for i, l := range strings.Split(xansi.Wordwrap(clean(x.Hint), cw-5, ""), "\n") {
+				head = append(head, st.Warn.Render([]string{"why: ", "     "}[min(i, 1)]+l))
+			}
 			if x.Loc != "" {
-				head = append(head, st.Warn.Render("at:  "+clean(x.Loc)))
+				file, _, _ := strings.Cut(x.Loc, ":")
+				at := st.Warn.Render("at:  ") + st.Accent.Render(filepath.Base(clean(x.Loc)))
+				if x.Code != "" {
+					at += st.Dim.Render("  │ ") + hlCode(st, file, clean(x.Code))
+				}
+				head = append(head, at)
+			}
+			if x.Trace != "" {
+				head = append(head, st.Warn.Render("via: ")+st.Dim.Render(clean(x.Trace)))
 			}
 		}
 	}
@@ -166,8 +193,12 @@ func (m Model) fullBox() []string {
 			body = append(body, st.Accent.Render(string(t)))
 		case r.bad:
 			body = append(body, st.Bad.Render("! "+string(t)))
-		case r.note:
+		case r.note, r.tone == 'f':
 			body = append(body, st.Dim.Render("  "+string(t)))
+		case r.tone == 'e':
+			body = append(body, st.Bad.Render("  "+string(t)))
+		case r.tone == 's':
+			body = append(body, st.Accent.Render("  "+string(t)))
 		default:
 			body = append(body, "  "+string(t))
 		}
@@ -176,7 +207,11 @@ func (m Model) fullBox() []string {
 	if m.fullWrap {
 		wrap = "pan"
 	}
-	note := m.kx(fmt.Sprintf("%d-%d/%d  {full.down}/{full.up} scroll  {full.pan_left}/{full.pan_right} pan  {full.wrap} %s  {full.section_1}-{full.section_4} section  {full.copy} copy  {full.rerun} rerun  {full.close} close", min(off+1, len(rows)), end, len(rows), wrap))
+	raw := "raw stderr"
+	if m.fullRaw {
+		raw = "fold stderr"
+	}
+	note := m.kx(fmt.Sprintf("%d-%d/%d  {full.down}/{full.up} scroll  {full.pan_left}/{full.pan_right} pan  {full.wrap} %s  {full.raw} %s  {full.next}/{full.prev} test  {full.copy} copy  {full.rerun} rerun  {full.close} close", min(off+1, len(rows)), end, len(rows), wrap, raw))
 	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }
 
@@ -216,12 +251,15 @@ func (m Model) updateFull(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.fullX = max(0, m.fullX-8)
 	case "w":
 		m.fullWrap, m.fullX = !m.fullWrap, 0
-	case "1", "2", "3", "4":
-		if row, ok := m.selected(); ok {
-			w, _ := m.modalSize(m.width, m.height)
-			_, starts := m.fullRows(row, max(4, w-6), m.fullWrap)
-			m.fullOff = starts[int(k[0]-'1')]
+	case "z":
+		m.fullRaw = !m.fullRaw
+	case "n", "p": // next or previous test, from the top
+		d := 1
+		if k == "p" {
+			d = -1
 		}
+		m.tsel = max(0, min(m.tsel+d, len(m.rows())-1))
+		m.fullOff, m.fullX = 0, 0
 	case "y":
 		row, ok := m.selected()
 		if !ok {
@@ -246,4 +284,26 @@ func (m Model) updateFull(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.stopTests(), tea.Quit
 	}
 	return m, nil
+}
+
+var errLine = regexp.MustCompile(`Error:|ERROR:|runtime error:|^SUMMARY:|^Traceback|^\w+(Error|Exception)\b|terminate called|Assertion`)
+
+// stderrTones colors stderr lines: 'e' the error message (a debug-mode "Error:" paragraph runs to the
+// blank line), 's' a line naming the Solution's file sol, 'f' folded noise and verd's own notes.
+func stderrTones(lines []string, sol string) []byte {
+	t := make([]byte, len(lines))
+	para := false
+	for i, l := range lines {
+		para = para && strings.TrimSpace(l) != ""
+		switch {
+		case strings.HasPrefix(l, "⋯ ") || strings.HasPrefix(l, "[verd:"):
+			t[i] = 'f'
+		case para || errLine.MatchString(l):
+			t[i] = 'e'
+			para = para || strings.HasPrefix(l, "Error: ")
+		case sol != "" && strings.Contains(l, sol):
+			t[i] = 's'
+		}
+	}
+	return t
 }
