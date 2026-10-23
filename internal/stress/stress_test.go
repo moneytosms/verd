@@ -89,7 +89,7 @@ func TestSolutionRETLEAndCancel(t *testing.T) {
 		t.Fatalf("%+v", r)
 	}
 	s := setup(t, "while True: pass\n", good)
-	s.TimeLimitMS = 200
+	s.TimeLimitMS = 1000 // the generator runs under the same limit: 200ms flaked under parallel load
 	if r, _ := final(Run(context.Background(), s)); r.Kind != SolutionTLE {
 		t.Fatalf("%+v", r)
 	}
