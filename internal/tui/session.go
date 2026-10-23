@@ -197,13 +197,16 @@ func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {
 func (m Model) endSession() Model {
 	m = m.cmSave()
 	note := ""
-	if m.deps.SaveReport != nil && m.sess != nil {
+	if m.cm.report == "" && m.deps.SaveReport != nil && m.sess != nil { // once: a retry after a failed end must not write again
 		md := session.Report(*m.sess, m.cmProblemsForReport(), m.sessResult, m.cm.stats, m.sessScore(), m.clock())
 		if path, err := m.deps.SaveReport(*m.sess, md); err != nil {
 			note = "report not saved: " + clean(err.Error())
 		} else {
-			note = "session report saved to " + path
+			m.cm.report = path
 		}
+	}
+	if m.cm.report != "" {
+		note = "session report saved to " + m.cm.report
 	}
 	if m.deps.EndSession != nil {
 		if err := m.deps.EndSession(); err != nil {

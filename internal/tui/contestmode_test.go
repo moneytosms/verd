@@ -162,3 +162,13 @@ func TestSummaryEscKeepsOneTickChain(t *testing.T) {
 		t.Fatalf("esc: summary %v, cmd %v", m.sessSum, cmd)
 	}
 }
+
+func TestOutsideProblemStaysOnceSessionShown(t *testing.T) {
+	now := time.Unix(10_000, 0)
+	m, _, _ := contestModel(t, &now) // session shows A
+	other := cf.Problem{ContestID: 9, Index: "A", Name: "Other"}
+	m.open = &other // e.g. a Test Run from the CLI on another contest's Problem
+	if m, _ = m.cmEnsure(); m.open.ContestID != 9 {
+		t.Fatalf("a Problem opened from outside was replaced by %s", m.open.Name)
+	}
+}

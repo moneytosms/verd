@@ -27,11 +27,13 @@ const railFullW, railCompactW = 26, 8
 
 // cmState is contest mode's own state.
 type cmState struct {
-	rail  int
-	mem   map[string]cmMem // per-Problem view state, by index
-	stats session.Stats
-	ticks int  // seconds since the stats were last saved
-	fetch bool // the session's statements were prefetched
+	rail   int
+	mem    map[string]cmMem // per-Problem view state, by index
+	stats  session.Stats
+	ticks  int    // seconds since the stats were last saved
+	fetch  bool   // the session's statements were prefetched
+	shown  bool   // a session Problem has been open: a Problem opened from outside then stays open
+	report string // where the ended session's report went, so a retried end does not write it again
 }
 
 // cmMem is a Problem's view as it was left: switching back restores it.
@@ -76,9 +78,13 @@ func (m Model) cmEnsure() (Model, tea.Cmd) {
 		}
 	}
 	m.tab, m.openTab = 0, 0
-	if m.cmCurrent() < 0 {
+	switch {
+	case m.cmCurrent() >= 0:
+		m.cm.shown = true
+	case !m.cm.shown || m.open == nil: // before the session's first Problem, any open one gives way
 		nm, cmd := m.cmSwitch(ps[0])
 		m, cmds = nm, append(cmds, cmd)
+		m.cm.shown = true
 	}
 	return m, tea.Batch(cmds...)
 }

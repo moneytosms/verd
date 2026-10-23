@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -570,11 +571,7 @@ func runTUI(path string) error {
 		EndSession:       s.EndSession,
 		SaveSessionStats: s.SaveSessionStats,
 		SaveReport: func(x session.Session, md string) (string, error) {
-			path := filepath.Join(workspace.New(cfg.Workspace).Dir(x.ContestID, ""), fmt.Sprintf("%s-%s.md", x.Mode, time.Unix(x.Start, 0).Format("2006-01-02-1504")))
-			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-				return "", err
-			}
-			return path, os.WriteFile(path, []byte(md), 0o644)
+			return saveReport(workspace.New(cfg.Workspace).Dir(x.ContestID, ""), x, md)
 		},
 		Editorial: func(p cf.Problem) (*editorial.Result, error) {
 			return editorial.Load(context.Background(), s, client, p, time.Now())
@@ -686,6 +683,31 @@ func stage(s *store.Store, handle string, sync func() error) func() (tui.Data, e
 		err := sync()
 		d, lerr := loadData(s, handle)
 		return d, errors.Join(err, lerr)
+	}
+}
+
+// saveReport writes a session's report under dir as <mode>-<start>.md, never overwriting: a second
+// session of the same mode starting in the same minute gets -2, -3 and so on.
+func saveReport(dir string, x session.Session, md string) (string, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	base := fmt.Sprintf("%s-%s", x.Mode, time.Unix(x.Start, 0).Format("2006-01-02-1504"))
+	for n := 1; ; n++ {
+		name := base + ".md"
+		if n > 1 {
+			name = fmt.Sprintf("%s-%d.md", base, n)
+		}
+		path := filepath.Join(dir, name)
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if errors.Is(err, fs.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		_, werr := f.WriteString(md)
+		return path, errors.Join(werr, f.Close())
 	}
 }
 
