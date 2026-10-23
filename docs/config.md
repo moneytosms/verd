@@ -23,7 +23,7 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `embed_ratio` | `0.4` | Share of the window verd keeps when Neovim is embedded. |
 | `embed_side` | `"right"` | Which column the embedded Neovim takes: `right` or `left`. |
 | `embed_focus_key` | `"ctrl+\\"` | Toggles keyboard focus between verd and the embedded Neovim. Same as `[keys.editor] focus`. |
-| `images`, `reading_size`, `reading_width`, `reading_margin`, `reading_spacing`, `reading_headings`, `reading_math`, `reading_emphasis` | `auto`, `normal`, `0`, `1`, `normal`, `bar`, `unicode`, `true` | How statements are laid out. See [Reading and fonts](./customizing.md#reading-and-fonts). |
+| `images`, `reading_width`, `reading_margin`, `reading_spacing`, `reading_headings`, `reading_math`, `reading_emphasis` | `auto`, `0`, `1`, `normal`, `bar`, `unicode`, `true` | How statements are laid out. See [Reading and fonts](./customizing.md#reading-and-fonts). |
 | `reading_split`, `reading_palette`, `reading_night_from` | `"full"`, `"app"`, `20` | `reading_split`: `full` or `cap`. `cap` limits the statement to 76 columns in the split view when `reading_width` is 0. `reading_palette`: `app`, `paper`, `sepia`, `cool`, `night`, `mono`, `contrast` or `auto`. `auto` is `night` from `reading_night_from` until 07:00, else `app`. It colors the statement only; `P` in a Problem cycles it. `reading_night_from`: hour 0–23 when `auto` switches to night. See [Reading and fonts](./customizing.md#reading-and-fonts). |
 | `mouse` | `true` | Enable mouse reporting. `false` disables it for terminal-native selection everywhere. |
 | `wheel_lines` | `3` | Lines scrolled per mouse wheel notch (1–20). |

@@ -117,8 +117,8 @@ func TestRenderHeadingsBar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "▌") {
-		t.Errorf("missing bar heading marker in %q", out)
+	if !strings.Contains(out, "▌") || !strings.Contains(out, "─") {
+		t.Errorf("missing bar or rule in heading %q", out)
 	}
 }
 

@@ -78,10 +78,10 @@ func applyHeadingStyle(cfg *ansi.StyleConfig, style string) {
 			}
 		}
 	case "bar":
-		// "▌ " prefix in accent colour + bold
+		// "▌ " prefix and a rule beneath, in the heading colour and bold
 		for _, h := range headings {
 			h.Prefix = "▌ "
-			h.Suffix = ""
+			h.Suffix = "\n" + strings.Repeat("─", 40) // approximate width; real width set post-render
 			if h.Bold == nil {
 				t := true
 				h.Bold = &t

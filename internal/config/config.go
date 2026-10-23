@@ -39,7 +39,6 @@ type Config struct {
 	SubmitMode       string   `toml:"submit_mode"`
 	Browser          string   `toml:"browser"`
 	Images           string   `toml:"images"`
-	ReadingSize      string   `toml:"reading_size"`
 	ReadingWidth     int      `toml:"reading_width"`
 	ReadingMargin    int      `toml:"reading_margin"`
 	ReadingSpacing   string   `toml:"reading_spacing"`
@@ -106,7 +105,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Resume: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser", Browser: "default",
-		Images: "auto", ReadingSize: "normal", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, ReadingSplit: "full", ReadingPalette: "app", ReadingNightFrom: 20, Border: "rounded",
+		Images: "auto", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, ReadingSplit: "full", ReadingPalette: "app", ReadingNightFrom: 20, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
@@ -247,9 +246,6 @@ func Load(path string) (Config, error) {
 	if c.Images != "" && c.Images != "auto" && c.Images != "kitty" && c.Images != "blocks" && c.Images != "off" {
 		return c, fmt.Errorf("images %q: want auto, kitty, blocks or off", c.Images)
 	}
-	if c.ReadingSize != "" && c.ReadingSize != "compact" && c.ReadingSize != "normal" && c.ReadingSize != "large" {
-		return c, fmt.Errorf("reading_size %q: want compact, normal or large", c.ReadingSize)
-	}
 	if c.ReadingMargin < 0 || c.ReadingMargin > 8 {
 		return c, fmt.Errorf("reading_margin: %d is outside 0 to 8", c.ReadingMargin)
 	}
@@ -318,7 +314,7 @@ func (c Config) Get(key string) (string, bool) {
 		"embed_side": c.EmbedSide, "embed_zoom": c.EmbedZoom, "submit_mode": c.SubmitMode, "browser": c.Browser, "time_multiplier": c.TimeMultiplier,
 		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest, "resume": c.Resume,
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
-		"images": c.Images, "reading_size": c.ReadingSize, "reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
+		"images": c.Images, "reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
 		"reading_split": c.ReadingSplit, "reading_palette": c.ReadingPalette, "reading_night_from": c.ReadingNightFrom,
 		"header": c.Header, "footer": c.Footer, "tabs": strings.Join(c.Tabs, ","), "mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,

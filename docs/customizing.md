@@ -215,11 +215,10 @@ Your terminal sets the font. What verd controls is how a statement is laid out a
 | Key | Values | Effect |
 | --- | --- | --- |
 | `images` | `auto`, `kitty`, `blocks`, `off` | Statement images, drawn in the terminal. `auto` uses the Kitty graphics protocol in kitty and Ghostty (real pixels, scrolls like text) and colour half-blocks everywhere else, Alacritty and tmux included. `off` leaves a link. Images are fetched over https from any public host (authors use imgur and similar), never from loopback or private addresses, up to 10 MB and 16 megapixels, and cached under the cache directory. When one cannot be loaded, the statement says why next to `[image]`. |
-| `reading_size` | `compact`, `normal`, `large` | One switch for how roomy statements feel. `large` is a narrower column with a wider margin. The keys below override it. |
 | `reading_width` | `0` or `40`-`200` | Cap the statement's line length (0 = the whole pane). Narrow columns read faster. |
 | `reading_margin` | `0`-`8` | Left margin in columns. |
 | `reading_spacing` | `compact`, `normal`, `relaxed` | Blank lines between paragraphs. |
-| `reading_headings` | `plain`, `bold`, `bar`, `underline` | Input / Output / Note headings: text, bold, `▌ Input`, or with a rule under them. |
+| `reading_headings` | `plain`, `bold`, `bar`, `underline` | Input / Output / Note headings: text, bold, `▌ Input`, or bold with a rule under them. `bar` (default) has both the marker and the rule. |
 | `reading_math` | `unicode`, `latex`, `raw` | Maths is drawn as code, so it stands out from the text. `unicode` shows symbols (`1 ≤ w ≤ 10⁹`); `latex` shows the TeX source (`1 \le w \le 10^9`). `raw` is the same as `latex`. The terminal cannot typeset real LaTeX. |
 | `reading_emphasis` | `true`, `false` | `false` turns italics and bold into plain text, for fonts that render them badly. |
 

@@ -643,19 +643,13 @@ type detailMsg struct {
 // readingOptions constructs scrape.Options from config values.
 func (m Model) readingOptions() scrape.Options {
 	o := scrape.DefaultOptions()
-	switch m.setting("reading_size") {
-	case "compact":
-		o.Margin, o.Spacing = 0, "compact"
-	case "large":
-		o.Width, o.Margin = 76, 3
-	}
 	if v := m.setting("reading_width"); v != "" && v != "0" {
 		fmt.Sscanf(v, "%d", &o.Width)
 	}
 	if _, _, ok := m.split(); ok && m.setting("reading_split") == "cap" && o.Width == 0 {
 		o.Width = 76
 	}
-	if v := m.setting("reading_margin"); v != "" && v != "1" { // 1 is the default: the size preset decides
+	if v := m.setting("reading_margin"); v != "" && v != "1" { // 1 is the default
 		fmt.Sscanf(v, "%d", &o.Margin)
 	}
 	if v := m.setting("reading_spacing"); v != "" && v != "normal" {

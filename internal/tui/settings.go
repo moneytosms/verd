@@ -43,11 +43,10 @@ var settingDefs = []settingDef{
 	{"Editor", "embed_zoom", "Start zoomed", "Start the editor zoomed (fullscreen) when it opens.", "bool", true},
 	{"Editor", "embed_focus_key", "Focus key", "Hands the keyboard between verd and the embedded editor.", "text", false},
 	{"Reading", "images", "Images", "Statement images drawn in the terminal. auto uses the Kitty protocol in kitty and Ghostty and colour half-blocks everywhere else (Alacritty, tmux, ...); blocks forces half-blocks; off shows a link.", "enum", true},
-	{"Reading", "reading_size", "Text size", "compact, normal or large. large is a narrower column with a wider margin, easier on the eyes. verd cannot change the terminal font: use your terminal's ctrl+plus / ctrl+minus for that. The settings below override it.", "enum", true},
 	{"Reading", "reading_width", "Statement width", "Max width for statement text (0 = use the whole pane; 40-200 to cap it). Text is left-aligned inside the pane.", "text", true},
 	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
 	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},
-	{"Reading", "reading_headings", "Section headings", "Style for Input/Output/Note headings: plain, bold, bar or underline.", "enum", true},
+	{"Reading", "reading_headings", "Section headings", "Style for Input/Output/Note headings: plain, bold, bar (marker and rule, the default) or underline (bold with a rule).", "enum", true},
 	{"Reading", "reading_math", "Math rendering", "How TeX maths shows, styled as code so it stands out. unicode turns it into symbols (1 ≤ n ≤ 10⁹); latex shows the TeX source (\\le, 10^9). Search words: latex tex unicode formula equation symbols.", "enum", true},
 	{"Reading", "reading_emphasis", "Emphasis", "Render italics and bold; off = plain text for emphasis.", "bool", true},
 	{"Reading", "reading_split", "Split view width", "full uses the whole left pane for the statement; cap keeps it to 76 columns in the split view when Statement width is 0. Words: split width cap narrow column line length.", "enum", true},
@@ -194,7 +193,7 @@ func (m Model) applyLive(key, value string) Model {
 		}
 		m.cursor, m.pickInit, m.pickExpr, m.pickPreset = 0, false, "", "" // the Picker redraws under the new sources
 		m = m.refilter()
-	case "reading_size", "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis", "reading_split", "reading_palette", "reading_night_from":
+	case "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis", "reading_split", "reading_palette", "reading_night_from":
 		// Invalidate bodyW to force re-render with new reading preferences
 		if m.detail != nil {
 			m.bodyW = 0

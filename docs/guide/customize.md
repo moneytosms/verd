@@ -60,7 +60,6 @@ How statements look:
 
 ```sh
 verd config set images blocks         # auto | kitty | blocks | off: statement images in the terminal
-verd config set reading_size large     # compact | normal | large: a narrower, roomier column
 verd config set reading_width 90         # cap the line length (0 = the whole pane)
 verd config set reading_spacing relaxed  # compact | normal | relaxed
 verd config set reading_headings bar     # plain | bold | bar | underline
@@ -70,7 +69,7 @@ verd config set reading_emphasis false   # no italics or bold, for fonts that re
 
 Your terminal sets the font.
 
-**Line length** is how many characters fit across one line of text. Lines of 60 to 75 columns are the easiest to read: the eye finds the start of the next line without losing its place. Much wider lines make the eye hunt. `reading_width` caps the statement at a number of columns (`0` uses the whole pane). `reading_margin` adds empty columns on the left. `reading_size` sets both at once: `large` is a narrower column with a wider margin.
+**Line length** is how many characters fit across one line of text. Lines of 60 to 75 columns are the easiest to read: the eye finds the start of the next line without losing its place. Much wider lines make the eye hunt. `reading_width` caps the statement at a number of columns (`0` uses the whole pane). `reading_margin` adds empty columns on the left.
 
 Two more settings:
 
