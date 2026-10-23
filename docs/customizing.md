@@ -180,6 +180,7 @@ Pick a theme live in Settings (`5`): it previews as you move through the list.
 | `embed_zoom` | `true`, `false` (default) | Start the editor fullscreen when it opens. |
 | `autotest` | `true`, `false` | Re-run tests whenever you save the Solution. |
 | `resume` | `true`, `false` | Start where you left off: tab, filter, sort, open contest and Problem. |
+| `browser` | `default`, or a command | Opens submit pages and Problem links. `default` uses the system opener; a command takes its arguments too, e.g. `chromium --new-window`. |
 | `source_cf`, `source_cses` | `true`, `false` | Which Problem sources the lists show. |
 
 Embedded editor keys (rebindable under `[keys.editor]`): `ctrl+\` toggles the keyboard between verd and the editor, `alt+h` / `alt+l` move the keyboard to the left / right column, `alt+z` hides verd so the editor fills the window, `alt+]` / `alt+[` grow/shrink the editor column, `alt+s` swaps the editor between left and right. See [Embedded pane](./embedded-pane.md).

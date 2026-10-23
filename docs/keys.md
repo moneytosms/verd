@@ -12,7 +12,7 @@ run_tests = "ctrl+t"
 submit = ["s", "ctrl+s"]   # a list gives several keys
 ```
 
-Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `stats`, `picker`, `settings`, `problem`, `editorial`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
+Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `contest_mode`, `stats`, `picker`, `settings`, `problem`, `editorial`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
 
 Other changes in this release: opening a Problem and switching tabs no longer closes it (it is hidden until you return to its tab; `esc` closes it).
 

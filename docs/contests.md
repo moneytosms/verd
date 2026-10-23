@@ -16,7 +16,7 @@ Each key asks you to press it again to confirm. The first press tells you what w
 Starting a session, of any kind, switches verd into contest mode, and it stays there (across restarts too) until the session ends:
 
 - The tabs are hidden. The header shows the contest, its clock and the score.
-- The contest's Problems sit on a rail at the left with each result (`✓ 12m +1`, `-2`); the open one is marked `▸`. Problem A opens first, and every statement is downloaded in the background so switching is instant.
+- The contest's Problems sit on a rail at the left with each result (`✓ 12m +1`, `-2`); the open one is marked `▸`. Problem A opens first (a Problem you had open from outside the session gives way to it, but one opened from outside afterwards, such as `verd test` on another contest, stays), and every statement is downloaded in the background so switching is instant.
 - `alt+n` / `alt+p` go to the next / previous Problem, `alt+1` to `alt+9` jump straight to one, and a click on the rail does the same. These work even while the embedded editor has the keyboard, and an open editor pane follows to the new Problem's Solution. Each Problem keeps its scroll, selected test and last Test Run, so switching back loses nothing.
 - `alt+b` cycles the rail: full (name, clock, score, problems, standings), compact (letters and results only) and hidden. Until you pick one it is compact next to an embedded editor or in a window under 140 columns, full otherwise. Zen mode hides it. The choice is remembered.
 - For a live contest the rail adds a standings panel: your rank out of everyone (`rank 512/18034`), the top three, and the two rows above and below yours, with your handle highlighted. A virtual or practice session has no live standings; its score is verd's own.
@@ -26,7 +26,7 @@ All of these keys can be rebound under `[keys.contest_mode]`.
 
 ### Session stats and report
 
-While a session runs, verd records for each Problem when you first opened it, how long it was the open Problem and how many Test Runs you made (and how many passed). The summary shows them next to each result.
+While a session runs, verd records for each Problem when you first opened it, how long it was the open Problem and how many Test Runs you made (and how many passed). The summary shows them next to each result. A report is never overwritten: a second session of the same mode starting in the same minute is saved as `…-1500-2.md`.
 
 Ending the session writes a Markdown report to `<workspace>/<contest>/<mode>-<date>.md` (for example `~/verd/500/virtual-2026-10-22-1500.md`): the date and length, the score, a table with each Problem's result, wrong attempts, time spent, first open and Test Runs, the totals, and links to what is left to upsolve. The footer says where it went.
 

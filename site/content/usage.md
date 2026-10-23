@@ -34,6 +34,8 @@ These talk to the running TUI over a Unix socket. With no TUI running they run h
 
 A Problem you opened stays open when you switch tabs; `esc` closes it.
 
+Start a contest session from the Contests tab and verd switches to contest mode: the tabs hide and the contest's Problems sit on a rail. See [Contest sessions](docs/contests.html).
+
 ## Everyday commands
 
 | Command | Does |

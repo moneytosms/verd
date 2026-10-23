@@ -26,6 +26,8 @@
 
 - **Local Verdicts first.** AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a real submission.
 - **Neovim stays Neovim.** It opens in a tmux or herdr split next to verd, or inside verd's own window when you are in neither (`split = "suspend"` hands over the terminal instead). `verd test`, `verd submit` and `verd stress` run from inside Neovim and report in verd's pane.
+- **Timed contest sessions.** Replay a finished contest as a virtual run, practice one, or join a live round with real standings. Ratings and tags stay hidden while it runs, and each session ends with a Markdown report. See [Contest sessions](./docs/contests.md).
+- **Failures explained.** A wrong answer, crash or sanitizer error says why in plain words, and points at the source line when it can.
 - **Stress testing built in.** `gen` and `brute` Templates per language; `S` finds a counterexample, shows the diff, and `w` saves it as the next Custom Test.
 - **Your history, used.** Solved marks, per-topic stats, rating chart, and a Problem Picker with a weak-topics preset.
 - **More than one provider.** Codeforces is on by default; turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse both in one list, with a Source filter and solved marks you set by hand or pull in with `verd sync cses`. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.

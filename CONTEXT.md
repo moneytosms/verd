@@ -60,6 +60,14 @@ The Codeforces judge's outcome for a Submission. Distinct from a Local Verdict.
 _Avoid_: Result
 _Avoid_: Attempt, upload
 
+**Session**:
+A timed run of one Codeforces contest: virtual (a finished contest, real length), practice (no timer) or live (the real clock, standings from Codeforces). One at a time; it survives restarts.
+_Avoid_: Contest run, mock, round
+
+**Contest mode**:
+The screen while a Session runs: the Session's Problems on a rail, no tabs, until the Session ends.
+_Avoid_: Contest view, exam mode
+
 **Problem Picker**:
 Chooses a random unsolved Problem matching user-given filters (rating range, tags).
 _Avoid_: Recommender, randomizer
