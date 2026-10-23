@@ -64,7 +64,7 @@ verd config set reading_size large     # compact | normal | large: a narrower, r
 verd config set reading_width 90         # cap the line length (0 = the whole pane)
 verd config set reading_spacing relaxed  # compact | normal | relaxed
 verd config set reading_headings bar     # plain | bold | bar | underline
-verd config set reading_math raw         # unicode (default) shows 1 ≤ w ≤ 10⁹; raw shows the TeX
+verd config set reading_math latex       # unicode (default) shows 1 ≤ w ≤ 10⁹; latex shows the TeX source
 verd config set reading_emphasis false   # no italics or bold, for fonts that render them badly
 ```
 
@@ -122,7 +122,7 @@ ext = "rb"
 run = ["ruby", "{src}"]
 ```
 
-Then `verd config set default_lang rust`. Scale limits per language with `time_multiplier`. Reference: [Configuration](../config.md), [Customizing](../customizing.md).
+Then `verd config set default_lang rust`. Set `default_lang ask` to pick a language per Problem from a list instead. Scale limits per language with `time_multiplier`. Reference: [Configuration](../config.md), [Customizing](../customizing.md).
 
 ## Check your work
 

@@ -146,11 +146,15 @@ func Render(statementHTML string, width int, style string, o Options) (string, e
 	if err != nil {
 		return "", err
 	}
-	// Apply math preference: skip TeX conversion if raw
-	texBody := body
-	if o.Math != "raw" {
-		texBody = ConvertTeX(body)
-	}
+	// Maths becomes inline code, so the terminal draws it in its own colour and background.
+	// unicode shows the symbols; latex and raw show the TeX source.
+	texBody := convertTeX(body, func(latex string) string {
+		text := latex
+		if o.Math != "latex" && o.Math != "raw" {
+			text = unicodeMath(latex)
+		}
+		return "<code>" + html.EscapeString(text) + "</code>"
+	})
 	markdown, err := md.ConvertString(texBody)
 	if err != nil {
 		return "", err

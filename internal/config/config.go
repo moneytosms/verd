@@ -117,6 +117,14 @@ func Default() Config {
 	}
 }
 
+// CLIDefaultLang is default_lang for commands run outside the TUI, where "ask" cannot prompt: cpp.
+func (c Config) CLIDefaultLang() string {
+	if c.DefaultLang == "ask" {
+		return "cpp"
+	}
+	return c.DefaultLang
+}
+
 // SnippetsPath is where Templates and the snippet library live: snippets_dir with a leading ~
 // expanded, else <config dir>/snippets.
 func (c Config) SnippetsPath() string {
@@ -251,8 +259,8 @@ func Load(path string) (Config, error) {
 	if c.ReadingHeadings != "" && c.ReadingHeadings != "plain" && c.ReadingHeadings != "bold" && c.ReadingHeadings != "bar" && c.ReadingHeadings != "underline" {
 		return c, fmt.Errorf("reading_headings %q: want plain, bold, bar or underline", c.ReadingHeadings)
 	}
-	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "raw" {
-		return c, fmt.Errorf("reading_math %q: want unicode or raw", c.ReadingMath)
+	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "latex" && c.ReadingMath != "raw" {
+		return c, fmt.Errorf("reading_math %q: want unicode, latex or raw", c.ReadingMath)
 	}
 	if c.ReadingSplit != "" && c.ReadingSplit != "full" && c.ReadingSplit != "cap" {
 		return c, fmt.Errorf("reading_split %q: want full or cap", c.ReadingSplit)

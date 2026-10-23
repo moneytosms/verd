@@ -30,7 +30,7 @@ var settingDefs = []settingDef{
 	{"General", "handle", "Handle", "Your Codeforces handle: where solved marks, stats and Submissions come from.", "text", false},
 	{"General", "workspace", "Workspace", "Where Solutions and tests live: <workspace>/<contest>/<index>/. A relative path is resolved against where verd starts; verd --here does that for one run.", "text", false},
 	{"General", "resume", "Resume", "Start where you left off: tab, filter, sort, open contest and Problem.", "bool", true},
-	{"General", "default_lang", "Default language", "Language for new Solutions. Switch per Problem with {problem.language}.", "enum", true},
+	{"General", "default_lang", "Default language", "Language for new Solutions. ask shows a picker the first time you open a Problem (per Problem). Switch per Problem with {problem.language}.", "enum", true},
 	{"Testing", "autotest", "Autotest", "Run the tests whenever you save the Solution.", "bool", true},
 	{"Testing", "time_multiplier", "Time multiplier", "Scales every time limit for local runs. Use 2.0 on a slow machine.", "text", false},
 	{"Testing", "float_eps", "Float tolerance", "Absolute and relative tolerance for the float Comparison Mode.", "text", false},
@@ -48,7 +48,7 @@ var settingDefs = []settingDef{
 	{"Reading", "reading_margin", "Left margin", "Left margin in columns (0-8).", "text", true},
 	{"Reading", "reading_spacing", "Paragraph spacing", "Blank lines between paragraphs: compact, normal or relaxed.", "enum", true},
 	{"Reading", "reading_headings", "Section headings", "Style for Input/Output/Note headings: plain, bold, bar or underline.", "enum", true},
-	{"Reading", "reading_math", "Math rendering", "TeX rendering: unicode (to Unicode symbols) or raw (show TeX source).", "enum", true},
+	{"Reading", "reading_math", "Math rendering", "How TeX maths shows, styled as code so it stands out. unicode turns it into symbols (1 ≤ n ≤ 10⁹); latex shows the TeX source (\\le, 10^9). Search words: latex tex unicode formula equation symbols.", "enum", true},
 	{"Reading", "reading_emphasis", "Emphasis", "Render italics and bold; off = plain text for emphasis.", "bool", true},
 	{"Reading", "reading_split", "Split view width", "full uses the whole left pane for the statement; cap keeps it to 76 columns in the split view when Statement width is 0. Words: split width cap narrow column line length.", "enum", true},
 	{"Reading", "reading_palette", "Reading palette", "Statement colours only: app (the theme's), paper, sepia, cool, night (dark), mono, contrast, or auto (night after Night starts at, day otherwise). Press P in a Problem to cycle. Words: paper sepia night dark light palette colour color theme reading.", "enum", true},
@@ -105,7 +105,7 @@ func (m Model) options(key string) []string {
 		}
 		return out
 	case "default_lang":
-		return m.deps.Langs
+		return append(slices.Clone(m.deps.Langs), "ask")
 	case "editor":
 		out := []string{"nvim", "vim", "hx", "nano", "micro", "emacs", "kak", "code", "subl", "zed"}
 		if cur := m.setting("editor"); cur != "" && !slices.Contains(out, cur) {

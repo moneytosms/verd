@@ -11,8 +11,18 @@ var texSpan = regexp.MustCompile(`(?s)\$\$\$(.+?)\$\$\$`)
 // ConvertTeX replaces every $$$...$$$ span in s with a Unicode rendering of its LaTeX.
 // Run it on the raw HTML before HTML-to-markdown, which would escape `_` and `\`.
 func ConvertTeX(s string) string {
+	return convertTeX(s, unicodeMath)
+}
+
+// unicodeMath is the Unicode rendering of one LaTeX span (without its $$$ marks).
+func unicodeMath(latex string) string {
+	return multiSpace.ReplaceAllString(tex(latex), " ")
+}
+
+// convertTeX replaces each $$$...$$$ span in s with conv of its LaTeX source.
+func convertTeX(s string, conv func(latex string) string) string {
 	return texSpan.ReplaceAllStringFunc(s, func(m string) string {
-		return multiSpace.ReplaceAllString(tex(m[3:len(m)-3]), " ")
+		return conv(m[3 : len(m)-3])
 	})
 }
 

@@ -29,7 +29,7 @@ func snippetCmd(out io.Writer, cfg config.Config, args []string) error {
 	}
 	fs := flag.NewFlagSet("snippet", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	lang := fs.String("lang", cfg.DefaultLang, "language")
+	lang := fs.String("lang", cfg.CLIDefaultLang(), "language")
 	list := fs.Bool("list", false, "list snippets")
 	cp := fs.Bool("copy", false, "copy to the clipboard instead of printing")
 	export := fs.Bool("export", false, "print the library as VSCode-style JSON")
@@ -108,7 +108,7 @@ var snippetName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 func snippetManage(out io.Writer, cfg config.Config, sub string, args []string) error {
 	fs := flag.NewFlagSet("snippet "+sub, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	lang := fs.String("lang", cfg.DefaultLang, "language")
+	lang := fs.String("lang", cfg.CLIDefaultLang(), "language")
 	desc := fs.String("desc", "", "one-line description")
 	force := fs.Bool("force", false, "overwrite an existing snippet")
 	usage := map[string]string{

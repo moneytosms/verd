@@ -248,9 +248,7 @@ func (m Model) infoLines(w int) []string {
 			lines = append(lines, st.Dim.Render("note   ")+clip(clean(first), max(8, w-7)))
 		}
 	}
-	for _, l := range m.submissionLines() {
-		lines = append(lines, l)
-	}
+	lines = append(lines, m.submissionLines()...)
 	return lines
 }
 

@@ -11,7 +11,7 @@
 # `verd init` fills it with the defaults; edit or add files freely. Default: ~/.config/verd/snippets
 # snippets_dir = "~/.config/verd/snippets"
 
-# Language used for new Solutions: cpp | c | python (or any [lang.*] key).
+# Language used for new Solutions: cpp | c | python (or any [lang.*] key), or ask to pick one per Problem.
 # default_lang = "cpp"
 
 # Scales every Problem's time limit for local runs (slow machine: 2.0).
@@ -106,7 +106,7 @@
 # reading_headings = "bar"
 #   Section heading style: plain | bold | bar | underline
 # reading_math = "unicode"
-#   Math rendering: unicode (TeX->Unicode) | raw (TeX source)
+#   Math rendering, shown as code so it stands out: unicode (symbols) | latex (TeX source; raw is the same)
 # reading_emphasis = true
 #   Render italics and bold; false = plain text for emphasis.
 # reading_split = "full"

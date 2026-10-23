@@ -15,8 +15,12 @@ func fit(s string, w int) string {
 	if w <= 0 {
 		return ""
 	}
-	s = xansi.Truncate(s, w, "…")
-	return s + strings.Repeat(" ", max(0, w-xansi.StringWidth(s)))
+	sw := xansi.StringWidth(s)
+	if sw > w { // only then walk the graphemes to cut it
+		s = xansi.Truncate(s, w, "…")
+		sw = xansi.StringWidth(s)
+	}
+	return s + strings.Repeat(" ", max(0, w-sw))
 }
 
 // borderGlyphs returns the box-drawing characters for the given border style.

@@ -27,3 +27,10 @@ func TestConvertTeX(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertTeXWrapsSpans(t *testing.T) {
+	got := convertTeX(`a $$$x_i$$$ b`, func(s string) string { return "<code>" + s + "</code>" })
+	if want := "a <code>x_i</code> b"; got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}

@@ -199,6 +199,8 @@ type Model struct {
 	contestCursor int
 	conQ          string // fuzzy filter over the contests list
 	conFind       bool   // keys go into conQ
+	langAsk       bool   // the language picker for default_lang "ask" is open
+	langSel       int
 	conChip       string // "" or "all", "upcoming", "past", "running", "started"
 	conSort       string // "" (date order) or "least" (least solved first)
 	contestOpen   *cf.Contest
@@ -860,6 +862,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg = "load failed: " + msg.err.Error()
 		default:
 			m.errMsg, m.detail, m.scroll, m.pstate = "", msg.d, 0, msg.state
+			if m.defaultLang() == "ask" && m.pstate.Lang == "" && len(m.deps.Langs) > 0 {
+				m.langAsk, m.langSel = true, 0
+			}
 			m = m.setBody(msg.body, msg.w).cmRestoreScroll()
 			m.imgWant = true
 			m = m.loadCases()
@@ -956,17 +961,20 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.help {
 			return m.updateHelp(msg)
 		}
-		if msg.String() == "x" && m.toast != nil && m.input == nil && !m.conFind && !m.setFind {
+		if m.langAsk {
+			return m.updateLangAsk(msg)
+		}
+		if msg.String() == "x" && m.toast != nil && m.input == nil && !m.typing() {
 			m.toast = nil
 			return m, nil
 		}
-		if msg.String() == "ctrl+k" && m.input == nil && !m.conFind && !m.setFind {
+		if msg.String() == "ctrl+k" && m.input == nil && !m.typing() {
 			return m.openPalette(), nil
 		}
-		if msg.String() == "Z" && m.input == nil && !m.setFind && !m.conFind && m.setEdit == nil && m.ke == nil {
+		if msg.String() == "Z" && m.input == nil && !m.typing() && m.ke == nil {
 			return m.toggleZen(), nil
 		}
-		if msg.String() == "?" && m.input == nil && !m.conFind && !m.setFind {
+		if msg.String() == "?" && m.input == nil && !m.typing() {
 			m.help, m.helpPage, m.helpScroll = true, 0, 0
 			return m, nil
 		}
@@ -989,12 +997,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1", "2", "3", "4", "5":
 			pos := int(k[0] - '1')
 			visible := m.visibleTabs()
-			if pos < len(visible) && !m.cmOn() && !m.conFind && !m.setFind {
+			if pos < len(visible) && !m.cmOn() && !m.typing() {
 				m.tab = m.tabIDFromPos(pos)
 				return m.onTab(), nil
 			}
 		case "tab":
-			if m.cmOn() || m.conFind || m.setFind {
+			if m.cmOn() || m.typing() {
 				return m, nil
 			}
 			visible := m.visibleTabs()
@@ -1213,20 +1221,7 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.deps.Langs) == 0 || m.detail == nil {
 			break
 		}
-		lang := nextOf(m.deps.Langs, m.lang())
-		if m.deps.Ensure != nil {
-			if err := m.deps.Ensure(*m.open, lang); err != nil {
-				m.errMsg = "language " + lang + ": " + err.Error()
-				break
-			}
-		}
-		m.pstate.Lang = lang
-		m.errMsg = ""
-		if m.deps.SaveState != nil {
-			if err := m.deps.SaveState(*m.open, m.pstate); err != nil {
-				m.errMsg = "saving language: " + err.Error()
-			}
-		}
+		m = m.chooseLang(nextOf(m.deps.Langs, m.lang()))
 	case "e":
 		if m.deps.Edit == nil {
 			break
@@ -1345,6 +1340,20 @@ func (m Model) lang() string {
 		if l == m.pstate.Lang {
 			return l
 		}
+	}
+	if d := m.defaultLang(); d != "ask" {
+		return d
+	}
+	if len(m.deps.Langs) > 0 {
+		return m.deps.Langs[0] // "ask" not answered yet: the first language
+	}
+	return "cpp"
+}
+
+// defaultLang is default_lang as set now ("ask" asks each time a Problem is opened).
+func (m Model) defaultLang() string {
+	if d := m.setting("default_lang"); d != "" {
+		return d
 	}
 	return m.deps.DefaultLang
 }

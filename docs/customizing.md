@@ -220,7 +220,7 @@ Your terminal sets the font. What verd controls is how a statement is laid out a
 | `reading_margin` | `0`-`8` | Left margin in columns. |
 | `reading_spacing` | `compact`, `normal`, `relaxed` | Blank lines between paragraphs. |
 | `reading_headings` | `plain`, `bold`, `bar`, `underline` | Input / Output / Note headings: text, bold, `▌ Input`, or with a rule under them. |
-| `reading_math` | `unicode`, `raw` | TeX shown as symbols (`1 ≤ w ≤ 10⁹`) or as its source. |
+| `reading_math` | `unicode`, `latex`, `raw` | Maths is drawn as code, so it stands out from the text. `unicode` shows symbols (`1 ≤ w ≤ 10⁹`); `latex` shows the TeX source (`1 \le w \le 10^9`). `raw` is the same as `latex`. The terminal cannot typeset real LaTeX. |
 | `reading_emphasis` | `true`, `false` | `false` turns italics and bold into plain text, for fonts that render them badly. |
 
 Colors of headings and text come from the theme (see [Themes](#themes-and-styling)); `glamour_dark` / `glamour_light` in a theme pick the statement style.

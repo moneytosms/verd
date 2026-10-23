@@ -14,6 +14,8 @@ func (m Model) modalBox() []string {
 	switch {
 	case m.pal != nil:
 		return m.paletteBox()
+	case m.langAsk:
+		return m.langAskBox()
 	case m.ke != nil:
 		return m.keyEditorBox()
 	case m.edv != nil:

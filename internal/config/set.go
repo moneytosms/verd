@@ -55,7 +55,7 @@ var settable = map[string]struct {
 	"reading_margin":     {kInt, nil},
 	"reading_spacing":    {kString, []string{"compact", "normal", "relaxed"}},
 	"reading_headings":   {kString, []string{"plain", "bold", "bar", "underline"}},
-	"reading_math":       {kString, []string{"unicode", "raw"}},
+	"reading_math":       {kString, []string{"unicode", "latex", "raw"}},
 	"reading_emphasis":   {kBool, nil},
 	"reading_split":      {kString, []string{"full", "cap"}},
 	"reading_palette":    {kString, ReadingPalettes},
