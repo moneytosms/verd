@@ -52,7 +52,7 @@ verd keys preset vim
 
 A rebound action stops answering to its old key, and two actions on one key within a screen are refused. `ctrl+c` always quits. In the TUI: Settings > **Keyboard shortcuts** (`/` searches, `enter` rebinds, `a` adds a second key, `backspace` resets). The full table is [Keys](../keys.md).
 
-**Command palette.** `ctrl+k` (action `common.palette`) opens one fuzzy box over every action on the current screen and every setting. `enter` runs the action (using your own binding), flips a yes/no setting such as `Show footer` in place, or jumps to any other setting. Settings: `/` filters; `?` then `/` searches all shortcuts.
+**Command palette.** `ctrl+k` (action `common.palette`) opens one fuzzy box over every action on the current screen and every setting. `enter` runs the action (using your own binding), flips a yes/no setting such as `Show footer` in place, or jumps to any other setting. In Settings, `/` fuzzy-searches settings by name, key and description; `?` then `/` searches all shortcuts.
 
 ## Reading
 
@@ -68,7 +68,19 @@ verd config set reading_math raw         # unicode (default) shows 1 ≤ w ≤ 1
 verd config set reading_emphasis false   # no italics or bold, for fonts that render them badly
 ```
 
-Font family and size belong to your terminal; verd cannot change them.
+Your terminal sets the font.
+
+**Line length** is how many characters fit across one line of text. Lines of 60 to 75 columns are the easiest to read: the eye finds the start of the next line without losing its place. Much wider lines make the eye hunt. `reading_width` caps the statement at a number of columns (`0` uses the whole pane). `reading_margin` adds empty columns on the left. `reading_size` sets both at once: `large` is a narrower column with a wider margin.
+
+Two more settings:
+
+```sh
+verd config set reading_split cap       # full | cap: in the split view, cap caps the statement at 76 columns (when reading_width is 0)
+verd config set reading_palette sepia   # colors for the statement only
+verd config set reading_night_from 21   # hour (0-23) when auto switches to night
+```
+
+`reading_palette` takes `app` (your theme, the default), `paper`, `sepia`, `cool`, `night`, `mono`, `contrast` or `auto`. `auto` uses `night` from `reading_night_from` (default 20) until 07:00, then `app`. In a Problem, `P` cycles through the palettes.
 
 ## Layout, mouse and tabs
 

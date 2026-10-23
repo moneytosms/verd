@@ -2,6 +2,8 @@
 
 The Contests tab (`2`) lists upcoming contests (soonest first) and past ones. `enter` opens a contest: its problems with your status, each openable like any other.
 
+Press `/` to search by contest name, id or problem name. The chips `a` (all), `u` (upcoming), `p` (past), `r` (running) and `s` (at least one solve) narrow the list, and `o` sorts least-solved first. Each row shows `solved/total` for cached problems (`-` when not fetched yet).
+
 A **session** turns a contest into a timed run inside verd. Start one from the contest modal.
 
 | Key | For | Does |

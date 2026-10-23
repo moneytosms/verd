@@ -36,12 +36,12 @@ The first start downloads the problem list, then works offline from its cache. F
 | Tab | What it is |
 | --- | --- |
 | `1` Problems | every problem, with search, filters and solved marks |
-| `2` Contests | contests, and timed [sessions](./contests.md) |
+| `2` Contests | contests (`/` to search), and timed [sessions](./contests.md) |
 | `3` Stats | your rating, topics and streaks |
 | `4` Picker | a random unsolved problem in your rating band |
 | `5` Settings | every option, live |
 
-Press `?` on any screen for its keys, or `ctrl+k` to fuzzy-find and run any action or setting. `Z` toggles zen mode (just the statement and tests).
+**Lost? Press `ctrl+k`.** The command palette fuzzy-runs any action or setting, so you can find a feature without knowing its key. Press `?` on any screen for its keys. `Z` toggles zen mode (just the statement and tests).
 
 ## 4. Solve one problem
 

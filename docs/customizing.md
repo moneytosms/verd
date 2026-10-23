@@ -41,7 +41,7 @@ verd                            # open the TUI
 | `verd config get <key>` | Print one value. |
 | `verd config set <key> <value>` | Change one top-level key. Comments and other lines stay; a commented default is uncommented in place. Enum values are checked (`split`, `background`, `embed_side`, `submit_mode`), numbers and booleans are parsed. |
 
-Tables (`[lang.*]`, `[keys.*]`, `[themes.*]`) are edited as text, or with `verd keys` for shortcuts. The full key list is in [Configuration](./config.md). The Settings tab (`5`) edits the same file live.
+Tables (`[lang.*]`, `[keys.*]`, `[themes.*]`) are edited as text, or with `verd keys` for shortcuts. The full key list is in [Configuration](./config.md). The Settings tab (`5`) edits the same file live, and `/` there searches settings by name, key and description. Press `ctrl+k` anywhere to fuzzy-run any action or setting (the command palette).
 
 ## Keyboard shortcuts
 
@@ -210,12 +210,12 @@ Changes to `config.toml` apply while verd runs, within about one second. Edit th
 
 ## Reading and fonts
 
-Font family and size belong to your terminal emulator; verd cannot change them. Change them in the terminal's own settings (for example `font` in kitty/alacritty/ghostty/foot, Preferences > Profiles > Text in iTerm2 and GNOME Terminal, `font.size` in Windows Terminal). What verd controls is how a statement is laid out and styled, live from Settings (`5`) > **Reading** or with `verd config set`:
+Your terminal sets the font. What verd controls is how a statement is laid out and styled, live from Settings (`5`) > **Reading** or with `verd config set`:
 
 | Key | Values | Effect |
 | --- | --- | --- |
 | `images` | `auto`, `kitty`, `blocks`, `off` | Statement images, drawn in the terminal. `auto` uses the Kitty graphics protocol in kitty and Ghostty (real pixels, scrolls like text) and colour half-blocks everywhere else, Alacritty and tmux included. `off` leaves a link. Images are fetched over https from any public host (authors use imgur and similar), never from loopback or private addresses, up to 10 MB and 16 megapixels, and cached under the cache directory. When one cannot be loaded, the statement says why next to `[image]`. |
-| `reading_size` | `compact`, `normal`, `large` | One switch for how roomy statements feel. `large` is a narrower column with a wider margin. verd cannot change the terminal font: use your terminal's own zoom (ctrl+plus / ctrl+minus). The keys below override it. |
+| `reading_size` | `compact`, `normal`, `large` | One switch for how roomy statements feel. `large` is a narrower column with a wider margin. The keys below override it. |
 | `reading_width` | `0` or `40`-`200` | Cap the statement's line length (0 = the whole pane). Narrow columns read faster. |
 | `reading_margin` | `0`-`8` | Left margin in columns. |
 | `reading_spacing` | `compact`, `normal`, `relaxed` | Blank lines between paragraphs. |
@@ -224,6 +224,10 @@ Font family and size belong to your terminal emulator; verd cannot change them. 
 | `reading_emphasis` | `true`, `false` | `false` turns italics and bold into plain text, for fonts that render them badly. |
 
 Colors of headings and text come from the theme (see [Themes](#themes-and-styling)); `glamour_dark` / `glamour_light` in a theme pick the statement style.
+
+### Reading palettes
+
+`reading_palette` recolors the statement only and leaves the rest of the screen on your theme. Pick `app` (the theme's own colors, the default), `paper`, `sepia`, `cool`, `night`, `mono`, `contrast`, or `auto`, which uses `night` from `reading_night_from` (hour 0-23, default 20) until 07:00 and `app` otherwise. Set one with `verd config set reading_palette sepia`, or press `P` in a Problem to cycle them. `reading_split` (`full` or `cap`) decides whether the split view caps the statement at 76 columns when `reading_width` is 0.
 
 ## Layout
 

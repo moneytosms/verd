@@ -1,6 +1,6 @@
 # Usage
 
-verd is a keyboard-driven TUI for the contest loop: **pick a problem, read it, write the solution, test it, stress it, submit it**. Press `?` on any screen for its key list; the mouse works too.
+verd is a keyboard-driven TUI for the contest loop: **pick a problem, read it, write the solution, test it, stress it, submit it**. Press `?` on any screen for its key list, or `ctrl+k` to fuzzy-run any action or setting (the command palette). The mouse works too.
 
 ## The loop
 
@@ -27,10 +27,10 @@ These talk to the running TUI over a Unix socket. With no TUI running they run h
 | Tab | What it is |
 | --- | --- |
 | `1` Problems | Codeforces (and optionally CSES) in one list with live fuzzy search, filter chips and solved marks. |
-| `2` Contests | Browse contests; `enter` lists a contest's problems with your per-problem status. |
+| `2` Contests | Browse contests; `/` searches by name, id or problem name, `a` `u` `p` `r` `s` filter by chip, `o` sorts least solved first. `enter` lists a contest's problems with your per-problem status. |
 | `3` Stats | Totals, rating chart, difficulty histogram, per-topic strengths, streaks, a solve heatmap. |
 | `4` Picker | A random unsolved problem in your rating band. `w` is the weak-topics preset. |
-| `5` Settings | Every option, live: theme, reading layout, editor, shortcuts, mouse, layout. |
+| `5` Settings | Every option, live: theme, reading layout, editor, shortcuts, mouse, layout. `/` searches settings by name, key and description. |
 
 A Problem you opened stays open when you switch tabs; `esc` closes it.
 

@@ -11,6 +11,12 @@ Finished contests are replayed:
 
 Each key asks you to press it again to confirm. The first press tells you what will be hidden.
 
+## Finding contests
+
+On the Contests tab, press `/` to search. Each word must match a contest's name or id, or a problem's name inside a contest whose problems are cached. Chips narrow the list: `a` all, `u` upcoming, `p` past, `r` in progress, `s` contests with at least one solve. Press a chip's key again to go back to all. `o` sorts least-solved first.
+
+Each row shows `solved/total` for the contest's cached problems. `-` means the problems are not fetched yet. `?` appears during the contest's own session, where the count is hidden.
+
 ## Contest mode
 
 Starting a session, of any kind, switches verd into contest mode, and it stays there (across restarts too) until the session ends:

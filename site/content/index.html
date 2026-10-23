@@ -11,7 +11,7 @@
 {{NAV}}
 
 <header class="hero" id="top"><div class="wrap">
-  <span class="pill">v0.7.1 · Linux &amp; macOS</span>
+  <span class="pill">v0.8.0 · Linux &amp; macOS</span>
   <h1>Codeforces, CSES and more, <em>without leaving the terminal</em></h1>
   <p class="lead">Pick a problem from Codeforces or CSES, read it, write the solution in Neovim, test it locally, hunt counterexamples, submit, and watch the verdict arrive. One keyboard-driven TUI. No browser tab for the loop.</p>
   <div class="install">
@@ -27,6 +27,7 @@
   <h2>Everything the contest loop needs</h2>
   <p class="sec-lead">Local first, offline tolerant, and out of your way. <a href="{{ROOT}}usage.html">See the full tour</a> or <a href="{{ROOT}}guide/index.html">follow the guide</a>.</p>
   <div class="grid">
+    <div class="card c1"><span class="ic">ctrl+k</span><h3>Command palette</h3><p>Press <kbd>ctrl+k</kbd> and type. Fuzzy-run any action or setting from one box. Yes/no settings flip in place.</p></div>
     <div class="card c1"><span class="ic">AC WA TLE</span><h3>Local verdicts first</h3><p>AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a Codeforces submission. Failures say why in plain words and point at the source line when they can.</p></div>
     <div class="card c2"><span class="ic">nvim</span><h3>Neovim stays Neovim</h3><p>It opens in a tmux or herdr split beside verd, or inside verd's own window. Run <code>verd test</code>, <code>submit</code> and <code>stress</code> from inside Neovim.</p></div>
     <div class="card c3"><span class="ic">stress</span><h3>Stress testing built in</h3><p>Per-language <code>gen</code> and <code>brute</code> templates. <kbd>S</kbd> finds a counterexample and shows the diff; <kbd>w</kbd> saves it as your next custom test.</p></div>
@@ -36,7 +37,7 @@
     <div class="card c2"><span class="ic">$EDITOR</span><h3>Your editor</h3><p>Neovim by default. Switch to vim, helix, nano, micro, emacs or VS Code in Settings, live.</p></div>
     <div class="card c3"><span class="ic">keys</span><h3>Every key is yours</h3><p>Rebind any shortcut from Settings or <code>config.toml</code>, with fuzzy search, presets (vim, emacs, arrows) and export/import. Hints and help follow your bindings.</p></div>
     <div class="card c4"><span class="ic">theme</span><h3>Themes and reading</h3><p>Eight themes or your own palette, border styles, statement width, spacing and heading style. Edits to <code>config.toml</code> apply live.</p></div>
-    <div class="card c5"><span class="ic">contest</span><h3>Contest sessions</h3><p>Replay a finished contest as a timed virtual run, practice one, or join a live round with real standings. Ratings and tags stay hidden while it runs.</p></div>
+    <div class="card c5"><span class="ic">contest</span><h3>Contest sessions</h3><p>Replay a finished contest as a timed virtual run, practice one, or join a live round with real standings. Ratings and tags stay hidden while it runs. Search contests with <kbd>/</kbd> and see solved counts per contest.</p></div>
     <div class="card c6"><span class="ic">editorial</span><h3>Editorials, one hint at a time</h3><p><kbd>H</kbd> shows the editorial with every hint and the solution locked. <kbd>enter</kbd> opens the next one, strictly in order.</p></div>
     <div class="card c1"><span class="ic">snippets</span><h3>A snippet library</h3><p>Thirty-five ready algorithms for C++, C and Python: bfs, dijkstra, dsu, segment tree, modpow. <kbd>i</kbd> copies one; add your own with <code>verd snippet add</code>.</p></div>
     <div class="card c6"><span class="ic">safe</span><h3>Safe submit by default</h3><p>Browser handoff copies the solution, opens the submit page and tracks the verdict. Direct submit is opt-in and experimental.</p></div>
@@ -48,7 +49,7 @@
     <div>
       <div class="kicker">Interface</div>
       <h2>Mouse and keyboard, both first class</h2>
-      <p class="sec-lead" style="margin-bottom:18px">Click tabs, rows, panes and settings. Drag the divider to resize. Drag over the statement or a test to select lines and copy them. Press <kbd>y</kbd> to copy the whole question with difficulty, tags and every test, neatly laid out.</p>
+      <p class="sec-lead" style="margin-bottom:18px">Click tabs, rows, panes and settings. Drag the divider to resize. Drag over the statement or a test to select lines and copy them. Press <kbd>y</kbd> to copy the whole question with difficulty, tags and every test, neatly laid out. Press <kbd>ctrl+k</kbd> to fuzzy-run any action or setting, and <kbd>/</kbd> in Settings to search every option.</p>
       <p class="sec-lead" style="margin:0">Eight themes ship, switchable live in the Settings tab: tokyo-night, dracula, catppuccin, gruvbox, nord, one-dark, solarized and your terminal's own.</p>
     </div>
     <div class="shot" style="margin:0"><img src="{{ROOT}}assets/loop.svg" alt="The verd loop: pick, read, edit, test, stress, submit"></div>
@@ -120,7 +121,7 @@ curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | s
 <span class="c"># set your handle, then go</span>
 verd init
 verd</pre>
-  <p class="sub" style="margin-top:22px"><a href="{{ROOT}}install.html">More install options</a> · Pin a version with <code>VERD_VERSION=v0.7.1</code>. Not affiliated with Codeforces or CSES.</p>
+  <p class="sub" style="margin-top:22px"><a href="{{ROOT}}install.html">More install options</a> · Pin a version with <code>VERD_VERSION=v0.8.0</code>. Not affiliated with Codeforces or CSES.</p>
 </div></div></section>
 
 {{FOOTER}}

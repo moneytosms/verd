@@ -24,12 +24,14 @@
 
 ## Why
 
+- **Command palette.** Press `ctrl+k`, type a few letters, and run any action or setting. Yes/no settings flip in place. Start here when you wonder what verd can do.
 - **Local Verdicts first.** AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a real submission.
 - **Neovim stays Neovim.** It opens in a tmux or herdr split next to verd, or inside verd's own window when you are in neither (`split = "suspend"` hands over the terminal instead). `verd test`, `verd submit` and `verd stress` run from inside Neovim and report in verd's pane.
 - **Timed contest sessions.** Replay a finished contest as a virtual run, practice one, or join a live round with real standings. Ratings and tags stay hidden while it runs, and each session ends with a Markdown report. See [Contest sessions](./docs/contests.md).
 - **Failures explained.** A wrong answer, crash or sanitizer error says why in plain words, and points at the source line when it can.
 - **Stress testing built in.** `gen` and `brute` Templates per language; `S` finds a counterexample, shows the diff, and `w` saves it as the next Custom Test.
 - **Your history, used.** Solved marks, per-topic stats, rating chart, and a Problem Picker with a weak-topics preset.
+- **Contest search.** On the Contests tab, `/` finds a contest by name, id or problem name, and chips narrow the list to upcoming, past, running or contests you have solved in.
 - **More than one provider.** Codeforces is on by default; turn on the [CSES Problem Set](./docs/sources.md) in Settings and browse both in one list, with a Source filter and solved marks you set by hand or pull in with `verd sync cses`. Pick your editor too: Neovim by default, or vim, helix, nano, micro, emacs, VS Code.
 - **Offline-tolerant.** Everything renders from a local cache; the network refreshes it in the background.
 - **Safe submit by default.** Browser handoff copies the Solution, opens the submit page and tracks the Verdict. Direct submit is opt-in and [experimental](./docs/submit.md#direct-mode).
@@ -79,7 +81,7 @@ verd --here                     # same, but keep Solutions in the current direct
 5. **Stress.** Press `S`. The first time, verd creates `gen.cpp` and `brute.cpp` and opens them; fill them in and press `S` again. It runs until it finds a counterexample, and `w` saves it as a Custom Test.
 6. **Submit.** Press `s`. The Solution is copied, the submit page opens, and the Verdict streams into the pane.
 
-Press `ctrl+k` for the command palette: fuzzy-find any action or setting and run it (yes/no settings like the footer flip in place). `Z` is zen mode: only the statement and tests. Press `?` on any screen for its key list (`/` there searches it). The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
+**Lost? Press `ctrl+k`.** The command palette fuzzy-runs any action or setting (yes/no settings like the footer flip in place). In Settings, `/` searches every option by name, key and description. `Z` is zen mode: only the statement and tests. Press `?` on any screen for its key list (`/` there searches it). The complete and always-current key reference is [docs/keys.md](./docs/keys.md), which is generated from your bindings.
 
 ## Run it from Neovim
 

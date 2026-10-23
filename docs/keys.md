@@ -2,6 +2,8 @@
 
 Press `?` on any screen to see its keys. Keys are the same everywhere the same action exists.
 
+**Start with `ctrl+k`.** The command palette fuzzy-runs any action on the current screen and any setting, so you do not need to know a key first. In Settings, `/` searches every setting by name, key and description. In a Problem, `P` cycles the reading palette.
+
 ## Rebinding
 
 Every shortcut can be changed: Settings (`5`) > **Keyboard shortcuts**. `enter` rebinds the selected action (press the new key), `a` adds a second key, `backspace` resets it, and changes apply at once. They are saved to `config.toml`:
@@ -70,6 +72,13 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `pgup` | `page_up` | page up |
 | `pgdown` | `page_down` | page down |
 | `enter` | `open` | list the contest's Problems |
+| `/` | `search` | fuzzy-find a contest by name or id |
+| `a` | `chip_all` | all contests |
+| `u` | `chip_upcoming` | upcoming only |
+| `p` | `chip_past` | past only |
+| `r` | `chip_running` | in progress only |
+| `s` | `chip_started` | contests with a solve |
+| `o` | `sort` | least solved first |
 
 ## Contest modal
 
@@ -165,6 +174,7 @@ Other changes in this release: opening a Problem and switching tabs no longer cl
 | `o` | `open_browser` | open in the browser |
 | `m` | `mark_solved` | mark a CSES task solved or not |
 | `v` | `toggle_tags` | show or hide the tags |
+| `P` | `reading_palette` | cycle the reading palette: app, paper, sepia, cool, night, mono, contrast, auto |
 | `>`, `.` | `widen` | widen the right column |
 | `<`, `,` | `narrow` | narrow the right column |
 | `+`, `=` | `grow_tests` | grow the test list |
