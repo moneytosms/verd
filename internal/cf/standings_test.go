@@ -3,8 +3,10 @@ package cf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -63,5 +65,33 @@ func TestStandingsFailureIsAPIError(t *testing.T) {
 	var ae *APIError
 	if !errors.As(err, &ae) || ae.Comment != "contestId: Contest has not started" {
 		t.Fatalf("%v", err)
+	}
+}
+
+func TestStandingsKeepsNeighbours(t *testing.T) {
+	row := func(h string, rank int) string {
+		return fmt.Sprintf(`{"party":{"members":[{"handle":%q}]},"rank":%d,"points":0,"penalty":0,"problemResults":[]}`, h, rank)
+	}
+	var rows []string
+	for i := 1; i <= 10; i++ {
+		h := fmt.Sprint("u", i)
+		if i == 6 {
+			h = "me"
+		}
+		rows = append(rows, row(h, i))
+	}
+	body := `{"status":"OK","result":{"contest":{"id":7},"problems":[],"rows":[` + strings.Join(rows, ",") + `]}}`
+	st, err := standingsClient(t, body).Standings(context.Background(), 7, "me")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ranks := func(rs []StandingRow) (out []int) {
+		for _, r := range rs {
+			out = append(out, r.Rank)
+		}
+		return
+	}
+	if fmt.Sprint(ranks(st.Top)) != "[1 2 3]" || fmt.Sprint(ranks(st.Near)) != "[4 5 6 7 8]" || st.Total != 10 || st.Row.Handle != "me" {
+		t.Fatalf("top %v near %v total %d row %+v", ranks(st.Top), ranks(st.Near), st.Total, st.Row)
 	}
 }
