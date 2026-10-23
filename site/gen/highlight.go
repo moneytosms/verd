@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	codeRe  = regexp.MustCompile(`(?s)<pre><code(?: class="language-([A-Za-z0-9_+-]+)")?>(.*?)</code></pre>`)
-	shellRe = regexp.MustCompile(`^(\$ |verd |go |git |curl |export |XDG_|gofmt |goreleaser |python3 |tmux )`)
+	codeRe   = regexp.MustCompile(`(?s)<pre><code(?: class="language-([A-Za-z0-9_+-]+)")?>(.*?)</code></pre>`)
+	assignRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
+	shellRe  = regexp.MustCompile(`^(\$ |verd |go |git |curl |export |XDG_|gofmt |goreleaser |python3 |tmux )`)
 )
 
 // highlightCode colors fenced code blocks: shell gets comments/commands/flags/strings picked out,
@@ -120,7 +121,7 @@ func shellLine(line string) string {
 			b.WriteString(span("sf", w))
 		case strings.ContainsAny(w[:1], `'"`) || strings.Contains(w, `"`) && strings.Contains(w, "="):
 			b.WriteString(span("ss", w))
-		case regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`).MatchString(w):
+		case assignRe.MatchString(w):
 			name, val, _ := strings.Cut(w, "=")
 			b.WriteString(span("sv", name+"=") + span("ss", val))
 		case cmd:

@@ -36,8 +36,8 @@ func TestDelegatedMatchesHeadless(t *testing.T) {
 		t.Skip("python3 missing")
 	}
 	d := &scrape.Detail{TimeLimitMS: 2000, MemoryLimitMB: 256, Samples: []scrape.Sample{{Input: "1 2\n", Output: "3\n"}, {Input: "5 5\n", Output: "10\n"}}}
-	cfg, path, cache, detail := setup(t, "a,b=map(int,input().split())\nprint(a+b+(a==5))\n", "main.py", d) // sample-2 is WA
-	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
+	cfg, path, cache, _ := setup(t, "a,b=map(int,input().split())\nprint(a+b+(a==5))\n", "main.py", d) // sample-2 is WA
+	detail := func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
 
 	var headless bytes.Buffer
 	hErr := testCmd(context.Background(), &headless, cfg, cache, detail, nil, path, testOpts{})

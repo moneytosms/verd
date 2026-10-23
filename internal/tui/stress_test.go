@@ -32,7 +32,7 @@ func TestStressPanelOverlaySaveAndCancel(t *testing.T) {
 	// progress updates per event
 	ch <- stress.Event{Iter: 7, Seed: 7}
 	m, cmd = send(m, "S")
-	m, cmd = step(t, m, cmd)
+	m, _ = step(t, m, cmd)
 	if out := plain(m); !strings.Contains(out, "running...") || !strings.Contains(out, "iteration 7") {
 		t.Fatalf("progress missing:\n%s", out)
 	}

@@ -124,13 +124,6 @@ func (m Model) sessScore() string {
 	return line
 }
 
-func (m Model) sessionDeadline() time.Duration {
-	if m.sess == nil || m.sess.End == 0 {
-		return 0
-	}
-	return time.Unix(m.sess.End, 0).Sub(time.Unix(m.sess.Start, 0))
-}
-
 // startSession begins a session after a second press of the same key confirms it. A finished
 // contest is replayed (virtual or practice); one that is running or upcoming is joined live.
 func (m Model) startSession(c cf.Contest, mode string) (Model, tea.Cmd) {

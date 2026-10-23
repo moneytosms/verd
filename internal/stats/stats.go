@@ -116,11 +116,10 @@ func Compute(in Input) Stats {
 	}
 	sort.Slice(subs, func(i, j int) bool { return subs[i].ID < subs[j].ID })
 	type hist struct {
-		firstOK   bool
-		solved    bool
-		attempts  int
-		last      time.Time
-		everySeen bool
+		firstOK  bool
+		solved   bool
+		attempts int
+		last     time.Time
 	}
 	h := map[key]*hist{}
 	days := map[string]bool{}

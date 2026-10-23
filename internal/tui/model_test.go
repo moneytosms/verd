@@ -678,7 +678,7 @@ func TestComparisonModeCyclesAndPersists(t *testing.T) {
 		t.Fatalf("c should cycle to none and save: %+v", saved)
 	}
 	m, _ = send(m, "c") // none -> tokens
-	m, _ = send(m, "c") // tokens -> exact
+	_, _ = send(m, "c") // tokens -> exact
 	if saved["A"].Mode != "exact" {
 		t.Fatalf("saved %+v", saved)
 	}
@@ -687,7 +687,7 @@ func TestComparisonModeCyclesAndPersists(t *testing.T) {
 	if !strings.Contains(plain(m2), "[exact]") {
 		t.Fatalf("saved mode must win over hint after restart:\n%s", plain(m2))
 	}
-	m2, _ = send(m2, "t")
+	_, _ = send(m2, "t")
 	if gotOpts.Mode != runner.Exact {
 		t.Fatalf("run should use exact, got %q", gotOpts.Mode)
 	}
@@ -777,7 +777,7 @@ func TestLanguageSwitchPersistsAndRuns(t *testing.T) {
 	if edited != "python" {
 		t.Fatalf("edit should open the python Solution, got %q", edited)
 	}
-	m, _ = send(m, "l") // python -> c (wraps)
+	_, _ = send(m, "l") // python -> c (wraps)
 	if saved["A"].Lang != "c" {
 		t.Fatalf("wraps around: %+v", saved)
 	}
@@ -845,7 +845,7 @@ func TestAutotestOnSave(t *testing.T) {
 	m2, c2 := send(New([]cf.Problem{{ContestID: 1, Index: "A"}}, "", deps), "enter")
 	loaded = c2().(tea.BatchMsg)[0]()
 	nm, _ = m2.Update(loaded)
-	nm, _ = nm.(Model).Update(watchMsg{path: "/w/1/A/main.cpp", ch: saves})
+	_, _ = nm.(Model).Update(watchMsg{path: "/w/1/A/main.cpp", ch: saves})
 	if runs != 1 {
 		t.Fatal("autotest=false must not run")
 	}
@@ -919,7 +919,7 @@ func TestSubmitFlowAcceptedToastAutoClears(t *testing.T) {
 	}
 	sub := cf.Submission{Verdict: "OK", TimeMS: 15, MemoryBytes: 3 << 20}
 	updates <- submit.Update{Text: "Accepted", Final: true, Submission: sub}
-	m, cmd = stepBatch(t, m, cmd)
+	m, _ = stepBatch(t, m, cmd)
 	// the toast shows on every screen, including the list
 	m, _ = send(m, "esc")
 	out := plain(m)

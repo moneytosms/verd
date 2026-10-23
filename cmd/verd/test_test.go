@@ -128,8 +128,8 @@ func TestVerdTestHonorsSavedModeAndHint(t *testing.T) {
 		t.Skip("python3 missing")
 	}
 	d := &scrape.Detail{TimeLimitMS: 2000, MemoryLimitMB: 256, Hint: "float", Samples: []scrape.Sample{{Input: "\n", Output: "0.3333333333\n"}}}
-	cfg, path, cache, detail := setup(t, "print('0.333333')\n", "main.py", d)
-	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
+	cfg, path, cache, _ := setup(t, "print('0.333333')\n", "main.py", d)
+	detail := func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
 	var out bytes.Buffer
 	// hint -> float: within eps, AC
 	if err := testCmd(context.Background(), &out, cfg, cache, detail, nil, path, testOpts{}); err != nil || !strings.Contains(out.String(), "float") {
@@ -149,8 +149,8 @@ func TestStressCmd(t *testing.T) {
 	}
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	d := &scrape.Detail{TimeLimitMS: 2000, MemoryLimitMB: 256}
-	cfg, path, cache, detail := setup(t, "n=int(input())\nprint(n if n!=7 else 0)\n", "main.py", d)
-	detail = func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
+	cfg, path, cache, _ := setup(t, "n=int(input())\nprint(n if n!=7 else 0)\n", "main.py", d)
+	detail := func(context.Context, int, string) (*scrape.Detail, error) { return d, nil }
 	dir := filepath.Dir(path)
 	os.WriteFile(filepath.Join(dir, "brute.py"), []byte("print(int(input()))\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "gen.py"), []byte("import sys,random\nprint(random.Random(int(sys.argv[1])).randint(1,10))\n"), 0o644)
