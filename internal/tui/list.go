@@ -7,30 +7,30 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/moneytosms/verd/internal/cf"
+	"github.com/moneytosms/verd/internal/theme"
 )
 
 // tagStyle gives every tag its own stable colour from the theme.
-func (m Model) tagStyle(tag string) lipgloss.Style {
-	st := m.styles()
+func tagStyle(st theme.Styles, tag string) lipgloss.Style {
 	h := fnv.New32a()
 	h.Write([]byte(tag))
 	pick := []lipgloss.Style{st.Accent, st.Accent2, st.Good, st.Warn}
 	return pick[h.Sum32()%uint32(len(pick))].Bold(false)
 }
 
-func (m Model) tagChips(p cf.Problem, w int) string {
+func tagChips(st theme.Styles, p cf.Problem, w int) string {
 	var parts []string
 	used := 0
 	for _, t := range p.Tags {
 		t = clean(t)
 		if used+len([]rune(t))+1 > w {
-			parts = append(parts, m.styles().Dim.Render("…"))
+			parts = append(parts, st.Dim.Render("…"))
 			break
 		}
-		parts = append(parts, m.tagStyle(t).Render(t))
+		parts = append(parts, tagStyle(st, t).Render(t))
 		used += len([]rune(t)) + 2
 	}
-	return strings.Join(parts, m.styles().Dim.Render(", "))
+	return strings.Join(parts, st.Dim.Render(", "))
 }
 
 // chipsBar shows the active filters, search and sort as chips (or the problem count when none).
@@ -89,11 +89,11 @@ func (m Model) viewList(b *strings.Builder) string {
 		id := fmt.Sprintf("%-8s", p.Code())
 		tagW := max(10, w-nameW-34)
 		if i == m.cursor {
-			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + m.tagChips(p, tagW)
+			line := st.Accent.Render("▌") + " " + m.markOf(m.statusOf(p)) + " " + st.Accent.Render(id) + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + tagChips(st, p, tagW)
 			b.WriteString(paintRow(line, w, st.Selected) + "\n")
 			continue
 		}
-		b.WriteString("  " + m.markOf(m.statusOf(p)) + " " + id + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + m.tagChips(p, tagW) + "\n")
+		b.WriteString("  " + m.markOf(m.statusOf(p)) + " " + id + " " + fit(clean(p.Name), nameW) + " " + m.ratingText(p) + m.solvedText(p) + tagChips(st, p, tagW) + "\n")
 	}
 	if len(m.visible) == 0 {
 		b.WriteString("\n  " + st.Dim.Render("no problems match: X clears the filters") + "\n")

@@ -32,7 +32,7 @@ var symbols = map[string]string{
 
 // commands whose braced argument is passed through unchanged
 var passthrough = map[string]bool{"text": true, "mathrm": true, "mathbf": true, "mathit": true, "operatorname": true,
-	"textbf": true, "textit": true, "mathcal": true, "bf": true, "rm": true, "boldsymbol": true, "mathbb": true}
+	"textbf": true, "textit": true, "mathcal": true, "bf": true, "rm": true, "boldsymbol": true, "mathbb": true, "underline": true}
 
 const (
 	supFrom = "0123456789+-=()abcdefghijklmnoprstuvwxyz"

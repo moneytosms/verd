@@ -109,6 +109,13 @@
 #   Math rendering: unicode (TeX->Unicode) | raw (TeX source)
 # reading_emphasis = true
 #   Render italics and bold; false = plain text for emphasis.
+# reading_split = "full"
+#   Statement width in the split view: full (the whole pane) | cap (76 columns, when reading_width = 0).
+# reading_palette = "app"
+#   Statement colours: app (the theme's) | paper | sepia | cool | night | mono | contrast | auto.
+#   auto is night from reading_night_from until 07:00, app otherwise. P cycles it in a Problem.
+# reading_night_from = 20
+#   Hour (0-23) the auto palette switches to night.
 
 # Box border glyph set: rounded | square | heavy | double | ascii | none
 # none draws no frame but keeps a title line; ascii uses + - |

@@ -50,6 +50,13 @@ var keyActions = []keyAction{
 	{"contests", "page_up", "page up", ks("pgup")},
 	{"contests", "page_down", "page down", ks("pgdown")},
 	{"contests", "open", "list the contest's Problems", ks("enter")},
+	{"contests", "search", "fuzzy-find a contest by name or id", ks("/")},
+	{"contests", "chip_all", "all contests", ks("a")},
+	{"contests", "chip_upcoming", "upcoming only", ks("u")},
+	{"contests", "chip_past", "past only", ks("p")},
+	{"contests", "chip_running", "in progress only", ks("r")},
+	{"contests", "chip_started", "contests with a solve", ks("s")},
+	{"contests", "sort", "least solved first", ks("o")},
 
 	{"contest", "close", "close", ks("q", "esc")},
 	{"contest", "start", "start a session: virtual (finished contest), live (running) or wait for the start (upcoming)", ks("s")},
@@ -125,6 +132,7 @@ var keyActions = []keyAction{
 	{"problem", "open_browser", "open in the browser", ks("o")},
 	{"problem", "mark_solved", "mark a CSES task solved or not", ks("m")},
 	{"problem", "toggle_tags", "show or hide the tags", ks("v")},
+	{"problem", "reading_palette", "cycle the reading palette: app, paper, sepia, cool, night, mono, contrast, auto", ks("P")},
 	{"problem", "widen", "widen the right column", ks(">", ".")},
 	{"problem", "narrow", "narrow the right column", ks("<", ",")},
 	{"problem", "grow_tests", "grow the test list", ks("+", "=")},
@@ -362,6 +370,8 @@ func (m Model) keyCtx() string {
 	case m.input != nil:
 		return ""
 	case m.tab == 4 && (m.setEdit != nil || m.setFind):
+		return ""
+	case m.tab == 1 && m.contestOpen == nil && m.conFind:
 		return ""
 	}
 	return m.screenCtx()

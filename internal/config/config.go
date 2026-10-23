@@ -18,41 +18,44 @@ import (
 )
 
 type Config struct {
-	Handle          string   `toml:"handle"`
-	Workspace       string   `toml:"workspace"`
-	SnippetsDir     string   `toml:"snippets_dir"`
-	DefaultLang     string   `toml:"default_lang"`
-	TimeMultiplier  float64  `toml:"time_multiplier"`
-	FloatEps        float64  `toml:"float_eps"`
-	Autotest        bool     `toml:"autotest"`
-	Resume          bool     `toml:"resume"`
-	Theme           string   `toml:"theme"`
-	Background      string   `toml:"background"`
-	SourceCF        bool     `toml:"source_cf"`
-	SourceCSES      bool     `toml:"source_cses"`
-	Editor          string   `toml:"editor"`
-	Split           string   `toml:"split"`
-	EmbedRatio      float64  `toml:"embed_ratio"`
-	EmbedFocusKey   string   `toml:"embed_focus_key"`
-	EmbedSide       string   `toml:"embed_side"`
-	EmbedZoom       bool     `toml:"embed_zoom"`
-	SubmitMode      string   `toml:"submit_mode"`
-	Browser         string   `toml:"browser"`
-	Images          string   `toml:"images"`
-	ReadingSize     string   `toml:"reading_size"`
-	ReadingWidth    int      `toml:"reading_width"`
-	ReadingMargin   int      `toml:"reading_margin"`
-	ReadingSpacing  string   `toml:"reading_spacing"`
-	ReadingHeadings string   `toml:"reading_headings"`
-	ReadingMath     string   `toml:"reading_math"`
-	ReadingEmphasis bool     `toml:"reading_emphasis"`
-	Border          string   `toml:"border"`
-	Mouse           bool     `toml:"mouse"`
-	WheelLines      int      `toml:"wheel_lines"`
-	MouseSelect     bool     `toml:"mouse_select"`
-	Header          bool     `toml:"header"`
-	Footer          bool     `toml:"footer"`
-	Tabs            []string `toml:"tabs"`
+	Handle           string   `toml:"handle"`
+	Workspace        string   `toml:"workspace"`
+	SnippetsDir      string   `toml:"snippets_dir"`
+	DefaultLang      string   `toml:"default_lang"`
+	TimeMultiplier   float64  `toml:"time_multiplier"`
+	FloatEps         float64  `toml:"float_eps"`
+	Autotest         bool     `toml:"autotest"`
+	Resume           bool     `toml:"resume"`
+	Theme            string   `toml:"theme"`
+	Background       string   `toml:"background"`
+	SourceCF         bool     `toml:"source_cf"`
+	SourceCSES       bool     `toml:"source_cses"`
+	Editor           string   `toml:"editor"`
+	Split            string   `toml:"split"`
+	EmbedRatio       float64  `toml:"embed_ratio"`
+	EmbedFocusKey    string   `toml:"embed_focus_key"`
+	EmbedSide        string   `toml:"embed_side"`
+	EmbedZoom        bool     `toml:"embed_zoom"`
+	SubmitMode       string   `toml:"submit_mode"`
+	Browser          string   `toml:"browser"`
+	Images           string   `toml:"images"`
+	ReadingSize      string   `toml:"reading_size"`
+	ReadingWidth     int      `toml:"reading_width"`
+	ReadingMargin    int      `toml:"reading_margin"`
+	ReadingSpacing   string   `toml:"reading_spacing"`
+	ReadingHeadings  string   `toml:"reading_headings"`
+	ReadingMath      string   `toml:"reading_math"`
+	ReadingEmphasis  bool     `toml:"reading_emphasis"`
+	ReadingSplit     string   `toml:"reading_split"`
+	ReadingPalette   string   `toml:"reading_palette"`
+	ReadingNightFrom int      `toml:"reading_night_from"`
+	Border           string   `toml:"border"`
+	Mouse            bool     `toml:"mouse"`
+	WheelLines       int      `toml:"wheel_lines"`
+	MouseSelect      bool     `toml:"mouse_select"`
+	Header           bool     `toml:"header"`
+	Footer           bool     `toml:"footer"`
+	Tabs             []string `toml:"tabs"`
 
 	// Keys rebinds shortcuts: [keys.<context>] action = "key" or ["key", ...]. See KeyBindings.
 	Keys map[string]map[string]any `toml:"keys"`
@@ -103,7 +106,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 func Default() Config {
 	return Config{
 		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Resume: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser", Browser: "default",
-		Images: "auto", ReadingSize: "normal", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
+		Images: "auto", ReadingSize: "normal", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, ReadingSplit: "full", ReadingPalette: "app", ReadingNightFrom: 20, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
 		Lang: map[string]Lang{
@@ -251,6 +254,15 @@ func Load(path string) (Config, error) {
 	if c.ReadingMath != "" && c.ReadingMath != "unicode" && c.ReadingMath != "raw" {
 		return c, fmt.Errorf("reading_math %q: want unicode or raw", c.ReadingMath)
 	}
+	if c.ReadingSplit != "" && c.ReadingSplit != "full" && c.ReadingSplit != "cap" {
+		return c, fmt.Errorf("reading_split %q: want full or cap", c.ReadingSplit)
+	}
+	if c.ReadingPalette != "" && !slices.Contains(ReadingPalettes, c.ReadingPalette) {
+		return c, fmt.Errorf("reading_palette %q: want %s", c.ReadingPalette, strings.Join(ReadingPalettes, ", "))
+	}
+	if c.ReadingNightFrom < 0 || c.ReadingNightFrom > 23 {
+		return c, fmt.Errorf("reading_night_from: %d is outside 0 to 23", c.ReadingNightFrom)
+	}
 	if c.WheelLines < 1 || c.WheelLines > 20 {
 		return c, fmt.Errorf("wheel_lines: %d is outside 1 to 20", c.WheelLines)
 	}
@@ -300,6 +312,7 @@ func (c Config) Get(key string) (string, bool) {
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
 		"images": c.Images, "reading_size": c.ReadingSize, "reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,
+		"reading_split": c.ReadingSplit, "reading_palette": c.ReadingPalette, "reading_night_from": c.ReadingNightFrom,
 		"header": c.Header, "footer": c.Footer, "tabs": strings.Join(c.Tabs, ","), "mouse": c.Mouse, "wheel_lines": c.WheelLines, "mouse_select": c.MouseSelect,
 	}
 	v, ok := vals[key]

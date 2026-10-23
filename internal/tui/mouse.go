@@ -87,11 +87,11 @@ func (m Model) clickList(x, y int) (tea.Model, tea.Cmd) {
 
 // contestLines maps each content row of the contests list to a contest index (-1 for a heading).
 func (m Model) contestLines() []int {
-	rows := m.page() - 2
-	start := max(0, min(m.contestCursor-rows/2, len(m.contests)-rows))
+	vis, start := m.contestWindow()
+	rows := m.contestRows()
 	var out []int
 	last := ""
-	for i := start; i < min(start+rows, len(m.contests)); i++ {
+	for _, i := range vis[start:min(start+rows, len(vis))] {
 		section := "Past"
 		if i < m.upcoming {
 			section = "Upcoming"
@@ -112,6 +112,7 @@ func (m Model) clickContests(y int) (tea.Model, tea.Cmd) {
 	if r < 0 || r >= len(lines) || lines[r] < 0 {
 		return m, nil
 	}
+	m.conFind = false // a click leaves the search prompt
 	if lines[r] == m.contestCursor {
 		c := m.contests[m.contestCursor]
 		m.contestOpen, m.cpCursor = &c, 0

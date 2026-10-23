@@ -29,42 +29,48 @@ var settable = map[string]struct {
 	kind keyKind
 	opts []string
 }{
-	"handle":           {kString, nil},
-	"workspace":        {kString, nil},
-	"snippets_dir":     {kString, nil},
-	"default_lang":     {kString, nil},
-	"theme":            {kString, nil},
-	"background":       {kString, []string{"auto", "dark", "light"}},
-	"editor":           {kString, nil},
-	"split":            {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
-	"embed_focus_key":  {kString, nil},
-	"embed_side":       {kString, []string{"left", "right"}},
-	"embed_zoom":       {kBool, nil},
-	"submit_mode":      {kString, []string{"browser", "direct"}},
-	"browser":          {kString, nil},
-	"time_multiplier":  {kFloat, nil},
-	"float_eps":        {kFloat, nil},
-	"embed_ratio":      {kFloat, nil},
-	"autotest":         {kBool, nil},
-	"resume":           {kBool, nil},
-	"source_cf":        {kBool, nil},
-	"source_cses":      {kBool, nil},
-	"images":           {kString, []string{"auto", "kitty", "blocks", "off"}},
-	"reading_size":     {kString, []string{"compact", "normal", "large"}},
-	"reading_width":    {kInt, nil},
-	"reading_margin":   {kInt, nil},
-	"reading_spacing":  {kString, []string{"compact", "normal", "relaxed"}},
-	"reading_headings": {kString, []string{"plain", "bold", "bar", "underline"}},
-	"reading_math":     {kString, []string{"unicode", "raw"}},
-	"reading_emphasis": {kBool, nil},
-	"border":           {kString, []string{"rounded", "square", "heavy", "double", "ascii", "none"}},
-	"mouse":            {kBool, nil},
-	"wheel_lines":      {kInt, nil},
-	"mouse_select":     {kBool, nil},
-	"header":           {kBool, nil},
-	"footer":           {kBool, nil},
-	"tabs":             {kStrings, nil},
+	"handle":             {kString, nil},
+	"workspace":          {kString, nil},
+	"snippets_dir":       {kString, nil},
+	"default_lang":       {kString, nil},
+	"theme":              {kString, nil},
+	"background":         {kString, []string{"auto", "dark", "light"}},
+	"editor":             {kString, nil},
+	"split":              {kString, []string{"auto", "tmux", "herdr", "embedded", "suspend"}},
+	"embed_focus_key":    {kString, nil},
+	"embed_side":         {kString, []string{"left", "right"}},
+	"embed_zoom":         {kBool, nil},
+	"submit_mode":        {kString, []string{"browser", "direct"}},
+	"browser":            {kString, nil},
+	"time_multiplier":    {kFloat, nil},
+	"float_eps":          {kFloat, nil},
+	"embed_ratio":        {kFloat, nil},
+	"autotest":           {kBool, nil},
+	"resume":             {kBool, nil},
+	"source_cf":          {kBool, nil},
+	"source_cses":        {kBool, nil},
+	"images":             {kString, []string{"auto", "kitty", "blocks", "off"}},
+	"reading_size":       {kString, []string{"compact", "normal", "large"}},
+	"reading_width":      {kInt, nil},
+	"reading_margin":     {kInt, nil},
+	"reading_spacing":    {kString, []string{"compact", "normal", "relaxed"}},
+	"reading_headings":   {kString, []string{"plain", "bold", "bar", "underline"}},
+	"reading_math":       {kString, []string{"unicode", "raw"}},
+	"reading_emphasis":   {kBool, nil},
+	"reading_split":      {kString, []string{"full", "cap"}},
+	"reading_palette":    {kString, ReadingPalettes},
+	"reading_night_from": {kInt, nil},
+	"border":             {kString, []string{"rounded", "square", "heavy", "double", "ascii", "none"}},
+	"mouse":              {kBool, nil},
+	"wheel_lines":        {kInt, nil},
+	"mouse_select":       {kBool, nil},
+	"header":             {kBool, nil},
+	"footer":             {kBool, nil},
+	"tabs":               {kStrings, nil},
 }
+
+// ReadingPalettes are the values of reading_palette.
+var ReadingPalettes = []string{"app", "paper", "sepia", "cool", "night", "mono", "contrast", "auto"}
 
 // Set writes one top-level key to the config file at path, keeping every comment and other line.
 // An existing assignment is replaced in place; a commented-out default (`# key = ...`) is
@@ -99,6 +105,10 @@ func Set(path, key, value string) error {
 		case "reading_margin":
 			if i < 0 || i > 8 {
 				return fmt.Errorf("reading_margin: %d is outside 0 to 8", i)
+			}
+		case "reading_night_from":
+			if i < 0 || i > 23 {
+				return fmt.Errorf("reading_night_from: %d is outside 0 to 23", i)
 			}
 		case "wheel_lines":
 			if i < 1 || i > 20 {

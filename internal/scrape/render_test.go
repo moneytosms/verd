@@ -192,3 +192,20 @@ func TestImageLinksAreAbsolute(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderUnderlineAndTable(t *testing.T) {
+	html := `<div class="problem-statement"><p>$$$[\underline{4,7}]$$$</p>
+	<center><table><tbody><tr><td>Operation</td><td>$$$a$$$ before</td></tr></tbody></table></center></div>`
+	out, err := Render(html, 80, "notty", DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"[4,7]", "Operation a before"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "underline") {
+		t.Errorf("underline command leaked:\n%s", out)
+	}
+}

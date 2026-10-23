@@ -88,7 +88,7 @@ func (m Model) rerender() Model {
 // setBody makes body (rendered at width w) the shown statement, with its images drawn in.
 func (m Model) setBody(body string, w int) Model {
 	lines, raw := m.withImages(strings.Split(body, "\n"), w)
-	m.body, m.bodyW = lines, w
+	m.body, m.bodyW, m.bodyPal = lines, w, m.resolvedPalette()
 	m.rawOut += raw
 	return m
 }

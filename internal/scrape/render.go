@@ -15,12 +15,13 @@ import (
 
 // Options configures how Render lays out and styles statements.
 type Options struct {
-	Width    int    // cap statement width (0 = unlimited)
-	Margin   int    // left margin in columns
-	Spacing  string // compact|normal|relaxed
-	Headings string // plain|bold|bar|underline
-	Math     string // unicode|raw
-	Emphasis bool   // render italics/bold
+	Width    int      // cap statement width (0 = unlimited)
+	Margin   int      // left margin in columns
+	Spacing  string   // compact|normal|relaxed
+	Headings string   // plain|bold|bar|underline
+	Math     string   // unicode|raw
+	Emphasis bool     // render italics/bold
+	Palette  *Palette // reading colours (nil = the theme's own)
 }
 
 // DefaultOptions returns the standard options.
@@ -44,6 +45,9 @@ func getStyleConfig(name string, o Options) *ansi.StyleConfig {
 	if !o.Emphasis { // plain text for *italic* and **bold** (some fonts render them badly)
 		off := false
 		cfg.Emph.Italic, cfg.Strong.Bold = &off, &off
+	}
+	if o.Palette != nil {
+		applyPalette(&cfg, *o.Palette)
 	}
 	return &cfg
 }
@@ -125,6 +129,18 @@ func Render(statementHTML string, width int, style string, o Options) (string, e
 	st.Find("img").Each(func(i int, s *goquery.Selection) {
 		src, _ := s.Attr("src")
 		s.ReplaceWithHtml("<p><a href=\"" + html.EscapeString(absImage(src)) + "\">" + ImageToken(i) + "</a></p>")
+	})
+	// Tables (Codeforces tex-tabular) lose their cell boundaries as text: one paragraph per row instead.
+	st.Find("table").Each(func(_ int, t *goquery.Selection) {
+		var rows strings.Builder
+		t.Find("tr").Each(func(_ int, tr *goquery.Selection) {
+			var cells []string
+			tr.Find("td, th").Each(func(_ int, td *goquery.Selection) {
+				cells = append(cells, strings.TrimSpace(td.Text()))
+			})
+			rows.WriteString("<p>" + strings.Join(cells, " ") + "</p>")
+		})
+		t.ReplaceWithHtml(rows.String())
 	})
 	body, err := st.Html()
 	if err != nil {

@@ -197,6 +197,10 @@ type Model struct {
 	contests      []cf.Contest
 	upcoming      int // contests[:upcoming] are not finished
 	contestCursor int
+	conQ          string // fuzzy filter over the contests list
+	conFind       bool   // keys go into conQ
+	conChip       string // "" or "all", "upcoming", "past", "running", "started"
+	conSort       string // "" (date order) or "least" (least solved first)
 	contestOpen   *cf.Contest
 	contestBusy   bool   // a contest's Problems are being fetched
 	contestNote   string // result of the last fetch, shown in the contest box
@@ -240,8 +244,9 @@ type Model struct {
 	wAdj, hAdj  int     // user resize of the split view: right column width, Tests pane height
 	dragging    bool    // dragging the column divider
 	sel         selection
-	showTags    bool // tags revealed in the Problem pane
-	bodyW       int  // width the statement was rendered at
+	showTags    bool   // tags revealed in the Problem pane
+	bodyW       int    // width the statement was rendered at
+	bodyPal     string // reading palette the statement was rendered with
 	tm          *testMgr
 	fm          *filterMgr
 	sp          *snippetPicker
@@ -645,6 +650,9 @@ func (m Model) readingOptions() scrape.Options {
 	if v := m.setting("reading_width"); v != "" && v != "0" {
 		fmt.Sscanf(v, "%d", &o.Width)
 	}
+	if _, _, ok := m.split(); ok && m.setting("reading_split") == "cap" && o.Width == 0 {
+		o.Width = 76
+	}
 	if v := m.setting("reading_margin"); v != "" && v != "1" { // 1 is the default: the size preset decides
 		fmt.Sscanf(v, "%d", &o.Margin)
 	}
@@ -659,6 +667,9 @@ func (m Model) readingOptions() scrape.Options {
 	}
 	if v := m.setting("reading_emphasis"); v == "false" {
 		o.Emphasis = false
+	}
+	if p, ok := m.readingPalette(); ok {
+		o.Palette = &p
 	}
 	return o
 }
@@ -722,7 +733,7 @@ type noticeClearMsg struct{ id int }
 
 // rewrap re-renders the statement when the pane it lives in changed width (resize, layout switch).
 func (m Model) rewrap() Model {
-	if m.detail == nil || m.open == nil || m.bodyW == 0 || m.stmtWidth() == m.bodyW {
+	if m.detail == nil || m.open == nil || (m.bodyW != 0 && m.stmtWidth() == m.bodyW && m.bodyPal == m.resolvedPalette()) {
 		return m
 	}
 	w := m.stmtWidth()
@@ -945,17 +956,17 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.help {
 			return m.updateHelp(msg)
 		}
-		if msg.String() == "x" && m.toast != nil && m.input == nil {
+		if msg.String() == "x" && m.toast != nil && m.input == nil && !m.conFind && !m.setFind {
 			m.toast = nil
 			return m, nil
 		}
-		if msg.String() == "ctrl+k" && m.input == nil {
+		if msg.String() == "ctrl+k" && m.input == nil && !m.conFind && !m.setFind {
 			return m.openPalette(), nil
 		}
-		if msg.String() == "Z" && m.input == nil && !m.setFind && m.setEdit == nil && m.ke == nil {
+		if msg.String() == "Z" && m.input == nil && !m.setFind && !m.conFind && m.setEdit == nil && m.ke == nil {
 			return m.toggleZen(), nil
 		}
-		if msg.String() == "?" && m.input == nil {
+		if msg.String() == "?" && m.input == nil && !m.conFind && !m.setFind {
 			m.help, m.helpPage, m.helpScroll = true, 0, 0
 			return m, nil
 		}
@@ -978,12 +989,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1", "2", "3", "4", "5":
 			pos := int(k[0] - '1')
 			visible := m.visibleTabs()
-			if pos < len(visible) && !m.cmOn() {
+			if pos < len(visible) && !m.cmOn() && !m.conFind && !m.setFind {
 				m.tab = m.tabIDFromPos(pos)
 				return m.onTab(), nil
 			}
 		case "tab":
-			if m.cmOn() {
+			if m.cmOn() || m.conFind || m.setFind {
 				return m, nil
 			}
 			visible := m.visibleTabs()
@@ -1161,6 +1172,8 @@ func (m Model) updateProblem(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.full, m.fullOff = true, 0
 	case "v":
 		m.showTags = !m.showTags
+	case "P":
+		return m.cyclePalette(), nil
 	case "y":
 		return m.copyPane()
 	case "I":
@@ -1301,7 +1314,7 @@ func (m Model) content() []string {
 		lines = append(lines, m.testsPanel()...)
 		lines = append(lines, m.stressPanel()...)
 		lines = append(lines, "")
-		lines = append(lines, m.body...)
+		lines = append(lines, m.paintStmt(m.body)...)
 		for i, s := range d.Samples {
 			lines = append(lines, "", fmt.Sprintf("Sample %d input:", i+1))
 			lines = append(lines, cleanLines(s.Input)...)

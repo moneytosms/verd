@@ -50,6 +50,9 @@ var settingDefs = []settingDef{
 	{"Reading", "reading_headings", "Section headings", "Style for Input/Output/Note headings: plain, bold, bar or underline.", "enum", true},
 	{"Reading", "reading_math", "Math rendering", "TeX rendering: unicode (to Unicode symbols) or raw (show TeX source).", "enum", true},
 	{"Reading", "reading_emphasis", "Emphasis", "Render italics and bold; off = plain text for emphasis.", "bool", true},
+	{"Reading", "reading_split", "Split view width", "full uses the whole left pane for the statement; cap keeps it to 76 columns in the split view when Statement width is 0. Words: split width cap narrow column line length.", "enum", true},
+	{"Reading", "reading_palette", "Reading palette", "Statement colours only: app (the theme's), paper, sepia, cool, night (dark), mono, contrast, or auto (night after Night starts at, day otherwise). Press P in a Problem to cycle. Words: paper sepia night dark light palette colour color theme reading.", "enum", true},
+	{"Reading", "reading_night_from", "Night starts at", "Hour (0-23) when the auto palette switches to night; it goes back to day at 07:00. Words: night dark light hour time palette.", "text", true},
 	{"Mouse", "mouse", "Mouse reporting", "Enable mouse support. Off allows terminal-native selection everywhere.", "bool", true},
 	{"Mouse", "wheel_lines", "Wheel lines", "Lines scrolled per wheel notch (1-20).", "text", true},
 	{"Mouse", "mouse_select", "Drag to select", "Enable drag-to-select-lines in the Problem view.", "bool", true},
@@ -191,7 +194,7 @@ func (m Model) applyLive(key, value string) Model {
 		}
 		m.cursor, m.pickInit, m.pickExpr, m.pickPreset = 0, false, "", "" // the Picker redraws under the new sources
 		m = m.refilter()
-	case "reading_size", "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis":
+	case "reading_size", "reading_width", "reading_margin", "reading_spacing", "reading_headings", "reading_math", "reading_emphasis", "reading_split", "reading_palette", "reading_night_from":
 		// Invalidate bodyW to force re-render with new reading preferences
 		if m.detail != nil {
 			m.bodyW = 0

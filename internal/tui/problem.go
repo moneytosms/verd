@@ -161,7 +161,7 @@ func (m Model) viewSplit(b *strings.Builder, lw, rw int) string {
 	p := *m.open
 
 	// left: the statement
-	body := m.stmtBody()
+	body := m.paintStmt(m.stmtBody())
 	inner := h - 2
 	off := min(m.scroll, max(0, len(body)-inner))
 	end := min(len(body), off+inner)

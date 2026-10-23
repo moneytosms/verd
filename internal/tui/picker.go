@@ -132,7 +132,7 @@ func (m Model) viewPicker(b *strings.Builder) string {
 		p := *m.picked
 		card = append(card, st.Accent.Render(p.Code())+"  "+clean(p.Name), "")
 		card = append(card, st.Dim.Render("rating ")+m.ratingText(p)+st.Dim.Render("    solved by ")+strings.TrimSpace(m.solvedText(p)))
-		card = append(card, m.tagChips(p, w-6))
+		card = append(card, tagChips(m.styles(), p, w-6))
 	case m.pickInit:
 		card = append(card, st.Bad.Render("No Problem matches these filters."), st.Dim.Render(m.kx("Press {picker.filters} to change them (e.g. widen the rating range) or {picker.reroll} to retry.")))
 	default:
