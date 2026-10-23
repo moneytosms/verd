@@ -13,6 +13,7 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `time_multiplier` | `1.0` | Scales every Problem's time limit for local runs. Use `2.0` on a slow machine. |
 | `float_eps` | `1e-6` | Absolute/relative tolerance for the `float` Comparison Mode. |
 | `autotest` | `true` | Run a Test Run whenever the active Solution is saved. |
+| `resume` | `true` | Start where you left off: tab, filter, sort, open contest and Problem (saved to `~/.local/share/verd/state.json` on quit). |
 | `theme` | `"terminal"` | `terminal` (inherits your palette), `tokyo-night`, `dracula`, `catppuccin`, `gruvbox`, `nord`, `one-dark` or `solarized`. Change it live in the Settings tab. |
 | `background` | `"auto"` | `auto` detects the terminal, or force `dark` / `light`. |
 | `editor` | `"nvim"` | The editor command: `nvim`, `vim`, `hx`, `nano`, `micro`, `emacs`, `kak`, `code`, `subl`, `zed` or any other, with optional arguments (`"code -w"`). verd knows how each takes a line number. Only Neovim reuses its pane on the next `e`; GUI editors open their own window instead of a split. Change it live in Settings. |
@@ -27,6 +28,7 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `wheel_lines` | `3` | Lines scrolled per mouse wheel notch (1–20). |
 | `mouse_select` | `true` | Enable drag-to-select-lines and copy in the Problem view. |
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
+| `browser` | `"default"` | Browser for submit pages and Problem links: `default` (the system opener: xdg-open, open, wslview) or a command with optional arguments (`"firefox"`, `"chromium --new-window"`). |
 | `border` | `"rounded"` | Box border glyphs: `rounded`, `square`, `heavy`, `double`, `ascii`, or `none` (no frame, title line only). |
 
 An unknown `submit_mode`, `embed_side` or `border` is a config error.
@@ -103,7 +105,7 @@ Set `snippets_dir = "~/dotfiles/verd"` to keep Templates and snippets elsewhere 
 | `~/.config/verd/snippets/templates/` | Templates (in `snippets_dir`). |
 | `~/.config/verd/snippets/library/<lang>/` | The snippet library, one file per snippet. |
 | `~/.config/verd/credentials.json` | Only if the OS keyring was unavailable at `verd login`; mode `0600`. |
-| `~/.local/share/verd/verd.db` | SQLite cache: Problems, Contests, Submissions, per-Problem choices. |
+| `~/.local/share/verd/verd.db` | SQLite cache: Problems, Contests, Submissions, per-Problem choices. Settings, **Clear cache** empties the fetched data and refetches it (marks and per-Problem choices stay). |
 | `~/.cache/verd/` | Compiled binaries. |
 | `$XDG_RUNTIME_DIR/verd/verd.sock` | The socket `verd test` / `submit` / `stress` use to reach the TUI. |
 | `<workspace>/<contest>/<index>/` | `main.<ext>`, `gen.<ext>`, `brute.<ext>`, and `tests/`. |

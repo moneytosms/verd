@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os/exec"
 	"slices"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ var settingDefs = []settingDef{
 	{"Layout", "tabs", "Tab order", "Visible tabs in order (comma-separated): problems,contests,stats,picker,settings. Settings cannot be hidden.", "text", true},
 	{"General", "handle", "Handle", "Your Codeforces handle: where solved marks, stats and Submissions come from.", "text", false},
 	{"General", "workspace", "Workspace", "Where Solutions and tests live: <workspace>/<contest>/<index>/. A relative path is resolved against where verd starts; verd --here does that for one run.", "text", false},
+	{"General", "resume", "Resume", "Start where you left off: tab, filter, sort, open contest and Problem.", "bool", true},
 	{"General", "default_lang", "Default language", "Language for new Solutions. Switch per Problem with {problem.language}.", "enum", true},
 	{"Testing", "autotest", "Autotest", "Run the tests whenever you save the Solution.", "bool", true},
 	{"Testing", "time_multiplier", "Time multiplier", "Scales every time limit for local runs. Use 2.0 on a slow machine.", "text", false},
@@ -53,6 +55,8 @@ var settingDefs = []settingDef{
 	{"Mouse", "mouse_select", "Drag to select", "Enable drag-to-select-lines in the Problem view.", "bool", true},
 	{"Keys", "keys", "Shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
 	{"Snippets", "snippets", "Template", "The starting text of a new Solution, one per language. ←/→ picks the language, enter edits its Template file. Available variables are listed below; saving the file applies to the next new Solution.", "snippets", true},
+	{"General", "browser", "Browser", "Where submit pages and Problem links open: default (the system's) or an installed browser. Any command works from config.toml (\"chromium --new-window\").", "enum", false},
+	{"Data", "clear_cache", "Clear cache", "Deletes everything fetched from Codeforces and CSES (Problems, contests, statements, Submissions, editorials) and refetches it. Use it when cached data looks stale or wrong. Solved marks, per-Problem state and the contest session stay. Solutions and tests in the workspace are not touched.", "action", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
 }
 
@@ -103,6 +107,17 @@ func (m Model) options(key string) []string {
 		out := []string{"nvim", "vim", "hx", "nano", "micro", "emacs", "kak", "code", "subl", "zed"}
 		if cur := m.setting("editor"); cur != "" && !slices.Contains(out, cur) {
 			out = append(out, cur) // a custom command from config.toml stays selectable
+		}
+		return out
+	case "browser":
+		out := []string{"default"}
+		for _, b := range []string{"firefox", "zen-browser", "librewolf", "chromium", "google-chrome-stable", "brave", "vivaldi", "microsoft-edge-stable", "qutebrowser"} {
+			if _, err := exec.LookPath(b); err == nil {
+				out = append(out, b)
+			}
+		}
+		if cur := m.setting("browser"); cur != "" && !slices.Contains(out, cur) {
+			out = append(out, cur)
 		}
 		return out
 	}
@@ -306,6 +321,9 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "left", "h":
 		m = m.step(d, -1)
 	case "enter":
+		if d.kind == "action" {
+			return m.clearCache()
+		}
 		if d.kind == "snippets" && m.deps.EditTemplate != nil {
 			cmd, err := m.deps.EditTemplate(m.snippetLang())
 			return m.afterOpen(cmd, err, "template")
@@ -326,6 +344,29 @@ func (m Model) updateSettings(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+const clearConfirm = "press enter again to clear the cache"
+
+// clearCache asks once, then empties the cache and refetches it.
+func (m Model) clearCache() (tea.Model, tea.Cmd) {
+	if m.deps.ClearCache == nil {
+		return m, nil
+	}
+	if m.setNote != clearConfirm {
+		m.setNote = clearConfirm
+		return m, nil
+	}
+	if err := m.deps.ClearCache(); err != nil {
+		m.setNote = "clear failed: " + err.Error()
+		return m, nil
+	}
+	m.setNote = "saved: cache cleared, refetching"
+	if len(m.deps.Refresh) == 0 || m.syncing {
+		return m, nil
+	}
+	m.syncing = true
+	return m, m.refresh(0)
 }
 
 // onConfigChanged reloads the config file when it changes.
@@ -433,6 +474,8 @@ func (m Model) settingLines(w int) []settingLine {
 			shown = st.Dim.Render(fmt.Sprintf("enter to edit (%d changed)", len(m.km.user)))
 		case "snippets":
 			shown = st.Dim.Render("‹ ") + st.Accent.Render(m.snippetLang()) + st.Dim.Render(" ›  enter to edit")
+		case "action":
+			shown = st.Dim.Render("enter to run")
 		case "enum":
 			shown = st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
 		case "bool":
@@ -522,6 +565,8 @@ func (m Model) viewSettings(b *strings.Builder) string {
 			info = append(info, "  "+st.Accent.Render(v[0]), "    "+st.Dim.Render(v[1]))
 		}
 		info = append(info, "", st.Dim.Render("Go text/template: {{if eq .Handle \"x\"}}…{{end}} works too"))
+	case "action":
+		info = append(info, st.Dim.Render("enter, then enter again to confirm"))
 	case "enum", "bool":
 		info = append(info, st.Dim.Render("←/→ or space change · saved on change"))
 	default:

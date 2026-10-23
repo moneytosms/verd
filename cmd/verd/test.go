@@ -149,12 +149,18 @@ func (r *reporter) event(ev runner.Event) {
 			if x.Loc != "" {
 				fmt.Fprintf(r.out, "  at:  %s\n", x.Loc)
 			}
+			if x.Code != "" {
+				fmt.Fprintf(r.out, "       │ %s\n", x.Code)
+			}
+			if x.Trace != "" {
+				fmt.Fprintf(r.out, "  via: %s\n", x.Trace)
+			}
 		}
 		if r.verbose {
 			r.sections(res)
 			break
 		}
-		if e := strings.TrimRight(res.Stderr, "\n"); e != "" && res.Verdict != runner.AC {
+		if e := strings.TrimRight(runner.Fold(res.Stderr), "\n"); e != "" && res.Verdict != runner.AC { // -v prints it unfolded
 			fmt.Fprintf(r.out, "  stderr:\n    %s\n", strings.ReplaceAll(e, "\n", "\n    "))
 		}
 		if in := strings.TrimRight(res.Input, "\n"); in != "" && (res.Verdict == runner.RE || res.Verdict == runner.TLE || res.Verdict == runner.MLE) {

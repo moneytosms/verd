@@ -3,6 +3,7 @@ package submit
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -201,5 +202,17 @@ func TestTrackDefaults(t *testing.T) {
 	d := Tracker{}.defaults()
 	if d.Interval != 2*time.Second || d.Timeout != 5*time.Minute {
 		t.Fatalf("%+v", d)
+	}
+}
+
+func TestConfiguredBrowser(t *testing.T) {
+	e := env("linux", nil, "xdg-open")
+	e.Browser = "chromium --new-window"
+	if got := strings.Join(e.OpenCommand("https://x"), " "); got != "chromium --new-window https://x" {
+		t.Errorf("got %q", got)
+	}
+	e.Browser = "default"
+	if got := e.OpenCommand("https://x"); len(got) != 2 || got[0] != "xdg-open" {
+		t.Errorf("default: got %v", got)
 	}
 }

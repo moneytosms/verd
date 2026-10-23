@@ -54,7 +54,7 @@ func directSubmit(ctx context.Context, contest int, index string, compilerID int
 func newSubmitter(cfg config.Config, client *cf.Client, s *store.Store) *submitter {
 	return &submitter{
 		cfg: cfg, client: client, store: s, direct: directSubmit,
-		env: submit.Env{GOOS: runtime.GOOS, Getenv: os.Getenv, LookPath: exec.LookPath},
+		env: submit.Env{GOOS: runtime.GOOS, Getenv: os.Getenv, LookPath: exec.LookPath, Browser: cfg.Browser},
 		run: func(argv []string, stdin []byte) error {
 			cmd := exec.Command(argv[0], argv[1:]...)
 			if stdin != nil {

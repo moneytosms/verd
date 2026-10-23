@@ -25,6 +25,7 @@ type Config struct {
 	TimeMultiplier  float64  `toml:"time_multiplier"`
 	FloatEps        float64  `toml:"float_eps"`
 	Autotest        bool     `toml:"autotest"`
+	Resume          bool     `toml:"resume"`
 	Theme           string   `toml:"theme"`
 	Background      string   `toml:"background"`
 	SourceCF        bool     `toml:"source_cf"`
@@ -36,6 +37,7 @@ type Config struct {
 	EmbedSide       string   `toml:"embed_side"`
 	EmbedZoom       bool     `toml:"embed_zoom"`
 	SubmitMode      string   `toml:"submit_mode"`
+	Browser         string   `toml:"browser"`
 	Images          string   `toml:"images"`
 	ReadingSize     string   `toml:"reading_size"`
 	ReadingWidth    int      `toml:"reading_width"`
@@ -100,7 +102,7 @@ func (c Config) Effective() ([]byte, error) { return toml.Marshal(c) }
 // Defaults mirror the Codeforces compilers.
 func Default() Config {
 	return Config{
-		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser",
+		Workspace: "~/verd", DefaultLang: "cpp", TimeMultiplier: 1.0, FloatEps: 1e-6, Autotest: true, Resume: true, Theme: "terminal", Background: "auto", SourceCF: true, Editor: "nvim", Split: "auto", EmbedRatio: 0.4, EmbedFocusKey: "ctrl+\\", EmbedSide: "right", SubmitMode: "browser", Browser: "default",
 		Images: "auto", ReadingSize: "normal", ReadingMargin: 1, ReadingSpacing: "normal", ReadingHeadings: "bar", ReadingMath: "unicode", ReadingEmphasis: true, Border: "rounded",
 		Mouse: true, WheelLines: 3, MouseSelect: true,
 		Header: true, Footer: true, Tabs: []string{"problems", "contests", "stats", "picker", "settings"},
@@ -293,8 +295,8 @@ func (c Config) Get(key string) (string, bool) {
 	vals := map[string]any{
 		"handle": c.Handle, "workspace": c.Workspace, "snippets_dir": c.SnippetsDir, "default_lang": c.DefaultLang, "theme": c.Theme,
 		"background": c.Background, "editor": c.Editor, "split": c.Split, "embed_focus_key": c.EmbedFocusKey,
-		"embed_side": c.EmbedSide, "embed_zoom": c.EmbedZoom, "submit_mode": c.SubmitMode, "time_multiplier": c.TimeMultiplier,
-		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest,
+		"embed_side": c.EmbedSide, "embed_zoom": c.EmbedZoom, "submit_mode": c.SubmitMode, "browser": c.Browser, "time_multiplier": c.TimeMultiplier,
+		"float_eps": c.FloatEps, "embed_ratio": c.EmbedRatio, "autotest": c.Autotest, "resume": c.Resume,
 		"source_cf": c.SourceCF, "source_cses": c.SourceCSES,
 		"images": c.Images, "reading_size": c.ReadingSize, "reading_width": c.ReadingWidth, "reading_margin": c.ReadingMargin, "reading_spacing": c.ReadingSpacing,
 		"reading_headings": c.ReadingHeadings, "reading_math": c.ReadingMath, "reading_emphasis": c.ReadingEmphasis,

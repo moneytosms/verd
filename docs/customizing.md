@@ -179,6 +179,7 @@ Pick a theme live in Settings (`5`): it previews as you move through the list.
 | `embed_ratio` | `0.1` to `0.9` | Share of the window verd keeps when the editor is embedded. |
 | `embed_zoom` | `true`, `false` (default) | Start the editor fullscreen when it opens. |
 | `autotest` | `true`, `false` | Re-run tests whenever you save the Solution. |
+| `resume` | `true`, `false` | Start where you left off: tab, filter, sort, open contest and Problem. |
 | `source_cf`, `source_cses` | `true`, `false` | Which Problem sources the lists show. |
 
 Embedded editor keys (rebindable under `[keys.editor]`): `ctrl+\` toggles the keyboard between verd and the editor, `alt+h` / `alt+l` move the keyboard to the left / right column, `alt+z` hides verd so the editor fills the window, `alt+]` / `alt+[` grow/shrink the editor column, `alt+s` swaps the editor between left and right. See [Embedded pane](./embedded-pane.md).

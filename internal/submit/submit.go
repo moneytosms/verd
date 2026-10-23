@@ -24,6 +24,7 @@ type Env struct {
 	GOOS     string
 	Getenv   func(string) string
 	LookPath func(string) (string, error)
+	Browser  string // a browser command from the config; "" or "default" uses the system opener
 }
 
 func (e Env) has(bin string) bool { _, err := e.LookPath(bin); return err == nil }
@@ -48,8 +49,12 @@ func (e Env) ClipboardCommand() []string {
 	return nil
 }
 
-// OpenCommand picks the browser opener for url; nil if none is available.
+// OpenCommand picks the browser opener for url: the configured Browser, else the system's; nil if
+// none is available.
 func (e Env) OpenCommand(url string) []string {
+	if f := strings.Fields(e.Browser); len(f) > 0 && e.Browser != "default" {
+		return append(f, url)
+	}
 	switch {
 	case e.GOOS == "darwin":
 		return []string{"open", url}

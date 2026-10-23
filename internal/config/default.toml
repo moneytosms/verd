@@ -23,6 +23,9 @@
 # Run tests automatically whenever you save the Solution.
 # autotest = true
 
+# Reopen verd where you left off: tab, filter, sort, open contest and Problem.
+# resume = true
+
 # Color theme: terminal (inherits your terminal palette) | tokyo-night | dracula | catppuccin |
 # gruvbox | nord | one-dark | solarized. Change it live in the Settings tab (5).
 # theme = "terminal"
@@ -66,6 +69,10 @@
 # it replays your Codeforces cookies, which Codeforces may treat as automation (account risk),
 # and it falls back to browser on any failure.
 # submit_mode = "browser"
+
+# Browser for submit pages and Problem links: default (the system's) or a command, with
+# optional arguments: "firefox", "chromium --new-window".
+# browser = "default"
 
 # Keyboard shortcuts. Every shortcut is rebindable: Settings (5) > Keyboard shortcuts edits these
 # for you, or write them by hand as [keys.<context>] action = "key" (or a list of keys).
