@@ -45,6 +45,12 @@ func TestRoundTripStreamsEvents(t *testing.T) {
 	if !dialed || err != nil {
 		t.Fatalf("dialed=%v err=%v", dialed, err)
 	}
+	t.Run("messages", func(t *testing.T) { checkStreamed(t, got) })
+	t.Run("handler error", func(t *testing.T) { checkHandlerError(t) })
+}
+
+// checkStreamed checks the four streamed messages survive the wire.
+func checkStreamed(t *testing.T, got []Message) {
 	if len(got) != 4 || got[0].Text != "1A cpp" || got[3].Verdict != "WA" {
 		t.Fatalf("%+v", got)
 	}
@@ -55,12 +61,15 @@ func TestRoundTripStreamsEvents(t *testing.T) {
 	if ev, ok := got[1].ToEvent(); !ok || !ev.Cached {
 		t.Fatal("compile event")
 	}
-	// handler errors reach the client as an error message
+}
+
+// checkHandlerError: handler errors reach the client as an error message.
+func checkHandlerError(t *testing.T) {
 	srv2path := sockPath(t)
 	srv2, _ := Listen(srv2path)
 	defer srv2.Close()
 	go srv2.Serve(func(context.Context, Request, func(Message)) error { return errors.New("no such Problem") })
-	got = nil
+	var got []Message
 	Call(context.Background(), srv2path, Request{Cmd: "test"}, func(m Message) { got = append(got, m) })
 	if len(got) != 1 || got[0].Kind != "error" || got[0].Text != "no such Problem" {
 		t.Fatalf("%+v", got)

@@ -49,6 +49,39 @@ func TestControlCharsStripped(t *testing.T) {
 // plain renders the model without SGR styling so tests can match on text.
 func plain(m Model) string { return ansi.ReplaceAllString(m.View().Content, "") }
 
+// mustHave fails unless out contains every want.
+func mustHave(t *testing.T, out string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// checkOrder fails unless each label appears in out, in the order given.
+func checkOrder(t *testing.T, out string, labels ...string) {
+	t.Helper()
+	last := -1
+	for _, l := range labels {
+		i := strings.Index(out, l)
+		if i <= last {
+			t.Fatalf("%q out of order:\n%s", l, out)
+		}
+		last = i
+	}
+}
+
+// mustLack fails if out contains any of unwanted.
+func mustLack(t *testing.T, out string, unwanted ...string) {
+	t.Helper()
+	for _, u := range unwanted {
+		if strings.Contains(out, u) {
+			t.Fatalf("unexpected %q:\n%s", u, out)
+		}
+	}
+}
+
 // initMsgs runs Init's commands and returns their messages (Init batches several).
 func initMsgs(m Model) []tea.Msg {
 	var out []tea.Msg
@@ -206,24 +239,18 @@ func TestContestsTab(t *testing.T) {
 	m := New(ps, "", deps).WithStatuses(map[string]store.Status{"10A": store.StatusSolved, "10B": store.StatusAttempted}).WithContests(cs)
 	m, _ = send(m, "2")
 	out := plain(m)
-	iSoon, iLater, iNew, iOld := strings.Index(out, "Soon Round"), strings.Index(out, "Later Round"), strings.Index(out, "Newer Past"), strings.Index(out, "Old Round")
-	if !(iSoon >= 0 && iSoon < iLater && iLater < iNew && iNew < iOld) {
-		t.Fatalf("order wrong (upcoming asc, then past desc):\n%s", out)
-	}
-	for _, want := range []string{"UPCOMING", "PAST", "in 3h 20m", "in 2d 2h", "1970-01-11"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("missing %q:\n%s", want, out)
-		}
-	}
+	checkOrder(t, out, "Soon Round", "Later Round", "Newer Past", "Old Round") // upcoming asc, then past desc
+	mustHave(t, out, "UPCOMING", "PAST", "in 3h 20m", "in 2d 2h", "1970-01-11")
 	// open Old Round (4th row), see Problems with status, in index order
 	for range 3 {
 		m, _ = send(m, "j")
 	}
 	m, _ = send(m, "enter")
 	out = plain(m)
-	if !(strings.Index(out, "✓ A") > 0 && strings.Index(out, "✓ A") < strings.Index(out, "✗ B")) || strings.Contains(out, "Other") {
+	if !(strings.Index(out, "✓ A") > 0 && strings.Index(out, "✓ A") < strings.Index(out, "✗ B")) {
 		t.Fatalf("contest problems wrong:\n%s", out)
 	}
+	mustLack(t, out, "Other")
 	// open a Problem, esc returns to the contest's problems, esc again to the list
 	m, cmd := send(m, "enter")
 	if m.open == nil || m.open.Index != "A" || cmd == nil {
@@ -484,41 +511,21 @@ func TestTestsPanelStreams(t *testing.T) {
 	m, cmd = step(t, m, cmd) // CompileFinished
 	m, cmd = step(t, m, cmd) // sample-1
 	out := plain(m)
-	if !strings.Contains(out, "compile: ok (cached)") || !strings.Contains(out, "sample-1") || !strings.Contains(out, "31.9 MB") || strings.Contains(out, "sample-2") {
-		t.Fatalf("after first test only sample-1 should show:\n%s", out)
-	}
+	mustHave(t, out, "compile: ok (cached)", "sample-1", "31.9 MB")
+	mustLack(t, out, "sample-2")
 	m, cmd = step(t, m, cmd) // sample-2 WA
-	if out := plain(m); !strings.Contains(out, "sample-2") || !strings.Contains(out, `line 2 col 1: want "10" got "11"`) {
-		t.Fatalf("WA row missing:\n%s", out)
-	}
+	mustHave(t, plain(m), "sample-2", `line 2 col 1: want "10" got "11"`)
 	m, cmd = step(t, m, cmd) // Done
 	close(ch)
 	m, cmd = step(t, m, cmd) // closed
 	if cmd != nil {
 		t.Fatal("stream end should stop listening")
 	}
-	if out := plain(m); !strings.Contains(out, "1/2 AC") || strings.Contains(out, "running...") {
-		t.Fatalf("summary missing:\n%s", out)
-	}
-
-	// diff overlay on the failing test: select it, d
-	m, _ = send(m, "n")
-	m, _ = send(m, "d")
 	out = plain(m)
-	for _, want := range []string{"Diff: sample-2", "first mismatch at line 2 col 1", "expected", "actual", "10", "11", "1-2/2"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("diff missing %q:\n%s", want, out)
-		}
-	}
-	// mismatching line is highlighted (styled), matching line is not
-	raw := m.View().Content
-	if !strings.Contains(raw, "\x1b[") || strings.Count(raw, "10") < 1 {
-		t.Fatal("no styling in diff")
-	}
-	m, _ = send(m, "esc")
-	if m.run == nil || m.run.diff || m.open == nil {
-		t.Fatal("esc closes the diff, not the Problem")
-	}
+	mustHave(t, out, "1/2 AC")
+	mustLack(t, out, "running...")
+
+	m = checkDiffOverlay(t, m)
 	// d on a passing test does nothing
 	m, _ = send(m, "p")
 	if m, _ = send(m, "d"); m.run.diff {
@@ -529,6 +536,24 @@ func TestTestsPanelStreams(t *testing.T) {
 	if m.run != nil {
 		t.Fatal("run should be dropped on esc")
 	}
+}
+
+// checkDiffOverlay opens the diff on the failing test, checks it, and closes it with esc.
+func checkDiffOverlay(t *testing.T, m Model) Model {
+	t.Helper()
+	m, _ = send(m, "n")
+	m, _ = send(m, "d")
+	mustHave(t, plain(m), "Diff: sample-2", "first mismatch at line 2 col 1", "expected", "actual", "10", "11", "1-2/2")
+	// mismatching line is highlighted (styled), matching line is not
+	raw := m.View().Content
+	if !strings.Contains(raw, "\x1b[") || strings.Count(raw, "10") < 1 {
+		t.Fatal("no styling in diff")
+	}
+	m, _ = send(m, "esc")
+	if m.run == nil || m.run.diff || m.open == nil {
+		t.Fatal("esc closes the diff, not the Problem")
+	}
+	return m
 }
 
 func TestDiffTruncatesLargeOutput(t *testing.T) {
@@ -1205,24 +1230,13 @@ func TestPickFiltersAndSolved(t *testing.T) {
 		t.Fatalf("rated default is rating..rating+200: %+v", f)
 	}
 	rng := rand.New(rand.NewSource(1))
-	seen := map[string]int{}
-	for i := 0; i < 300; i++ {
-		p, n, ok := Pick(pickProblems(), status, f, rng, nil)
-		if !ok || n != 4 { // 1A 1C 1D 2A (1B solved, 1E too high, 1F unrated)
-			t.Fatalf("matches=%d ok=%v", n, ok)
-		}
-		seen[fmt.Sprintf("%d%s", p.ContestID, p.Index)]++
-	}
-	for _, bad := range []string{"1B", "1E", "1F"} {
-		if seen[bad] != 0 {
-			t.Fatalf("%s must never be picked: %v", bad, seen)
-		}
-	}
-	for _, good := range []string{"1A", "1C", "1D", "2A"} {
-		if seen[good] < 30 {
-			t.Fatalf("%s should be reachable roughly uniformly: %v", good, seen)
-		}
-	}
+	checkPickSpread(t, rng, status, f)
+	checkPickChoices(t, rng, status, f)
+}
+
+// checkPickChoices covers re-rolls, single matches, no match, and AnyOf.
+func checkPickChoices(t *testing.T, rng *rand.Rand, status func(cf.Problem) store.Status, f Filter) {
+	t.Helper()
 	// re-roll never repeats when there is a choice
 	cur := pickProblems()[0]
 	for i := 0; i < 100; i++ {
@@ -1249,14 +1263,37 @@ func TestPickFiltersAndSolved(t *testing.T) {
 	}
 }
 
+// checkPickSpread picks 300 times: excluded Problems never show, each match shows up.
+func checkPickSpread(t *testing.T, rng *rand.Rand, status func(cf.Problem) store.Status, f Filter) {
+	t.Helper()
+	seen := map[string]int{}
+	for i := 0; i < 300; i++ {
+		p, n, ok := Pick(pickProblems(), status, f, rng, nil)
+		if !ok || n != 4 { // 1A 1C 1D 2A (1B solved, 1E too high, 1F unrated)
+			t.Fatalf("matches=%d ok=%v", n, ok)
+		}
+		seen[fmt.Sprintf("%d%s", p.ContestID, p.Index)]++
+	}
+	for _, bad := range []string{"1B", "1E", "1F"} {
+		if seen[bad] != 0 {
+			t.Fatalf("%s must never be picked: %v", bad, seen)
+		}
+	}
+	for _, good := range []string{"1A", "1C", "1D", "2A"} {
+		if seen[good] < 30 {
+			t.Fatalf("%s should be reachable roughly uniformly: %v", good, seen)
+		}
+	}
+}
+
 func TestPickerTab(t *testing.T) {
 	deps := Deps{Load: func(cf.Problem, bool) (*scrape.Detail, error) { return nil, cf.ErrChallenge }}
 	m := New(nil, "", deps).WithData(Data{Problems: pickProblems()}).WithRand(rand.New(rand.NewSource(7)))
 	m, _ = send(m, "4")
-	out := plain(m)
-	if !strings.Contains(out, "Problem Picker") || !strings.Contains(out, "rating 800-1200, unsolved only") || m.picked == nil {
-		t.Fatalf("picker should roll on entry:\n%s", out)
+	if m.picked == nil {
+		t.Fatalf("picker should roll on entry:\n%s", plain(m))
 	}
+	mustHave(t, plain(m), "Problem Picker", "rating 800-1200, unsolved only")
 	if m.picked.Rating < 800 || m.picked.Rating > 1200 {
 		t.Fatalf("pick outside the default band: %+v", m.picked)
 	}
@@ -1276,6 +1313,16 @@ func TestPickerTab(t *testing.T) {
 		t.Fatalf("enter should open the pick: %+v", m.open)
 	}
 	m, _ = send(m, "esc")
+	m = checkPickFilters(t, m)
+	m, cmd = send(m, "enter")
+	if cmd != nil || m.open != nil {
+		t.Fatal("enter with no pick must do nothing")
+	}
+}
+
+// checkPickFilters types filters into the picker: a bad one errors, a good one picks, a miss says so.
+func checkPickFilters(t *testing.T, m Model) Model {
+	t.Helper()
 	// f edits filters; a bad expression keeps the prompt open
 	m, _ = send(m, "f")
 	m = typeText(m, "wat")
@@ -1287,21 +1334,20 @@ func TestPickerTab(t *testing.T) {
 	nm, _ := m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	m = typeText(nm.(Model), "800-2000 +graphs")
 	m, _ = send(m, "enter")
-	if m.picked == nil || m.picked.Index != "C" || m.pickMatches != 1 || !strings.Contains(plain(m), "filter: 800-2000 +graphs") {
+	if m.picked == nil || m.picked.Index != "C" || m.pickMatches != 1 {
 		t.Fatalf("filtered pick: %+v matches=%d\n%s", m.picked, m.pickMatches, plain(m))
 	}
+	mustHave(t, plain(m), "filter: 800-2000 +graphs")
 	// no match: clear message
 	m, _ = send(m, "f")
 	nm, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	m = typeText(nm.(Model), "+geometry")
 	m, _ = send(m, "enter")
-	if m.picked != nil || !strings.Contains(plain(m), "No Problem matches these filters.") || !strings.Contains(plain(m), "0 match(es)") {
-		t.Fatalf("no-match message:\n%s", plain(m))
+	if m.picked != nil {
+		t.Fatalf("no match should clear the pick:\n%s", plain(m))
 	}
-	m, cmd = send(m, "enter")
-	if cmd != nil || m.open != nil {
-		t.Fatal("enter with no pick must do nothing")
-	}
+	mustHave(t, plain(m), "No Problem matches these filters.", "0 match(es)")
+	return m
 }
 
 func TestStatsPJumpsToWeakTopicsPicker(t *testing.T) {
@@ -1311,10 +1357,10 @@ func TestStatsPJumpsToWeakTopicsPicker(t *testing.T) {
 	m := New(nil, "", Deps{Mouse: true, WheelLines: 3, MouseSelect: true}).WithData(Data{Problems: pickProblems(), Stats: st}).WithRand(rand.New(rand.NewSource(3)))
 	m, _ = send(m, "3")
 	m, _ = send(m, "p")
-	out := plain(m)
-	if m.tab != 3 || !strings.Contains(out, "preset: weak topics (graphs, greedy)") || !strings.Contains(out, "rating 1000-1200") {
-		t.Fatalf("p on Stats should open the Picker with the preset:\n%s", out)
+	if m.tab != 3 {
+		t.Fatalf("p on Stats should open the Picker with the preset:\n%s", plain(m))
 	}
+	mustHave(t, plain(m), "preset: weak topics (graphs, greedy)", "rating 1000-1200")
 	if m.picked == nil || (m.picked.Index != "C" && m.picked.Index != "A") || m.pickMatches != 2 {
 		t.Fatalf("pick must come from the weak tags in band: %+v matches=%d", m.picked, m.pickMatches)
 	}

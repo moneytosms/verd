@@ -17,6 +17,46 @@ func sessSub(idx, verdict string, at int64) cf.Submission {
 	return x
 }
 
+// startVirtual presses s twice: the first only asks to confirm.
+func startVirtual(t *testing.T, m Model, started *session.Session) Model {
+	t.Helper()
+	m, cmd := send(m, "s")
+	if m.sess != nil || cmd != nil || !strings.Contains(plain(m), "Press the same key again") {
+		t.Fatalf("first press only asks to confirm:\n%s", plain(m))
+	}
+	m, cmd = send(m, "s")
+	if m.sess == nil || cmd == nil || started.Mode != session.Virtual {
+		t.Fatalf("second press starts the session: %+v", m.sess)
+	}
+	return m
+}
+
+// checkBlinded checks the session hides old marks and ratings, and keeps the raw data.
+func checkBlinded(t *testing.T, m Model, ps []cf.Problem) {
+	t.Helper()
+	if m.statusOf(ps[0]) != store.StatusNone || m.statusOf(ps[2]) != store.StatusSolved {
+		t.Fatalf("old marks hidden only inside the session contest: %v %v", m.statusOf(ps[0]), m.statusOf(ps[2]))
+	}
+	if blinded := m.Problems[0]; blinded.Rating != 0 || blinded.Tags != nil || blinded.SolvedCount != 0 || m.Problems[2].Rating != 1500 {
+		t.Fatalf("blinding: %+v / %+v", blinded, m.Problems[2])
+	}
+	if raw := m.raw.Problems[0]; raw.Rating != 800 {
+		t.Fatal("raw data must stay intact so ending restores it")
+	}
+}
+
+// scoreVirtual adds a solve inside the window and checks the score after a reload.
+func scoreVirtual(t *testing.T, m Model, now time.Time) Model {
+	t.Helper()
+	// a submission inside the window scores; a later reload shows it
+	d := m.raw
+	d.Subs = []cf.Submission{sessSub("A", "WRONG_ANSWER", now.Unix()+60), sessSub("A", "OK", now.Unix()+600), sessSub("B", "OK", now.Unix()-5)}
+	m = m.WithData(d)
+	m.cm.rail = railFull // the rail shows each result in full
+	mustHave(t, plain(m), "solved 1/2", "penalty 30", "10m +1")
+	return m
+}
+
 func TestVirtualSessionHidesAndScores(t *testing.T) {
 	now := time.Unix(10_000, 0)
 	ps := []cf.Problem{
@@ -40,53 +80,23 @@ func TestVirtualSessionHidesAndScores(t *testing.T) {
 	m := New(ps, "", deps).WithData(data)
 	m, _ = send(m, "2")
 	m, _ = send(m, "enter")
-	if !strings.Contains(plain(m), "2400") {
-		t.Fatalf("ratings are visible before the session:\n%s", plain(m))
-	}
-	m, cmd := send(m, "s")
-	if m.sess != nil || cmd != nil || !strings.Contains(plain(m), "Press the same key again") {
-		t.Fatalf("first press only asks to confirm:\n%s", plain(m))
-	}
-	m, cmd = send(m, "s")
-	if m.sess == nil || cmd == nil || started.Mode != session.Virtual {
-		t.Fatalf("second press starts the session: %+v", m.sess)
-	}
-	out := plain(m)
-	for _, hidden := range []string{"2400", "800"} {
-		if strings.Contains(out, hidden) {
-			t.Fatalf("rating %s must be hidden:\n%s", hidden, out)
-		}
-	}
-	for _, want := range []string{"virtual", "2:00:00 left", "solved 0/2", "penalty 0"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("session view missing %q:\n%s", want, out)
-		}
-	}
-	if m.statusOf(ps[0]) != store.StatusNone || m.statusOf(ps[2]) != store.StatusSolved {
-		t.Fatalf("old marks hidden only inside the session contest: %v %v", m.statusOf(ps[0]), m.statusOf(ps[2]))
-	}
-	if blinded := m.Problems[0]; blinded.Rating != 0 || blinded.Tags != nil || blinded.SolvedCount != 0 || m.Problems[2].Rating != 1500 {
-		t.Fatalf("blinding: %+v / %+v", blinded, m.Problems[2])
-	}
-	if raw := m.raw.Problems[0]; raw.Rating != 800 {
-		t.Fatal("raw data must stay intact so ending restores it")
-	}
+	mustHave(t, plain(m), "2400")
+	m = startVirtual(t, m, &started)
+	mustLack(t, plain(m), "2400", "800")
+	mustHave(t, plain(m), "virtual", "2:00:00 left", "solved 0/2", "penalty 0")
+	checkBlinded(t, m, ps)
 
-	// a submission inside the window scores; a later reload shows it
-	d := m.raw
-	d.Subs = []cf.Submission{sessSub("A", "WRONG_ANSWER", now.Unix()+60), sessSub("A", "OK", now.Unix()+600), sessSub("B", "OK", now.Unix()-5)}
-	m = m.WithData(d)
-	m.cm.rail = railFull // the rail shows each result in full
-	out = plain(m)
-	if !strings.Contains(out, "solved 1/2") || !strings.Contains(out, "penalty 30") || !strings.Contains(out, "10m +1") || m.statusOf(ps[1]) != store.StatusNone {
-		t.Fatalf("score after a solve (10 min + 20 for one wrong):\n%s", out)
+	m = scoreVirtual(t, m, now)
+	if m.statusOf(ps[1]) != store.StatusNone {
+		t.Fatal("B is not solved inside the window")
 	}
 
 	// time runs out: the summary opens, esc keeps the session, e ends it
 	now = now.Add(2*time.Hour + time.Second)
 	m2, _ := m.Update(sessTickMsg{})
 	m = m2.(Model)
-	if !m.sessSum || !strings.Contains(plain(m), "Session summary") || !strings.Contains(plain(m), "upsolve: B") {
+	mustHave(t, plain(m), "Session summary", "upsolve: B")
+	if !m.sessSum {
 		t.Fatalf("summary at the deadline:\n%s", plain(m))
 	}
 	m, _ = send(m, "e")
@@ -149,6 +159,41 @@ func collect(cmd tea.Cmd) []tea.Msg {
 	return []tea.Msg{msg}
 }
 
+// feedCmd delivers every message cmd produces back to m.
+func feedCmd(m Model, cmd tea.Cmd) Model {
+	for _, msg := range collect(cmd) {
+		nm, _ := m.Update(msg)
+		m = nm.(Model)
+	}
+	return m
+}
+
+// startLive opens the 2 contest and presses s twice, confirming the live session.
+func startLive(t *testing.T, m Model) Model {
+	t.Helper()
+	m, _ = send(m, "2")
+	m, _ = send(m, "enter")
+	m, _ = send(m, "s")
+	if !strings.Contains(plain(m), "live contest") || m.sess != nil {
+		t.Fatalf("confirm first:\n%s", plain(m))
+	}
+	m, _ = send(m, "s")
+	if m.sess == nil || m.sess.Mode != session.Live || m.sess.End != 107_200 {
+		t.Fatalf("%+v", m.sess)
+	}
+	mustHave(t, plain(m), "live  1:50:00 left")
+	return m
+}
+
+// checkStandingsView checks the rail shows the standings row and marks follow it.
+func checkStandingsView(t *testing.T, m Model, ps []cf.Problem) {
+	t.Helper()
+	mustHave(t, plain(m), "rank 5  490 pts", "490* +1")
+	if m.statusOf(ps[0]) != store.StatusSolved || m.statusOf(ps[1]) != store.StatusNone {
+		t.Fatal("marks follow the standings row")
+	}
+}
+
 func TestLiveSessionUsesStandings(t *testing.T) {
 	now := time.Unix(100_600, 0)
 	ps := []cf.Problem{{ContestID: 7, Index: "A", Name: "a", Rating: 800}, {ContestID: 7, Index: "B", Name: "b"}}
@@ -172,49 +217,23 @@ func TestLiveSessionUsesStandings(t *testing.T) {
 		},
 	}
 	m := New(ps, "", deps).WithData(Data{Handle: "me", Problems: ps, Contests: cs})
-	m, _ = send(m, "2")
-	m, _ = send(m, "enter")
-	m, _ = send(m, "s")
-	if !strings.Contains(plain(m), "live contest") || m.sess != nil {
-		t.Fatalf("confirm first:\n%s", plain(m))
-	}
-	m, _ = send(m, "s")
-	if m.sess == nil || m.sess.Mode != session.Live || m.sess.End != 107_200 {
-		t.Fatalf("%+v", m.sess)
-	}
-	if !strings.Contains(plain(m), "live  1:50:00 left") {
-		t.Fatalf("real clock, not a fresh timer:\n%s", plain(m))
-	}
+	m = startLive(t, m)
 
 	// the first tick downloads the standings; the next ones wait a minute
 	m, cmd := m.liveTick()
-	for _, msg := range collect(cmd) {
-		nm, _ := m.Update(msg)
-		m = nm.(Model)
-	}
+	m = feedCmd(m, cmd)
 	if calls != 1 || fetches != 0 {
 		t.Fatalf("calls=%d fetches=%d", calls, fetches)
 	}
 	m.cm.rail = railFull
-	out := plain(m)
-	for _, want := range []string{"rank 5  490 pts", "490* +1"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("live view missing %q:\n%s", want, out)
-		}
-	}
-	if m.statusOf(ps[0]) != store.StatusSolved || m.statusOf(ps[1]) != store.StatusNone {
-		t.Fatal("marks follow the standings row")
-	}
+	checkStandingsView(t, m, ps)
 	now = now.Add(30 * time.Second)
 	if _, cmd := m.liveTick(); cmd != nil && len(collect(cmd)) > 0 || calls != 1 {
 		t.Fatalf("polled again after 30s: %d", calls)
 	}
 	now = now.Add(31 * time.Second)
 	m, cmd = m.liveTick()
-	for _, msg := range collect(cmd) {
-		nm, _ := m.Update(msg)
-		m = nm.(Model)
-	}
+	m = feedCmd(m, cmd)
 	if calls != 2 {
 		t.Fatalf("calls=%d", calls)
 	}
@@ -222,11 +241,7 @@ func TestLiveSessionUsesStandings(t *testing.T) {
 	// the end: one last poll, then the summary warns that system testing can change it
 	now = time.Unix(107_201, 0)
 	nm, cmd := m.Update(sessTickMsg{})
-	m = nm.(Model)
-	for _, msg := range collect(cmd) {
-		nm, _ := m.Update(msg)
-		m = nm.(Model)
-	}
+	m = feedCmd(nm.(Model), cmd)
 	if !m.sessSum || calls != 3 || !strings.Contains(plain(m), "results can change after system testing") {
 		t.Fatalf("calls=%d\n%s", calls, plain(m))
 	}

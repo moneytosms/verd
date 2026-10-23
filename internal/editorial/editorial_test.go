@@ -34,6 +34,17 @@ func blogContent(t *testing.T, id string) string {
 }
 
 func TestParseMaterialsVariants(t *testing.T) {
+	t.Run("announcement and tutorial", func(t *testing.T) { checkAnnouncementTutorial(t) })
+	t.Run("locale-less tutorial", func(t *testing.T) { checkLocaleLessTutorial(t) })
+	t.Run("no box", func(t *testing.T) {
+		if ms, err := ParseMaterials([]byte(`<html><body><div class="problem-statement"></div></body></html>`)); err != nil || len(ms) != 0 {
+			t.Fatalf("a page without the box has none: %+v %v", ms, err)
+		}
+	})
+	t.Run("pick tutorial", func(t *testing.T) { checkPickTutorial(t) })
+}
+
+func checkAnnouncementTutorial(t *testing.T) {
 	ms, err := ParseMaterials(fixture(t, "materials_announcement_tutorial.html"))
 	if err != nil || len(ms) != 2 || ms[0].Kind != Announcement || ms[1].Kind != Tutorial || ms[1].BlogID != 122677 || ms[1].Locale != "en" {
 		t.Fatalf("%+v %v", ms, err)
@@ -41,9 +52,11 @@ func TestParseMaterialsVariants(t *testing.T) {
 	if ms[1].URL != "https://codeforces.com/blog/entry/122677" {
 		t.Fatalf("url %q", ms[1].URL)
 	}
+}
 
-	// "Tutorial #1" has no locale label; a video and a discussion stream are links only
-	ms, _ = ParseMaterials(fixture(t, "materials_video_only.html"))
+// "Tutorial #1" has no locale label; a video and a discussion stream are links only
+func checkLocaleLessTutorial(t *testing.T) {
+	ms, _ := ParseMaterials(fixture(t, "materials_video_only.html"))
 	kinds := map[Kind]int{}
 	for _, m := range ms {
 		kinds[m.Kind]++
@@ -55,23 +68,29 @@ func TestParseMaterialsVariants(t *testing.T) {
 	if !ok || pick.BlogID != 132689 || pick.Locale != "" {
 		t.Fatalf("a locale-less Tutorial is still the editorial: %+v %v", pick, ok)
 	}
+}
 
-	if ms, err := ParseMaterials([]byte(`<html><body><div class="problem-statement"></div></body></html>`)); err != nil || len(ms) != 0 {
-		t.Fatalf("a page without the box has none: %+v %v", ms, err)
-	}
+func checkPickTutorial(t *testing.T) {
 	if _, ok := PickTutorial([]Material{{Kind: Video, BlogID: 1}, {Kind: Announcement, BlogID: 2}}); ok {
 		t.Fatal("videos and announcements are not editorials")
 	}
 	if _, ok := PickTutorial([]Material{{Kind: Tutorial, BlogID: 3, Locale: "ru"}}); ok {
 		t.Fatal("a Russian-only Tutorial is not picked")
 	}
-	if m, _ := PickTutorial([]Material{{Kind: Tutorial, BlogID: 4}, {Kind: Tutorial, BlogID: 5, Locale: "en"}}); m.BlogID != 5 {
-		t.Fatalf("english wins: %+v", m)
+	if m, ok := PickTutorial([]Material{{Kind: Tutorial, BlogID: 4}, {Kind: Tutorial, BlogID: 5, Locale: "en"}}); !ok || m.BlogID != 5 {
+		t.Fatalf("english wins: %+v %v", m, ok)
 	}
 }
 
 func TestSectionsSplitByProblemLink(t *testing.T) {
 	c := blogContent(t, "118466")
+	t.Run("own section", func(t *testing.T) { checkOwnSection(t, c) })
+	t.Run("last problem", func(t *testing.T) { checkLastProblem(t, c) })
+	t.Run("no section", func(t *testing.T) { checkNoSection(t, c) })
+	t.Run("one-line intros", func(t *testing.T) { checkOneLineIntros(t) })
+}
+
+func checkOwnSection(t *testing.T, c string) {
 	blocks, whole, err := Sections(c, 1850, "B")
 	if err != nil || whole || len(blocks) < 3 {
 		t.Fatalf("%v whole=%v n=%d", err, whole, len(blocks))
@@ -94,19 +113,26 @@ func TestSectionsSplitByProblemLink(t *testing.T) {
 	if spoilers < 2 {
 		t.Fatalf("hints and a solution are spoilers: %d", spoilers)
 	}
+}
+
+func checkLastProblem(t *testing.T, c string) {
 	last, _, _ := Sections(c, 1850, "H")
 	if len(last) == 0 || strings.Contains(last[0].HTML, "1850G - ") {
 		t.Fatal("the last problem runs to the end of the post")
 	}
+}
 
-	blocks, whole, _ = Sections(c, 1850, "Z")
+func checkNoSection(t *testing.T, c string) {
+	blocks, whole, _ := Sections(c, 1850, "Z")
 	if !whole || len(blocks) == 0 {
 		t.Fatalf("no section for the problem: the whole post, whole=%v", whole)
 	}
 	if _, whole, _ := Sections(c, 9999, "B"); !whole {
 		t.Fatal("another contest's links are not sections")
 	}
+}
 
+func checkOneLineIntros(t *testing.T) {
 	b, whole, _ := Sections(blogContent(t, "88591"), 1501, "A")
 	if whole || len(b) != 1 || !strings.Contains(b[0].HTML, "Alexey and Train") || strings.Contains(b[0].HTML, "Napoleon") {
 		t.Fatalf("a post of one-line intros: whole=%v %+v", whole, b)
@@ -175,8 +201,11 @@ func TestLoadCachesPageAndPost(t *testing.T) {
 	now := time.Unix(1_000_000, 0)
 	p := cf.Problem{ContestID: 1850, Index: "B"}
 	res, err := Load(context.Background(), s, c, p, now)
-	if err != nil || res.Status != OK || res.Whole || res.Spoilers() < 2 || res.URL != "https://codeforces.com/blog/entry/122677" || !strings.Contains(res.Title, "Editorial") {
+	if err != nil || res.Status != OK || res.Whole || res.Spoilers() < 2 {
 		t.Fatalf("%+v %v", res, err)
+	}
+	if res.URL != "https://codeforces.com/blog/entry/122677" || !strings.Contains(res.Title, "Editorial") {
+		t.Fatalf("%+v", res)
 	}
 	if len(res.Links) != 1 || res.Links[0].Kind != Announcement {
 		t.Fatalf("the announcement is a link: %+v", res.Links)
@@ -240,6 +269,14 @@ func TestHostileMaterialsAreSanitized(t *testing.T) {
 			t.Fatalf("control characters survived: %+v", m)
 		}
 	}
+	t.Run("relative and foreign links", func(t *testing.T) { checkHostileLinks(t, byURL) })
+	t.Run("rebuilt urls", func(t *testing.T) { checkRebuiltURLs(t, byURL) })
+	if pick, ok := PickTutorial(ms); !ok || pick.BlogID == 0 {
+		t.Fatalf("%+v", pick)
+	}
+}
+
+func checkHostileLinks(t *testing.T, byURL map[string]Material) {
 	if m := byURL["https://codeforces.com/blog/entry/5"]; m.BlogID != 5 || m.Label != "Tutorial[31mred" {
 		t.Fatalf("relative blog link: %+v", m)
 	}
@@ -251,6 +288,9 @@ func TestHostileMaterialsAreSanitized(t *testing.T) {
 			t.Fatal("javascript: links must be dropped")
 		}
 	}
+}
+
+func checkRebuiltURLs(t *testing.T, byURL map[string]Material) {
 	if byURL["https://codeforces.com/blog/entry/7"].BlogID != 7 {
 		t.Fatal("the URL is rebuilt from the id alone: the query and fragment are dropped")
 	}
@@ -259,9 +299,6 @@ func TestHostileMaterialsAreSanitized(t *testing.T) {
 	}
 	if m := byURL["https://youtu.be/abc"]; m.Kind != Video || m.BlogID != 0 {
 		t.Fatalf("%+v", m)
-	}
-	if pick, ok := PickTutorial(ms); !ok || pick.BlogID == 0 {
-		t.Fatalf("%+v", pick)
 	}
 }
 

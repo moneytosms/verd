@@ -36,18 +36,31 @@ func TestStandingsKeepsOnlyMyRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Contest.Type != "CF" || st.Contest.Phase != "CODING" || len(st.Problems) != 2 || st.Problems[1].Points != 1000 {
-		t.Fatalf("%+v", st)
-	}
-	r := st.Row
-	if r == nil || r.Rank != 2 || r.Points != 490 || !r.Results[0].Solved() || r.Results[0].Rejected != 1 || r.Results[1].Solved() {
-		t.Fatalf("row: %+v", r)
-	}
+	t.Run("contest", func(t *testing.T) { checkStandingsContest(t, st) })
+	t.Run("my row", func(t *testing.T) { checkMyRow(t, st.Row) })
 	if st.Bytes != int64(len(standingsBody)) {
 		t.Fatalf("bytes %d", st.Bytes)
 	}
 	if st, err := standingsClient(t, standingsBody).Standings(context.Background(), 7, "nobody"); err != nil || st.Row != nil {
 		t.Fatalf("unregistered handle has no row: %+v %v", st, err)
+	}
+}
+
+func checkStandingsContest(t *testing.T, st *Standing) {
+	if st.Contest.Type != "CF" || st.Contest.Phase != "CODING" || len(st.Problems) != 2 || st.Problems[1].Points != 1000 {
+		t.Fatalf("%+v", st)
+	}
+}
+
+func checkMyRow(t *testing.T, r *StandingRow) {
+	if r == nil {
+		t.Fatal("row: <nil>")
+	}
+	if r.Rank != 2 || r.Points != 490 {
+		t.Fatalf("row: %+v", r)
+	}
+	if !r.Results[0].Solved() || r.Results[0].Rejected != 1 || r.Results[1].Solved() {
+		t.Fatalf("row: %+v", r)
 	}
 }
 

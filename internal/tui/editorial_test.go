@@ -32,6 +32,15 @@ func openEditorialFor(t *testing.T, m Model) Model {
 	return m
 }
 
+// revealStep presses enter and checks the hint count, and whether the first and second hints show.
+func revealStep(t *testing.T, m Model, shown, hidden []string, count string) Model {
+	t.Helper()
+	m, _ = send(m, "enter")
+	mustHave(t, plain(m), append(shown, count)...)
+	mustLack(t, plain(m), hidden...)
+	return m
+}
+
 func TestEditorialRevealsStrictlyInOrder(t *testing.T) {
 	res := &editorial.Result{
 		Status: editorial.OK, Title: "Round 911 Editorial", URL: "https://codeforces.com/blog/entry/122677",
@@ -46,25 +55,10 @@ func TestEditorialRevealsStrictlyInOrder(t *testing.T) {
 	m := New([]cf.Problem{{ContestID: 1900, Index: "A", Name: "N"}}, "", editorialDeps(res, &opened))
 	m = openEditorialFor(t, m)
 
-	out := plain(m)
-	for _, want := range []string{"Idea: think about water", "▸ Hint 1", "to reveal", "▸ Solution (locked)", "0/2 hints", "More materials", "Video Tutorial"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("missing %q:\n%s", want, out)
-		}
-	}
-	if strings.Contains(out, "FIRSTHINT") || strings.Contains(out, "THESOLUTION") {
-		t.Fatalf("spoilers must stay closed:\n%s", out)
-	}
-	m, _ = send(m, "enter")
-	out = plain(m)
-	if !strings.Contains(out, "FIRSTHINT") || strings.Contains(out, "THESOLUTION") || !strings.Contains(out, "▸ Solution") || !strings.Contains(out, "1/2 hints") {
-		t.Fatalf("one at a time:\n%s", out)
-	}
-	m, _ = send(m, "enter")
-	out = plain(m)
-	if !strings.Contains(out, "THESOLUTION") || !strings.Contains(out, "2/2 hints") {
-		t.Fatalf("second reveal:\n%s", out)
-	}
+	mustHave(t, plain(m), "Idea: think about water", "▸ Hint 1", "to reveal", "▸ Solution (locked)", "0/2 hints", "More materials", "Video Tutorial")
+	mustLack(t, plain(m), "FIRSTHINT", "THESOLUTION")
+	m = revealStep(t, m, []string{"FIRSTHINT", "▸ Solution"}, []string{"THESOLUTION"}, "1/2 hints")
+	m = revealStep(t, m, []string{"THESOLUTION"}, nil, "2/2 hints")
 	m, _ = send(m, "enter") // nothing left to open
 	if m.edv.revealed != 2 {
 		t.Fatalf("revealed %d", m.edv.revealed)

@@ -99,16 +99,27 @@ func TestEditCmdCreatesSolutionOnce(t *testing.T) {
 	}
 }
 
-func TestAddCustomAndLangHelpers(t *testing.T) {
+// addCustomEnv sets up a fake nvim on PATH and a fresh config for the custom and language helpers.
+func addCustomEnv(t *testing.T) (config.Config, *editor.Controller) {
 	bin := t.TempDir()
 	os.WriteFile(filepath.Join(bin, "nvim"), []byte("#!/bin/sh\n"), 0o755)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cfg := config.Default()
 	cfg.Workspace = t.TempDir()
-	p := cf.Problem{ContestID: 5, Index: "C"}
-	ctrl := &editor.Controller{Bin: "nvim"}
+	return cfg, &editor.Controller{Bin: "nvim"}
+}
 
+func TestAddCustomAndLangHelpers(t *testing.T) {
+	cfg, ctrl := addCustomEnv(t)
+	p := cf.Problem{ContestID: 5, Index: "C"}
+	t.Run("addCustom", func(t *testing.T) { checkAddCustom(t, cfg, ctrl, p) })
+	t.Run("langKeys", func(t *testing.T) { checkLangKeys(t, cfg) })
+	t.Run("solutionRef", func(t *testing.T) { checkSolutionRef(t, cfg, p) })
+	t.Run("ensureSolution per language", func(t *testing.T) { checkEnsurePerLang(t, cfg, p) })
+}
+
+func checkAddCustom(t *testing.T, cfg config.Config, ctrl *editor.Controller, p cf.Problem) {
 	cmd, err := addCustom(cfg, ctrl, p)
 	if err != nil || len(cmd.Args) != 4 || cmd.Args[1] != "-O" || filepath.Base(cmd.Args[2]) != "custom-1.in" || filepath.Base(cmd.Args[3]) != "custom-1.ans" {
 		t.Fatalf("%v %v", cmd, err)
@@ -117,10 +128,15 @@ func TestAddCustomAndLangHelpers(t *testing.T) {
 	if filepath.Base(cmd.Args[2]) != "custom-2.in" {
 		t.Fatalf("second add must not reuse custom-1: %v", cmd.Args)
 	}
+}
 
+func checkLangKeys(t *testing.T, cfg config.Config) {
 	if got := strings.Join(langKeys(cfg), ","); got != "c,cpp,python" {
 		t.Fatalf("langs %s", got)
 	}
+}
+
+func checkSolutionRef(t *testing.T, cfg config.Config, p cf.Problem) {
 	ref, err := solutionRef(cfg, p, "python")
 	if err != nil || filepath.Base(ref.Path) != "main.py" || ref.Lang != "python" {
 		t.Fatalf("%+v %v", ref, err)
@@ -128,7 +144,10 @@ func TestAddCustomAndLangHelpers(t *testing.T) {
 	if _, err := solutionRef(cfg, p, "rust"); err == nil {
 		t.Fatal("unknown language must error")
 	}
-	// switching language creates that Solution; the other language's file is untouched
+}
+
+// switching language creates that Solution; the other language's file is untouched
+func checkEnsurePerLang(t *testing.T, cfg config.Config, p cf.Problem) {
 	cppPath, _, _ := ensureSolution(cfg, p, "cpp")
 	os.WriteFile(cppPath, []byte("cpp work"), 0o644)
 	pyPath, _, err := ensureSolution(cfg, p, "python")
@@ -150,74 +169,94 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func TestCustomizeCLI(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	do := func(args ...string) (string, error) {
-		var out bytes.Buffer
-		err := run(args, &out)
-		return out.String(), err
-	}
-	if _, err := do("init", "--no-setup"); err != nil {
-		t.Fatal(err)
-	}
-	if out, err := do("config", "set", "embed_side", "left"); err != nil || !strings.Contains(out, "embed_side = left") {
+// runCLI runs the CLI and returns its stdout along with the error.
+func runCLI(args ...string) (string, error) {
+	var out bytes.Buffer
+	err := run(args, &out)
+	return out.String(), err
+}
+
+// customizeConfig covers `config set/get` on the embed_side setting.
+func customizeConfig(t *testing.T) {
+	if out, err := runCLI("config", "set", "embed_side", "left"); err != nil || !strings.Contains(out, "embed_side = left") {
 		t.Fatalf("%q %v", out, err)
 	}
-	if out, _ := do("config", "get", "embed_side"); strings.TrimSpace(out) != "left" {
+	if out, _ := runCLI("config", "get", "embed_side"); strings.TrimSpace(out) != "left" {
 		t.Fatalf("get: %q", out)
 	}
-	if _, err := do("config", "set", "embed_side", "up"); err == nil {
+	if _, err := runCLI("config", "set", "embed_side", "up"); err == nil {
 		t.Fatal("bad value must be refused")
 	}
-	if _, err := do("keys", "set", "problem.run_tests", "ctrl+t"); err != nil {
+}
+
+// customizeKeys covers `keys set/reset` and the --json listing.
+func customizeKeys(t *testing.T) {
+	if _, err := runCLI("keys", "set", "problem.run_tests", "ctrl+t"); err != nil {
 		t.Fatal(err)
 	}
-	if out, _ := do("keys", "--json"); !strings.Contains(out, `"keys": [`+"\n"+`      "ctrl+t"`) {
+	if out, _ := runCLI("keys", "--json"); !strings.Contains(out, `"keys": [`+"\n"+`      "ctrl+t"`) {
 		t.Fatalf("json should show the new key:\n%s", out)
 	}
-	if _, err := do("keys", "set", "problem.submit", "ctrl+t"); err == nil || !strings.Contains(err.Error(), "bound to both") {
+	if _, err := runCLI("keys", "set", "problem.submit", "ctrl+t"); err == nil || !strings.Contains(err.Error(), "bound to both") {
 		t.Fatalf("conflict must be refused: %v", err)
 	}
-	if _, err := do("keys", "set", "problem.nope", "x"); err == nil {
+	if _, err := runCLI("keys", "set", "problem.nope", "x"); err == nil {
 		t.Fatal("unknown action must be refused")
 	}
-	if _, err := do("keys", "reset", "problem.run_tests"); err != nil {
+	if _, err := runCLI("keys", "reset", "problem.run_tests"); err != nil {
 		t.Fatal(err)
 	}
-	if out, _ := do("keys"); strings.Contains(out, "ctrl+t") {
+	if out, _ := runCLI("keys"); strings.Contains(out, "ctrl+t") {
 		t.Fatalf("reset should restore t:\n%s", out)
 	}
-	out, err := do("themes", "show", "nord")
+}
+
+// customizeThemes covers `themes show` for a custom and the terminal palette.
+func customizeThemes(t *testing.T) {
+	out, err := runCLI("themes", "show", "nord")
 	if err != nil || !strings.Contains(out, "[themes.my-nord.dark]") || !strings.Contains(out, `accent = "#88c0d0"`) {
 		t.Fatalf("%q %v", out, err)
 	}
-	if out, _ := do("themes", "show", "terminal"); !strings.Contains(out, `accent = "ansi6"`) {
+	if out, _ := runCLI("themes", "show", "terminal"); !strings.Contains(out, `accent = "ansi6"`) {
 		t.Fatalf("terminal palette uses ansi indices:\n%s", out)
 	}
-	// Test presets
-	if out, err := do("keys", "presets", "list"); err != nil || !strings.Contains(out, "default") || !strings.Contains(out, "vim") {
+}
+
+// customizePresets covers `keys presets` list, apply, export and reset.
+func customizePresets(t *testing.T) {
+	if out, err := runCLI("keys", "presets", "list"); err != nil || !strings.Contains(out, "default") || !strings.Contains(out, "vim") {
 		t.Fatalf("presets list failed: %q %v", out, err)
 	}
-	if out, err := do("keys", "presets", "preset", "vim"); err != nil || !strings.Contains(out, "applied") {
+	if out, err := runCLI("keys", "presets", "preset", "vim"); err != nil || !strings.Contains(out, "applied") {
 		t.Fatalf("apply vim preset failed: %q %v", out, err)
 	}
-	if out, _ := do("keys"); !strings.Contains(out, "ctrl+d") {
+	if out, _ := runCLI("keys"); !strings.Contains(out, "ctrl+d") {
 		t.Fatalf("vim preset should have ctrl+d:\n%s", out)
 	}
-	// Test export
-	if out, err := do("keys", "presets", "export"); err != nil || !strings.Contains(out, "[keys.") {
+	if out, err := runCLI("keys", "presets", "export"); err != nil || !strings.Contains(out, "[keys.") {
 		t.Fatalf("export failed: %q %v", out, err)
 	}
-	// Test round-trip: export and import
-	if _, err := do("keys", "presets", "export"); err != nil {
+	// round-trip: export and reset to default
+	if _, err := runCLI("keys", "presets", "export"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := do("keys", "presets", "preset", "default"); err != nil {
+	if _, err := runCLI("keys", "presets", "preset", "default"); err != nil {
 		t.Fatalf("reset to default failed: %v", err)
 	}
-	if o2, _ := do("keys"); strings.Contains(o2, "ctrl+d") {
+	if o2, _ := runCLI("keys"); strings.Contains(o2, "ctrl+d") {
 		t.Fatalf("default preset should not have ctrl+d:\n%s", o2)
 	}
+}
+
+func TestCustomizeCLI(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if _, err := runCLI("init", "--no-setup"); err != nil {
+		t.Fatal(err)
+	}
+	t.Run("config", customizeConfig)
+	t.Run("keys", customizeKeys)
+	t.Run("themes", customizeThemes)
+	t.Run("presets", customizePresets)
 }
 
 func TestWatchConfigStartsAndStops(t *testing.T) {
@@ -336,6 +375,95 @@ func TestSnippetExport(t *testing.T) {
 	}
 }
 
+// snipCLI runs `verd snippet ...` and keeps the output of the last call.
+type snipCLI struct {
+	out bytes.Buffer
+}
+
+func (s *snipCLI) do(args ...string) error {
+	s.out.Reset()
+	return run(append([]string{"snippet"}, args...), &s.out)
+}
+
+// must runs a snippet command and fails the test on error.
+func (s *snipCLI) must(t *testing.T, args ...string) {
+	t.Helper()
+	if err := s.do(args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// snippetAdd covers `snippet add` from a file, with a description, and its errors.
+func snippetAdd(t *testing.T, s *snipCLI, dir string) {
+	src := filepath.Join(t.TempDir(), "mine.cpp")
+	os.WriteFile(src, []byte("int twice(int x) { return 2 * x; }"), 0o644)
+	s.must(t, "add", "--desc", "double it", "twice", src)
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "twice.cpp")); string(b) != "// double it\nint twice(int x) { return 2 * x; }\n" {
+		t.Fatalf("added file: %q", b)
+	}
+	if err := s.do("--list"); err != nil || !strings.Contains(s.out.String(), "double it") {
+		t.Fatalf("list: %v %q", err, s.out.String())
+	}
+	if err := s.do("add", "twice", src); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("duplicate add: %v", err)
+	}
+	if err := s.do("add", "dsu", src); err == nil {
+		t.Fatal("adding over a built-in needs --force")
+	}
+	if err := s.do("add", "bad name", src); err == nil {
+		t.Fatal("bad name")
+	}
+}
+
+// snippetAddPython covers that python gets a # description line.
+func snippetAddPython(t *testing.T, s *snipCLI, dir string) {
+	pysrc := filepath.Join(t.TempDir(), "p.py")
+	os.WriteFile(pysrc, []byte("x = 1\n"), 0o644)
+	s.must(t, "add", "--lang", "python", "xone", pysrc)
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "python", "xone.py")); string(b) != "# xone\nx = 1\n" {
+		t.Fatalf("python add: %q", b)
+	}
+}
+
+// snippetEditAndStub covers editing a built-in and adding a stub with no source.
+func snippetEditAndStub(t *testing.T, s *snipCLI, dir, rec string) {
+	s.must(t, "edit", "modpow")
+	mp := filepath.Join(dir, "library", "cpp", "modpow.cpp")
+	if _, err := os.Stat(mp); err != nil {
+		t.Fatal("edit should write the built-in's copy")
+	}
+	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), mp) {
+		t.Fatalf("editor not run on %s: %q", mp, log)
+	}
+	s.must(t, "add", "--desc", "mine", "stub")
+	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "stub.cpp")); string(b) != "// mine\n" {
+		t.Fatalf("stub: %q", b)
+	}
+}
+
+// snippetRmOpenPath covers rm (user file goes, built-in stays), open and path.
+func snippetRmOpenPath(t *testing.T, s *snipCLI, dir, rec string) {
+	s.must(t, "rm", "twice")
+	if err := s.do("rm", "twice"); err == nil {
+		t.Fatal("second rm should fail")
+	}
+	s.must(t, "rm", "modpow")
+	if err := s.do("modpow"); err != nil || !strings.Contains(s.out.String(), "modular exponentiation") {
+		t.Fatalf("built-in must remain after rm: %v %q", err, s.out.String())
+	}
+	// open: populates and opens the library folder; path prints the dir
+	s.must(t, "open")
+	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), filepath.Join(dir, "library")) {
+		t.Fatalf("open: %q", log)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "library", "python", "dsu.py")); err != nil {
+		t.Fatal("open should populate the library")
+	}
+	if err := s.do("path"); err != nil || strings.TrimSpace(s.out.String()) != dir {
+		t.Fatalf("path: %v %q", err, s.out.String())
+	}
+}
+
 func TestSnippetManage(t *testing.T) {
 	cfgHome := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", cfgHome)
@@ -345,84 +473,12 @@ func TestSnippetManage(t *testing.T) {
 	os.WriteFile(ed, []byte("#!/bin/sh\necho \"$@\" >> '"+rec+"'\n"), 0o755)
 	os.MkdirAll(filepath.Join(cfgHome, "verd"), 0o755)
 	os.WriteFile(filepath.Join(cfgHome, "verd", "config.toml"), []byte("editor = '"+ed+"'\n"), 0o644)
-	var out bytes.Buffer
-	do := func(args ...string) error { out.Reset(); return run(append([]string{"snippet"}, args...), &out) }
+	s := &snipCLI{}
 
-	// add from a file: gets a description line, shows up in the library
-	src := filepath.Join(t.TempDir(), "mine.cpp")
-	os.WriteFile(src, []byte("int twice(int x) { return 2 * x; }"), 0o644)
-	if err := do("add", "--desc", "double it", "twice", src); err != nil {
-		t.Fatal(err)
-	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "twice.cpp")); string(b) != "// double it\nint twice(int x) { return 2 * x; }\n" {
-		t.Fatalf("added file: %q", b)
-	}
-	if err := do("--list"); err != nil || !strings.Contains(out.String(), "double it") {
-		t.Fatalf("list: %v %q", err, out.String())
-	}
-	if err := do("add", "twice", src); err == nil || !strings.Contains(err.Error(), "already exists") {
-		t.Fatalf("duplicate add: %v", err)
-	}
-	if err := do("add", "dsu", src); err == nil {
-		t.Fatal("adding over a built-in needs --force")
-	}
-	if err := do("add", "bad name", src); err == nil {
-		t.Fatal("bad name")
-	}
-	// python gets a # description
-	pysrc := filepath.Join(t.TempDir(), "p.py")
-	os.WriteFile(pysrc, []byte("x = 1\n"), 0o644)
-	if err := do("add", "--lang", "python", "xone", pysrc); err != nil {
-		t.Fatal(err)
-	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "library", "python", "xone.py")); string(b) != "# xone\nx = 1\n" {
-		t.Fatalf("python add: %q", b)
-	}
-
-	// edit a built-in: writes an editable copy and opens it
-	if err := do("edit", "modpow"); err != nil {
-		t.Fatal(err)
-	}
-	mp := filepath.Join(dir, "library", "cpp", "modpow.cpp")
-	if _, err := os.Stat(mp); err != nil {
-		t.Fatal("edit should write the built-in's copy")
-	}
-	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), mp) {
-		t.Fatalf("editor not run on %s: %q", mp, log)
-	}
-	// add with no source: stub + editor
-	if err := do("add", "--desc", "mine", "stub"); err != nil {
-		t.Fatal(err)
-	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "library", "cpp", "stub.cpp")); string(b) != "// mine\n" {
-		t.Fatalf("stub: %q", b)
-	}
-	// rm: user file goes, built-in stays
-	if err := do("rm", "twice"); err != nil {
-		t.Fatal(err)
-	}
-	if err := do("rm", "twice"); err == nil {
-		t.Fatal("second rm should fail")
-	}
-	if err := do("rm", "modpow"); err != nil {
-		t.Fatal(err)
-	}
-	if err := do("modpow"); err != nil || !strings.Contains(out.String(), "modular exponentiation") {
-		t.Fatalf("built-in must remain after rm: %v %q", err, out.String())
-	}
-	// open: populates and opens the library folder; path prints the dir
-	if err := do("open"); err != nil {
-		t.Fatal(err)
-	}
-	if log, _ := os.ReadFile(rec); !strings.Contains(string(log), filepath.Join(dir, "library")) {
-		t.Fatalf("open: %q", log)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "library", "python", "dsu.py")); err != nil {
-		t.Fatal("open should populate the library")
-	}
-	if err := do("path"); err != nil || strings.TrimSpace(out.String()) != dir {
-		t.Fatalf("path: %v %q", err, out.String())
-	}
+	t.Run("add from file", func(t *testing.T) { snippetAdd(t, s, dir) })
+	t.Run("add python", func(t *testing.T) { snippetAddPython(t, s, dir) })
+	t.Run("edit and stub", func(t *testing.T) { snippetEditAndStub(t, s, dir, rec) })
+	t.Run("rm open path", func(t *testing.T) { snippetRmOpenPath(t, s, dir, rec) })
 }
 
 func TestChooseMux(t *testing.T) {

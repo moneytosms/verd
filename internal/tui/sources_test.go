@@ -29,9 +29,10 @@ func mixedModel(settings map[string]string, marks *[]string) Model {
 func TestMixedListSourcesFilterAndMarks(t *testing.T) {
 	var marks []string
 	m := mixedModel(map[string]string{"source_cses": "true"}, &marks)
-	if len(m.visible) != 2 || !strings.Contains(plain(m), "CSES1068") || !strings.Contains(plain(m), "4A") {
+	if len(m.visible) != 2 {
 		t.Fatalf("one mixed list:\n%s", plain(m))
 	}
+	mustHave(t, plain(m), "CSES1068", "4A")
 	f, err := ParseFilter("src:cses")
 	if err != nil || f.Source != cf.SourceCSES || f.Expr() != "src:cses" {
 		t.Fatalf("%+v %v", f, err)
@@ -42,10 +43,16 @@ func TestMixedListSourcesFilterAndMarks(t *testing.T) {
 	}
 	m.filter = Filter{}
 	m = m.refilter()
+	checkMarks(t, m, &marks)
+}
+
+// checkMarks toggles the CSES row with m, then checks a Codeforces row refuses the mark.
+func checkMarks(t *testing.T, m Model, marks *[]string) {
+	t.Helper()
 	m.cursor = 1
 	m, _ = send(m, "m")
-	if len(marks) != 1 || marks[0] != "CSES1068" || m.statusOf(m.visible[1]) != store.StatusSolved {
-		t.Fatalf("m marks a CSES task solved: %v", marks)
+	if len(*marks) != 1 || (*marks)[0] != "CSES1068" || m.statusOf(m.visible[1]) != store.StatusSolved {
+		t.Fatalf("m marks a CSES task solved: %v", *marks)
 	}
 	m, _ = send(m, "m")
 	if m.statusOf(m.visible[1]) == store.StatusSolved {
@@ -53,8 +60,8 @@ func TestMixedListSourcesFilterAndMarks(t *testing.T) {
 	}
 	m.cursor = 0
 	m, _ = send(m, "m")
-	if len(marks) != 2 || !strings.Contains(m.Notice, "Submissions") {
-		t.Fatalf("Codeforces rows cannot be marked: %v %q", marks, m.Notice)
+	if len(*marks) != 2 || !strings.Contains(m.Notice, "Submissions") {
+		t.Fatalf("Codeforces rows cannot be marked: %v %q", *marks, m.Notice)
 	}
 }
 

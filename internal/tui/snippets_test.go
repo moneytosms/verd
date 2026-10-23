@@ -28,22 +28,17 @@ func TestSnippetPickerFiltersAndCopies(t *testing.T) {
 	m, _ = step(t, m, cmd)
 
 	m, _ = send(m, "i")
-	if m.sp == nil || !strings.Contains(plain(m), "Snippets") || !strings.Contains(plain(m), "dijkstra") {
-		t.Fatalf("picker should open with the library:\n%s", plain(m))
+	if m.sp == nil {
+		t.Fatal("picker should open with the library")
 	}
+	mustHave(t, plain(m), "Snippets", "dijkstra")
 	// typing filters by name, then by description; the preview follows the selection
-	for _, k := range []string{"m", "o"} {
-		m, _ = send(m, k)
-	}
-	if out := plain(m); !strings.Contains(out, "modpow") || strings.Contains(out, "dijkstra") {
-		t.Fatalf("filter 'mo':\n%s", out)
-	}
-	for _, k := range []string{"backspace", "backspace", "s", "h", "o", "r"} {
-		m, _ = send(m, k)
-	}
-	if out := plain(m); !strings.Contains(out, "dijkstra") || strings.Contains(out, "modpow") {
-		t.Fatalf("filter by description 'shor':\n%s", out)
-	}
+	m = sendKeys(m, "m", "o")
+	mustHave(t, plain(m), "modpow")
+	mustLack(t, plain(m), "dijkstra")
+	m = sendKeys(m, "backspace", "backspace", "s", "h", "o", "r")
+	mustHave(t, plain(m), "dijkstra")
+	mustLack(t, plain(m), "modpow")
 	// tab switches language and reloads the list
 	m, _ = send(m, "tab")
 	if len(asked) != 2 || asked[1] != "python" {
@@ -59,4 +54,12 @@ func TestSnippetPickerFiltersAndCopies(t *testing.T) {
 	if m.sp != nil || m.open == nil {
 		t.Fatal("esc closes only the picker")
 	}
+}
+
+// sendKeys presses each key in turn.
+func sendKeys(m Model, keys ...string) Model {
+	for _, k := range keys {
+		m, _ = send(m, k)
+	}
+	return m
 }

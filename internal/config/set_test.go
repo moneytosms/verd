@@ -13,6 +13,12 @@ func TestSetKeepsCommentsAndTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	before, _ := os.ReadFile(path)
+	t.Run("set values", func(t *testing.T) { checkSetValues(t, path) })
+	t.Run("comments kept", func(t *testing.T) { checkCommentsKept(t, path, before) })
+	t.Run("second write", func(t *testing.T) { checkSecondWrite(t, path) })
+}
+
+func checkSetValues(t *testing.T, path string) {
 	for key, val := range map[string]string{"theme": "nord", "autotest": "false", "embed_ratio": "0.5", "handle": "tourist", "split": "tmux"} {
 		if err := Set(path, key, val); err != nil {
 			t.Fatalf("%s: %v", key, err)
@@ -25,6 +31,9 @@ func TestSetKeepsCommentsAndTypes(t *testing.T) {
 	if cfg.Theme != "nord" || cfg.Autotest || cfg.EmbedRatio != 0.5 || cfg.Handle != "tourist" || cfg.Split != "tmux" {
 		t.Fatalf("%+v", cfg)
 	}
+}
+
+func checkCommentsKept(t *testing.T, path string, before []byte) {
 	after, _ := os.ReadFile(path)
 	if strings.Count(string(after), "\n") != strings.Count(string(before), "\n") {
 		t.Fatal("a commented default must be replaced in place, not appended")
@@ -32,12 +41,18 @@ func TestSetKeepsCommentsAndTypes(t *testing.T) {
 	if !strings.Contains(string(after), "# Run tests automatically whenever you save") {
 		t.Fatal("comments must survive")
 	}
-	// second write replaces the live line
+}
+
+// second write replaces the live line
+func checkSecondWrite(t *testing.T, path string) {
 	if err := Set(path, "theme", "dracula"); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(path)
-	if strings.Count(string(b), "theme = ") != 1 || !strings.Contains(string(b), `theme = 'dracula'`) && !strings.Contains(string(b), `theme = "dracula"`) {
+	if strings.Count(string(b), "theme = ") != 1 {
+		t.Fatalf("theme line:\n%s", b)
+	}
+	if !strings.Contains(string(b), `theme = 'dracula'`) && !strings.Contains(string(b), `theme = "dracula"`) {
 		t.Fatalf("theme line:\n%s", b)
 	}
 }

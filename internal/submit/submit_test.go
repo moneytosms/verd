@@ -44,21 +44,24 @@ func TestClipboardAndOpenerSelection(t *testing.T) {
 		{"headless ssh", env("linux", nil), "", ""},
 		{"wayland var but no tool", env("linux", map[string]string{"WAYLAND_DISPLAY": "w"}, "xdg-open"), "", "xdg-open"},
 	} {
-		got := tc.env.ClipboardCommand()
-		gotStr := ""
-		if len(got) > 0 {
-			gotStr = got[0]
-			for _, a := range got[1:] {
-				gotStr += " " + a
-			}
-		}
+		gotStr := strings.Join(tc.env.ClipboardCommand(), " ")
 		if gotStr != tc.clip {
 			t.Errorf("%s clipboard: got %q want %q", tc.name, gotStr, tc.clip)
 		}
-		open := tc.env.OpenCommand("https://x")
-		if tc.open == "" && open != nil || tc.open != "" && (len(open) != 2 || open[0] != tc.open || open[1] != "https://x") {
-			t.Errorf("%s opener: got %v want %q", tc.name, open, tc.open)
+		checkOpener(t, tc.name, tc.env.OpenCommand("https://x"), tc.open)
+	}
+}
+
+// checkOpener: no opener means nil, otherwise the command opens the URL.
+func checkOpener(t *testing.T, name string, open []string, want string) {
+	if want == "" {
+		if open != nil {
+			t.Errorf("%s opener: got %v want none", name, open)
 		}
+		return
+	}
+	if len(open) != 2 || open[0] != want || open[1] != "https://x" {
+		t.Errorf("%s opener: got %v want %q", name, open, want)
 	}
 }
 

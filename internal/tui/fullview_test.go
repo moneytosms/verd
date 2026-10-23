@@ -71,8 +71,13 @@ func TestDiffLines(t *testing.T) {
 	want := []string{"1 2", "3.0", "x"}
 	got := []string{"1  2", "3.0000001", "y", "extra"}
 	bw, bg := diffLines(runner.Tokens, want, got)
-	if bw[0] || bg[0] || !bw[2] || !bg[2] || !bg[3] || !bg[1] {
+	if bw[0] || bg[0] {
 		t.Fatalf("tokens: %v %v", bw, bg)
+	}
+	for _, marked := range []bool{bw[2], bg[2], bg[3], bg[1]} {
+		if !marked {
+			t.Fatalf("tokens: %v %v", bw, bg)
+		}
 	}
 	bw, bg = diffLines(runner.Float, want, got)
 	if bg[1] || bw[1] {
@@ -297,10 +302,7 @@ func TestPaletteRunsActionAndJumpsToSetting(t *testing.T) {
 	if m.pal == nil {
 		t.Fatal("ctrl+k should open the palette")
 	}
-	for _, r := range "run tests" {
-		nm, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
-		m = nm.(Model)
-	}
+	m = typeRunes(m, "run tests")
 	if ms := m.palMatches(); len(ms) == 0 || ms[0].key != "t" {
 		t.Fatalf("matches: %+v", ms)
 	}
@@ -309,27 +311,46 @@ func TestPaletteRunsActionAndJumpsToSetting(t *testing.T) {
 	if m.pal != nil || m.run == nil {
 		t.Fatalf("enter should close the palette and press t: pal=%v run=%v", m.pal, m.run)
 	}
+	checkPaletteSetting(t)
+	checkPaletteToggle(t)
+}
 
-	m2 := New(nil, "", Deps{})
-	m2 = m2.openPalette()
-	m2.pal.q = "theme"
-	nm, _ = m2.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m2 = nm.(Model)
-	if m2.tab != 4 || settingDefs[m2.setSel].key != "theme" {
-		t.Fatalf("setting jump: tab=%d sel=%d", m2.tab, m2.setSel)
+// typeRunes presses each rune of s as a key.
+func typeRunes(m Model, s string) Model {
+	for _, r := range s {
+		nm, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+		m = nm.(Model)
 	}
+	return m
+}
 
+// checkPaletteSetting jumps to a setting from the palette.
+func checkPaletteSetting(t *testing.T) {
+	t.Helper()
+	m := New(nil, "", Deps{})
+	m = m.openPalette()
+	m.pal.q = "theme"
+	nm, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = nm.(Model)
+	if m.tab != 4 || settingDefs[m.setSel].key != "theme" {
+		t.Fatalf("setting jump: tab=%d sel=%d", m.tab, m.setSel)
+	}
+}
+
+// checkPaletteToggle flips a yes/no setting in place, then checks zen hides the chrome.
+func checkPaletteToggle(t *testing.T) {
+	t.Helper()
 	// a yes/no setting flips in place, from the palette
-	m3 := New(nil, "", Deps{})
-	m3 = m3.openPalette()
-	m3.pal.q = "show footer"
-	nm, _ = m3.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m3 = nm.(Model)
-	if m3.pal != nil || m3.cfgVals["footer"] != "true" && m3.cfgVals["footer"] != "false" {
-		t.Fatalf("toggle: pal=%v footer=%q", m3.pal, m3.cfgVals["footer"])
+	m := New(nil, "", Deps{})
+	m = m.openPalette()
+	m.pal.q = "show footer"
+	nm, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = nm.(Model)
+	if m.pal != nil || m.cfgVals["footer"] != "true" && m.cfgVals["footer"] != "false" {
+		t.Fatalf("toggle: pal=%v footer=%q", m.pal, m.cfgVals["footer"])
 	}
 	// zen hides the header and footer for the session
-	nm, _ = m3.Update(tea.KeyPressMsg{Code: 'Z', Text: "Z"})
+	nm, _ = m.Update(tea.KeyPressMsg{Code: 'Z', Text: "Z"})
 	z := nm.(Model)
 	if !z.zen || z.hdrOn() || z.ftrOn() {
 		t.Fatalf("zen should hide header and footer: %+v", z.zen)

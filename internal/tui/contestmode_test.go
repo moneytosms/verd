@@ -41,48 +41,62 @@ func contestModel(t *testing.T, now *time.Time) (Model, *session.Stats, *string)
 	return m, saved, report
 }
 
-func TestContestModeNavigatesAndReports(t *testing.T) {
-	now := time.Unix(10_000, 0)
-	m, saved, report := contestModel(t, &now)
+// checkContestStart checks the contest screen opens on problem A with tabs hidden.
+func checkContestStart(t *testing.T, m Model) {
+	t.Helper()
 	if !m.viewing() || m.open.Index != "A" || m.tab != 0 {
 		t.Fatalf("starting opens problem A: %+v tab %d", m.open, m.tab)
 	}
-	out := plain(m)
-	for _, want := range []string{"contest", "Round 7", "▸A", " B", " C"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("contest screen missing %q:\n%s", want, out)
-		}
-	}
-	if strings.Contains(out, "Problems") || strings.Contains(out, "Settings") {
-		t.Fatalf("tabs are hidden:\n%s", out)
-	}
+	mustHave(t, plain(m), "contest", "Round 7", "▸A", " B", " C")
+	mustLack(t, plain(m), "Problems", "Settings")
+}
 
+// expectOpen fails unless problem index is open.
+func expectOpen(t *testing.T, m Model, index string) {
+	t.Helper()
+	if m.open.Index != index {
+		t.Fatalf("open %s, want %s", m.open.Index, index)
+	}
+}
+
+// cycleProblems walks alt+n, alt+3 and alt+p around the contest, keeping A's scroll.
+func cycleProblems(t *testing.T, m Model) Model {
+	t.Helper()
 	m.scroll = 3
 	m = alt(m, 'n')
-	if m.open.Index != "B" {
-		t.Fatalf("alt+n: %s", m.open.Index)
-	}
+	expectOpen(t, m, "B")
 	m = alt(m, '3')
-	if m.open.Index != "C" {
-		t.Fatalf("alt+3: %s", m.open.Index)
-	}
+	expectOpen(t, m, "C")
 	m = alt(m, 'n') // wraps around
-	if m.open.Index != "A" || m.cmRestoreScroll().scroll != 3 {
-		t.Fatalf("back to A with its scroll: %s %d", m.open.Index, m.cmRestoreScroll().scroll)
+	expectOpen(t, m, "A")
+	if m.cmRestoreScroll().scroll != 3 {
+		t.Fatalf("back to A with its scroll: %d", m.cmRestoreScroll().scroll)
 	}
 	m = alt(m, 'p')
-	if m.open.Index != "C" {
-		t.Fatalf("alt+p wraps back: %s", m.open.Index)
-	}
+	expectOpen(t, m, "C")
 	if m, _ = send(m, "esc"); !m.viewing() {
 		t.Fatal("esc must not leave contest mode")
 	}
+	return m
+}
 
-	for i := 0; i < 5; i++ { // five seconds on C
-		now = now.Add(time.Second)
+// idleOnC runs five seconds of session ticks.
+func idleOnC(m Model, now *time.Time) Model {
+	for i := 0; i < 5; i++ {
+		*now = now.Add(time.Second)
 		nm, _ := m.Update(sessTickMsg{})
 		m = nm.(Model)
 	}
+	return m
+}
+
+func TestContestModeNavigatesAndReports(t *testing.T) {
+	now := time.Unix(10_000, 0)
+	m, saved, report := contestModel(t, &now)
+	checkContestStart(t, m)
+	m = cycleProblems(t, m)
+
+	m = idleOnC(m, &now) // five seconds on C
 	m = m.cmCountRun("AC")
 	if c := (*saved)["C"]; c == nil || c.Seconds != 5 || c.Runs != 1 || c.Green != 1 || c.FirstOpen == 0 {
 		t.Fatalf("stats for C: %+v", c)
@@ -96,12 +110,9 @@ func TestContestModeNavigatesAndReports(t *testing.T) {
 	if m.sess != nil || m.cmOn() {
 		t.Fatal("e ends the session and contest mode")
 	}
-	if !strings.Contains(*report, "| C Gamma | - | 0 | 0:05 |") || !strings.Contains(m.Notice, "/w/7/practice.md") {
-		t.Fatalf("report %q notice %q", *report, m.Notice)
-	}
-	if !strings.Contains(plain(m), "Settings") {
-		t.Fatal("ending restores the tabs")
-	}
+	mustHave(t, *report, "| C Gamma | - | 0 | 0:05 |")
+	mustHave(t, m.Notice, "/w/7/practice.md")
+	mustHave(t, plain(m), "Settings")
 }
 
 func TestContestRail(t *testing.T) {

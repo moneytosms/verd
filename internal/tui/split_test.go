@@ -201,19 +201,32 @@ func TestFilterModalRatingStatusTagsAndSort(t *testing.T) {
 		t.Fatal("f opens the filter modal")
 	}
 	// rating min: type 9 0 0 -> 900
-	for _, k := range []string{"9", "0", "0"} {
-		m, _ = send(m, k)
-	}
+	m = sendKeys(m, "9", "0", "0")
 	if m.filter.MinRating != 900 || len(m.visible) != 2 {
 		t.Fatalf("min rating: %d %v", m.filter.MinRating, m.visible)
 	}
-	// tags: tab x5 to the tag list, type "math", space includes it
+	m = filterByTag(t, m)
+	if !strings.Contains(plain(m), "Filters") {
+		t.Fatal("modal should be drawn")
+	}
+	m, _ = send(m, "esc")
+	if m.fm != nil {
+		t.Fatal("esc closes the filter modal")
+	}
+	mustHave(t, plain(m), "rating ≥ 900", "math")
+	m, _ = send(m, "X")
+	if len(m.visible) != 3 || m.filter.Active() {
+		t.Fatal("X clears every filter")
+	}
+}
+
+// filterByTag moves to the tag list, types math, includes it, then excludes it.
+func filterByTag(t *testing.T, m Model) Model {
+	t.Helper()
 	for range 5 {
 		m, _ = send(m, "tab")
 	}
-	for _, k := range []string{"m", "a", "t", "h"} {
-		m, _ = send(m, k)
-	}
+	m = sendKeys(m, "m", "a", "t", "h")
 	m, _ = send(m, " ")
 	if len(m.filter.Include) != 1 || m.filter.Include[0] != "math" || len(m.visible) != 2 {
 		t.Fatalf("tag include: %+v %v", m.filter.Include, m.visible)
@@ -222,17 +235,7 @@ func TestFilterModalRatingStatusTagsAndSort(t *testing.T) {
 	if len(m.filter.Exclude) != 1 || len(m.visible) != 0 {
 		t.Fatalf("tag exclude: %+v %v", m.filter.Exclude, m.visible)
 	}
-	if !strings.Contains(plain(m), "Filters") {
-		t.Fatal("modal should be drawn")
-	}
-	m, _ = send(m, "esc")
-	if m.fm != nil || !strings.Contains(plain(m), "rating ≥ 900") || !strings.Contains(plain(m), "math") {
-		t.Fatalf("chips should show the active filters:\n%s", plain(m))
-	}
-	m, _ = send(m, "X")
-	if len(m.visible) != 3 || m.filter.Active() {
-		t.Fatal("X clears every filter")
-	}
+	return m
 }
 
 func TestSortOrdersTheList(t *testing.T) {

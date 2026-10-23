@@ -11,8 +11,22 @@ import (
 	"github.com/moneytosms/verd/internal/editorial"
 )
 
+// editorialRig drives editorialCmd with a fake loader.
+type editorialRig struct {
+	res   *editorial.Result
+	asked cf.Problem
+	cfg   config.Config
+}
+
+func (r *editorialRig) run(args ...string) (string, error) {
+	var b bytes.Buffer
+	load := func(p cf.Problem) (*editorial.Result, error) { r.asked = p; return r.res, nil }
+	err := editorialCmd(&b, r.cfg, load, args)
+	return b.String(), err
+}
+
 func TestEditorialCmd(t *testing.T) {
-	res := &editorial.Result{
+	r := &editorialRig{cfg: config.Default(), res: &editorial.Result{
 		Status: editorial.OK, Title: "Editorial", URL: "https://codeforces.com/blog/entry/1",
 		Blocks: []editorial.Block{
 			{HTML: "<p>PLAINIDEA</p>"},
@@ -20,47 +34,67 @@ func TestEditorialCmd(t *testing.T) {
 			{Title: "Solution", HTML: "<p>SOLVED</p>", Spoiler: true},
 		},
 		Links: []editorial.Material{{Label: "Video Tutorial", URL: "https://codeforces.com/blog/entry/9"}},
-	}
-	var asked cf.Problem
-	load := func(p cf.Problem) (*editorial.Result, error) { asked = p; return res, nil }
-	cfg := config.Default()
-	run := func(args ...string) (string, error) {
-		var b bytes.Buffer
-		err := editorialCmd(&b, cfg, load, args)
-		return b.String(), err
-	}
+	}}
+	t.Run("spoilers withheld by default", func(t *testing.T) { checkSpoilersWithheld(t, r) })
+	t.Run("reveal one", func(t *testing.T) { checkRevealOne(t, r) })
+	t.Run("all", func(t *testing.T) { checkRevealAll(t, r) })
+	t.Run("no editorial", func(t *testing.T) { checkNoEditorial(t, r) })
+	t.Run("russian only", func(t *testing.T) { checkRussianOnly(t, r) })
+	t.Run("bad args", func(t *testing.T) { checkBadArgs(t, r) })
+}
 
-	out, err := run("1900/A")
-	if err != nil || asked.ContestID != 1900 || asked.Index != "A" {
-		t.Fatalf("%v %+v", err, asked)
+func checkSpoilersWithheld(t *testing.T, r *editorialRig) {
+	out, err := r.run("1900/A")
+	if err != nil || r.asked.ContestID != 1900 || r.asked.Index != "A" {
+		t.Fatalf("%v %+v", err, r.asked)
 	}
-	if !strings.Contains(out, "PLAINIDEA") || strings.Contains(out, "HINTONE") || strings.Contains(out, "SOLVED") ||
-		!strings.Contains(out, "Hint 1 (hidden: --reveal 1)") || !strings.Contains(out, "Solution (hidden: --reveal 2)") || !strings.Contains(out, "Video Tutorial") {
-		t.Fatalf("spoilers withheld by default:\n%s", out)
+	for _, want := range []string{"PLAINIDEA", "Hint 1 (hidden: --reveal 1)", "Solution (hidden: --reveal 2)", "Video Tutorial"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("spoilers withheld by default, missing %q:\n%s", want, out)
+		}
 	}
-	out, _ = run("--reveal", "1", "1900b")
-	if asked.Index != "B" || !strings.Contains(out, "HINTONE") || strings.Contains(out, "SOLVED") {
+	for _, hidden := range []string{"HINTONE", "SOLVED"} {
+		if strings.Contains(out, hidden) {
+			t.Fatalf("spoilers withheld by default, leaked %q:\n%s", hidden, out)
+		}
+	}
+}
+
+func checkRevealOne(t *testing.T, r *editorialRig) {
+	out, _ := r.run("--reveal", "1", "1900b")
+	if r.asked.Index != "B" || !strings.Contains(out, "HINTONE") || strings.Contains(out, "SOLVED") {
 		t.Fatalf("reveal 1:\n%s", out)
 	}
-	out, _ = run("--all", "1900A")
+}
+
+func checkRevealAll(t *testing.T, r *editorialRig) {
+	out, _ := r.run("--all", "1900A")
 	if !strings.Contains(out, "HINTONE") || !strings.Contains(out, "SOLVED") {
 		t.Fatalf("--all:\n%s", out)
 	}
+}
 
-	res = &editorial.Result{Status: editorial.None, Links: []editorial.Material{{Label: "Discussion stream", URL: "https://codeforces.com/blog/entry/2"}}}
-	out, err = run("1900A")
+func checkNoEditorial(t *testing.T, r *editorialRig) {
+	r.res = &editorial.Result{Status: editorial.None, Links: []editorial.Material{{Label: "Discussion stream", URL: "https://codeforces.com/blog/entry/2"}}}
+	out, err := r.run("1900A")
 	var ee *exitError
 	if !errors.As(err, &ee) || ee.code != 1 || !strings.Contains(out, "no editorial is published for 1900A") || !strings.Contains(out, "Discussion stream") {
 		t.Fatalf("none: %v\n%s", err, out)
 	}
-	res = &editorial.Result{Status: editorial.NotEnglish}
-	if out, _ = run("1900A"); !strings.Contains(out, "only a Russian editorial") {
+}
+
+func checkRussianOnly(t *testing.T, r *editorialRig) {
+	r.res = &editorial.Result{Status: editorial.NotEnglish}
+	if out, _ := r.run("1900A"); !strings.Contains(out, "only a Russian editorial") {
 		t.Fatalf("%s", out)
 	}
-	if _, err := run(); err == nil {
+}
+
+func checkBadArgs(t *testing.T, r *editorialRig) {
+	if _, err := r.run(); err == nil {
 		t.Fatal("usage error")
 	}
-	if _, err := run("/etc/passwd"); err == nil {
+	if _, err := r.run("/etc/passwd"); err == nil {
 		t.Fatal("a path outside the workspace is refused")
 	}
 }

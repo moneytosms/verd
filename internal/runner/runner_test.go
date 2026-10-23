@@ -66,25 +66,37 @@ func TestCppACWACached(t *testing.T) {
 	src := f.write("main.cpp", cppSum)
 	tests := []workspace.Test{f.test("sample-1", "1 2\n", "3\n"), f.test("sample-2", "5 5\n", "11\n")}
 	res, evs := f.run(src, "cpp", tests, nil)
+	checkCppVerdicts(t, res)
+	checkCppEvents(t, evs)
+	checkCompileCache(t, f, src, tests)
+}
+
+func checkCppVerdicts(t *testing.T, res []Result) {
 	if len(res) != 2 || res[0].Verdict != AC || res[1].Verdict != WA {
 		t.Fatalf("%+v", res)
 	}
 	if m := res[1].Mismatch; m == nil || m.Line != 1 || m.Col != 1 || m.Want != "11" || m.Got != "10" {
 		t.Fatalf("mismatch %+v", m)
 	}
+	// memory is sampled while the child runs, so a process that exits at once may read 0: only reject nonsense
+	if res[0].MemoryMB < 0 || res[0].TimeMS < 0 {
+		t.Fatalf("stats not measured: %+v", res[0])
+	}
+}
+
+func checkCppEvents(t *testing.T, evs []Event) {
 	if evs[1].Kind != CompileFinished || evs[1].Cached {
 		t.Fatalf("first run must compile: %+v", evs[1])
 	}
 	if last := evs[len(evs)-1]; last.Kind != Done || last.Verdict != WA {
 		t.Fatalf("overall should be first failure: %+v", last)
 	}
-	// memory is sampled while the child runs, so a process that exits at once may read 0: only reject nonsense
-	if res[0].MemoryMB < 0 || res[0].TimeMS < 0 {
-		t.Fatalf("stats not measured: %+v", res[0])
-	}
+}
 
+// checkCompileCache: the compile is reused until the source or the compile argv changes.
+func checkCompileCache(t *testing.T, f *fixture, src string, tests []workspace.Test) {
 	// unchanged source: no recompile
-	_, evs = f.run(src, "cpp", tests, nil)
+	_, evs := f.run(src, "cpp", tests, nil)
 	if !evs[1].Cached {
 		t.Fatal("second run of unchanged source must hit the compile cache")
 	}
