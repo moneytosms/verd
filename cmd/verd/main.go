@@ -478,6 +478,7 @@ func runTUI(path string) error {
 		Settings:    buildSettings(cfg),
 		LangSummary: langSummary(cfg),
 	}
+	deps.NewerVersion = newerRelease
 	submitDeps(&deps, sub)
 	editDeps(&deps, cfg, path, ctrl, pickMux)
 	problemDeps(&deps, cfg, s, client, ctx)

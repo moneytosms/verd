@@ -50,3 +50,19 @@ func TestUpdateCheckReportsNewerRelease(t *testing.T) {
 		t.Fatalf("%q %v", out.String(), err)
 	}
 }
+
+func TestSkippedReleasesBetweenCurAndLatest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/releases" {
+			w.Write([]byte(`[{"tag_name":"v0.4.0","body":"d"},{"tag_name":"v0.3.0","body":"c"},{"tag_name":"v0.2.0","body":"b"},{"tag_name":"v0.1.0","body":"a"}]`))
+		}
+	}))
+	defer srv.Close()
+	oldAPI := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = oldAPI }()
+	rels, err := skippedReleases("0.1.0", "0.3.0")
+	if err != nil || len(rels) != 2 || rels[0].Tag != "v0.3.0" || rels[1].Tag != "v0.2.0" {
+		t.Fatalf("%+v %v", rels, err)
+	}
+}

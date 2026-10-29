@@ -34,6 +34,8 @@ type Deps struct {
 	Load    func(p cf.Problem, force bool) (*scrape.Detail, error)
 	OpenURL func(url string) error
 	Now     func() time.Time // defaults to time.Now
+	// NewerVersion returns the latest release tag when it is newer than this build, else "".
+	NewerVersion func() string
 	// Edit creates the Problem's Solution if needed and opens it in the editor.
 	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
 	Edit func(p cf.Problem, lang string) (*exec.Cmd, error)
@@ -601,6 +603,14 @@ func (m Model) Init() tea.Cmd {
 	if p := m.resume; p != nil {
 		cmds = append(cmds, func() tea.Msg { return resumeMsg{*p} })
 	}
+	if check := m.deps.NewerVersion; check != nil {
+		cmds = append(cmds, func() tea.Msg {
+			if tag := check(); tag != "" {
+				return updateAvailMsg{tag}
+			}
+			return nil
+		})
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -830,6 +840,11 @@ func (m Model) updateRun(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case testEventMsg:
 		nm, cmd := m.onTestEvent(msg)
 		return nm, cmd, true
+	case updateAvailMsg:
+		if m.toast == nil { // never replace a Submission toast
+			m.toast = &toast{text: fmt.Sprintf("verd %s available: run `verd update`  x dismiss", msg.tag)}
+		}
+		return m, nil, true
 	case resumeMsg:
 		m.resume = nil
 		nm, cmd := m.reopen(msg.p)

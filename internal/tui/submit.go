@@ -53,8 +53,9 @@ type (
 		ch     <-chan submit.Update
 		closed bool
 	}
-	toastClearMsg struct{ id int }
-	reloadMsg     struct{ data Data }
+	toastClearMsg  struct{ id int }
+	updateAvailMsg struct{ tag string }
+	reloadMsg      struct{ data Data }
 )
 
 func listenSub(ch <-chan submit.Update) tea.Cmd {

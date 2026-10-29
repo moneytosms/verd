@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,9 @@ import (
 
 // releaseBase is where releases live; tests point it at a local server.
 var releaseBase = "https://github.com/moneytosms/verd/releases"
+
+// apiBase serves release bodies for verd update; the startup check uses the /latest redirect instead (no API rate limit).
+var apiBase = "https://api.github.com/repos/moneytosms/verd"
 
 // updateCmd replaces the running binary with the latest release (checksum verified).
 // With check it only reports.
@@ -55,7 +59,58 @@ func updateCmd(out io.Writer, check bool) error {
 		return err
 	}
 	fmt.Fprintf(out, "updated verd %s -> %s (restart verd to use it)\n", cur, latest)
+	printSkippedNotes(out, cur, latest)
 	return nil
+}
+
+// newerRelease returns the latest release tag when it is newer than this build, else "".
+// Errors are dropped: a failed check is not worth a toast.
+func newerRelease() string {
+	if version == "dev" {
+		return ""
+	}
+	tag, err := latestTag()
+	if err != nil || !newer(strings.TrimPrefix(tag, "v"), strings.TrimPrefix(version, "v")) {
+		return ""
+	}
+	return tag
+}
+
+type release struct {
+	Tag  string `json:"tag_name"`
+	Body string `json:"body"`
+}
+
+// printSkippedNotes prints the notes of every release after cur up to latest, newest first.
+func printSkippedNotes(out io.Writer, cur, latest string) {
+	rels, err := skippedReleases(cur, latest)
+	if err != nil {
+		fmt.Fprintf(out, "\nrelease notes unavailable (%v): see %s\n", err, releaseBase)
+		return
+	}
+	for _, r := range rels {
+		fmt.Fprintf(out, "\n%s\n%s\n", r.Tag, strings.TrimSpace(r.Body))
+	}
+}
+
+// skippedReleases returns the releases with cur < version <= latest, newest first.
+func skippedReleases(cur, latest string) ([]release, error) {
+	body, err := fetch(&http.Client{Timeout: 10 * time.Second}, apiBase+"/releases?per_page=100")
+	if err != nil {
+		return nil, err
+	}
+	var all []release
+	if err := json.Unmarshal(body, &all); err != nil {
+		return nil, err
+	}
+	var out []release
+	for _, r := range all {
+		v := strings.TrimPrefix(r.Tag, "v")
+		if newer(v, cur) && !newer(v, latest) {
+			out = append(out, r)
+		}
+	}
+	return out, nil
 }
 
 // latestTag reads the newest release tag from the /latest redirect.

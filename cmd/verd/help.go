@@ -239,7 +239,7 @@ var helpDocs = []cmdDoc{
 	{
 		Name: "update", Group: "Maintenance", Summary: "replace verd with the latest release",
 		Usage: []string{"verd update [--check]"},
-		About: "Downloads the latest GitHub release for your platform, verifies its checksum and replaces the running binary. A source build (version dev) is refused: update those with go install.",
+		About: "Downloads the latest GitHub release for your platform, verifies its checksum and replaces the running binary, then prints the notes of every release you skipped. verd also shows a toast when a newer release exists. A source build (version dev) is refused: update those with go install.",
 		Flags: []opt{{"--check", "only report whether a newer release exists"}},
 		See:   []string{"version"},
 	},
