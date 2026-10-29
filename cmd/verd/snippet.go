@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -259,4 +260,55 @@ func runEditor(cfg config.Config, target, file string) error {
 	}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+// editLibrarySnippet opens a library snippet in the editor pane. A built-in gets an editable copy
+// first; add creates a new snippet from a template instead.
+func editLibrarySnippet(cfg config.Config, ctrl *editor.Controller, lang, name string, add bool) (*exec.Cmd, error) {
+	if err := requireEditor(ctrl); err != nil {
+		return nil, err
+	}
+	l, err := langOf(cfg, lang)
+	if err != nil {
+		return nil, err
+	}
+	dir := cfg.SnippetsPath()
+	path := workspace.SnippetPath(dir, lang, l, name)
+	if add {
+		if !snippetName.MatchString(name) {
+			return nil, errors.New("snippet name may only contain letters, digits, _ and -")
+		}
+		for _, s := range workspace.ListSnippets(dir, lang, l) {
+			if s.Name == name {
+				return nil, errors.New(name + " already exists for " + lang + ": edit it instead")
+			}
+		}
+		if err := writeSnippet(path, workspace.WithDescription("", name, "describe "+name, l)); err != nil {
+			return nil, err
+		}
+		return ctrl.Open(path, 1)
+	}
+	s, err := workspace.FindSnippet(dir, lang, l, name)
+	if err != nil {
+		return nil, err
+	}
+	path = workspace.SnippetPath(dir, lang, l, s.Name)
+	if _, err := os.Stat(path); err != nil {
+		if err := writeSnippet(path, s.Code); err != nil {
+			return nil, err
+		}
+	}
+	return ctrl.Open(path, 1)
+}
+
+// openLibraryFolder opens the snippet library folder in the editor pane.
+func openLibraryFolder(cfg config.Config, ctrl *editor.Controller) (*exec.Cmd, error) {
+	if err := requireEditor(ctrl); err != nil {
+		return nil, err
+	}
+	dir := cfg.SnippetsPath()
+	if _, err := workspace.InitSnippets(dir, cfg.Lang, false); err != nil {
+		return nil, err
+	}
+	return ctrl.Open(workspace.LibraryRoot(dir), 1)
 }

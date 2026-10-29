@@ -13,11 +13,14 @@ import (
 type Snippet struct{ Name, Desc, Code string }
 
 // snippetPicker is the snippet library modal: type to filter, enter copies the selection.
+// mode is "copy" (enter copies), "edit" (enter opens the selection in the editor) or "add" (enter
+// creates a snippet named after the query).
 type snippetPicker struct {
 	lang  string
 	query string
 	sel   int
 	items []Snippet
+	mode  string
 }
 
 // matches are the snippets whose name or description fuzzy-matches the query, best first
@@ -52,12 +55,12 @@ func (p *snippetPicker) matches() []Snippet {
 	return out
 }
 
-func (m Model) openSnippets(lang string) Model {
-	if m.deps.Snippets == nil {
+func (m Model) openSnippets(lang, mode string) Model {
+	if m.deps.Snippets == nil || (mode != "copy" && m.deps.EditSnippet == nil) {
 		m.errMsg = "snippets are unavailable"
 		return m
 	}
-	m.sp = &snippetPicker{lang: lang, items: m.deps.Snippets(lang)}
+	m.sp = &snippetPicker{lang: lang, items: m.deps.Snippets(lang), mode: mode}
 	return m
 }
 
@@ -82,9 +85,23 @@ func (m Model) updateSnippets(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			p.query, p.sel = string(r[:len(r)-1]), 0
 		}
 	case "enter":
+		if p.mode == "add" {
+			name := strings.TrimSpace(p.query)
+			if name == "" {
+				return m, nil
+			}
+			m.sp = nil
+			cmd, err := m.deps.EditSnippet(p.lang, name, true)
+			return m.afterOpen(cmd, err, "snippet")
+		}
 		ms := p.matches()
 		if p.sel >= len(ms) {
 			return m, nil
+		}
+		if p.mode == "edit" {
+			m.sp = nil
+			cmd, err := m.deps.EditSnippet(p.lang, ms[p.sel].Name, false)
+			return m.afterOpen(cmd, err, "snippet")
 		}
 		m.Notice = fmt.Sprintf("copied snippet %s (%s)", ms[p.sel].Name, p.lang)
 		m.sp = nil
@@ -103,6 +120,16 @@ func (m Model) snippetBox() []string {
 	p := m.sp
 	w, h := m.modalSize(100, 32)
 	ms := p.matches()
+	title, verb := "Snippets", "enter copy"
+	switch p.mode {
+	case "edit":
+		title, verb = "Edit snippet", "enter edit"
+	case "add":
+		title, verb = "Add snippet", "enter create "+strings.TrimSpace(p.query)
+		if strings.TrimSpace(p.query) == "" {
+			verb = "type a name"
+		}
+	}
 	p.sel = min(p.sel, max(0, len(ms)-1))
 	listRows := max(3, (h-5)/2)
 	body := []string{st.Accent.Render("> ") + p.query + st.Dim.Render("▏")}
@@ -124,6 +151,6 @@ func (m Model) snippetBox() []string {
 			body = append(body, cell(code, i, w-4))
 		}
 	}
-	note := fmt.Sprintf("%s  %d/%d  enter copy  tab language  esc close", p.lang, min(p.sel+1, len(ms)), len(ms))
-	return box("Snippets", body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
+	note := fmt.Sprintf("%s  %d/%d  %s  tab language  esc close", p.lang, min(p.sel+1, len(ms)), len(ms), verb)
+	return box(title, body, note, w, min(h, len(body)+2), true, st, m.borderStyle())
 }

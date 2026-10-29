@@ -57,6 +57,9 @@ var settingDefs = []settingDef{
 	{"Mouse", "mouse_select", "Drag to select", "Enable drag-to-select-lines in the Problem view.", "bool", true},
 	{"Keys", "keys", "Shortcuts", "Rebind every shortcut: enter opens the editor. Changes apply at once and are saved under [keys.*] in config.toml, e.g. [keys.problem] run_tests = \"ctrl+t\" (a list gives several keys). ctrl+c always quits.", "keys", true},
 	{"Snippets", "snippets", "Template", "The starting text of a new Solution, one per language. ←/→ picks the language, enter edits its Template file. Available variables are listed below; saving the file applies to the next new Solution.", "snippets", true},
+	{"Snippets", "snippet_edit", "Edit snippet", "Pick a snippet from the library and edit it in the editor. A built-in snippet gets an editable copy in the library folder that replaces it. tab in the picker changes language.", "snippetedit", true},
+	{"Snippets", "snippet_add", "Add snippet", "Type a name in the picker and press enter: creates a new snippet for the language from a template and opens it. Names use letters, digits, _ and -.", "snippetadd", true},
+	{"Snippets", "snippet_dir", "Snippet folder", "Open the snippet library folder in the editor: one file per snippet, per language. Delete a copy of a built-in to restore the original.", "snippetdir", true},
 	{"General", "browser", "Browser", "Where submit pages and Problem links open: default (the system's) or an installed browser. Any command works from config.toml (\"chromium --new-window\").", "enum", false},
 	{"Data", "clear_cache", "Clear cache", "Deletes everything fetched from Codeforces and CSES (Problems, contests, statements, Submissions, editorials) and refetches it. Use it when cached data looks stale or wrong. Solved marks, per-Problem state and the contest session stay. Solutions and tests in the workspace are not touched.", "action", true},
 	{"Submit", "submit_mode", "Submit mode", "browser copies the Solution and opens Codeforces (safe). direct posts it from verd with your saved session: experimental, account risk. See docs/submit.md.", "enum", false},
@@ -364,6 +367,13 @@ func (m Model) settingEnter(d settingDef) (tea.Model, tea.Cmd) {
 	case d.kind == "snippets" && m.deps.EditTemplate != nil:
 		cmd, err := m.deps.EditTemplate(m.snippetLang())
 		return m.afterOpen(cmd, err, "template")
+	case d.kind == "snippetedit":
+		return m.openSnippets(m.snippetLang(), "edit"), nil
+	case d.kind == "snippetadd":
+		return m.openSnippets(m.snippetLang(), "add"), nil
+	case d.kind == "snippetdir" && m.deps.OpenSnippets != nil:
+		cmd, err := m.deps.OpenSnippets()
+		return m.afterOpen(cmd, err, "snippets")
 	case d.kind == "text":
 		m.setEdit = &settingEdit{text: m.setting(d.key)}
 		return m, nil
@@ -515,6 +525,10 @@ func (m Model) settingValue(d settingDef, i int, val string, st theme.Styles) st
 		return st.Dim.Render("‹ ") + st.Accent.Render(m.snippetLang()) + st.Dim.Render(" ›  enter to edit")
 	case "action":
 		return st.Dim.Render("enter to run")
+	case "snippetedit", "snippetadd":
+		return st.Dim.Render("enter to pick a snippet")
+	case "snippetdir":
+		return st.Dim.Render("enter to open")
 	case "enum":
 		return st.Dim.Render("‹ ") + st.Accent.Render(val) + st.Dim.Render(" ›")
 	case "bool":
@@ -633,6 +647,8 @@ func settingKindHelp(kind string, st theme.Styles) []string {
 		return append(out, "", st.Dim.Render("Go text/template: {{if eq .Handle \"x\"}}…{{end}} works too"))
 	case "action":
 		return []string{st.Dim.Render("enter, then enter again to confirm")}
+	case "snippetedit", "snippetadd", "snippetdir":
+		return []string{st.Dim.Render("enter opens the editor · esc closes the picker")}
 	case "enum", "bool":
 		return []string{st.Dim.Render("←/→ or space change · saved on change")}
 	}

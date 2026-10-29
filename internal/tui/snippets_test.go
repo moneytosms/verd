@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -62,4 +64,27 @@ func sendKeys(m Model, keys ...string) Model {
 		m, _ = send(m, k)
 	}
 	return m
+}
+
+func TestSnippetPickerEditAndAddOpenTheEditor(t *testing.T) {
+	var edited []string
+	deps := Deps{
+		Langs: []string{"cpp"}, DefaultLang: "cpp",
+		Snippets: func(string) []Snippet { return []Snippet{{Name: "bfs", Code: "// bfs\n"}} },
+		EditSnippet: func(lang, name string, add bool) (*exec.Cmd, error) {
+			edited = append(edited, fmt.Sprintf("%s %s %v", lang, name, add))
+			return nil, nil
+		},
+	}
+	m := New(nil, "", deps)
+	m = m.openSnippets("cpp", "edit")
+	m, _ = send(m, "enter")
+	if m.sp != nil || len(edited) != 1 || edited[0] != "cpp bfs false" {
+		t.Fatalf("edit: picker %v, calls %v", m.sp != nil, edited)
+	}
+	m = m.openSnippets("cpp", "add")
+	m = sendKeys(m, "m", "y", "enter")
+	if len(edited) != 2 || edited[1] != "cpp my true" {
+		t.Fatalf("add: calls %v", edited)
+	}
 }

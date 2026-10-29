@@ -567,6 +567,10 @@ func editDeps(d *tui.Deps, cfg config.Config, path string, ctrl *editor.Controll
 	}
 	d.AddCustom = func(p cf.Problem) (*exec.Cmd, error) { return addCustom(cfg, ctrl, p) }
 	d.EditTemplate = func(lang string) (*exec.Cmd, error) { return editTemplate(cfg, ctrl, lang) }
+	d.EditSnippet = func(lang, name string, add bool) (*exec.Cmd, error) {
+		return editLibrarySnippet(cfg, ctrl, lang, name, add)
+	}
+	d.OpenSnippets = func() (*exec.Cmd, error) { return openLibraryFolder(cfg, ctrl) }
 	d.EditConfig = func() (*exec.Cmd, error) {
 		if _, err := os.Stat(path); err != nil {
 			if err := config.Init(path, false); err != nil {

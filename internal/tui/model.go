@@ -84,6 +84,11 @@ type Deps struct {
 	FetchContest func(contest int) error
 	// EditTemplate opens the language's Solution Template in the editor, creating it if absent (like Edit).
 	EditTemplate func(lang string) (*exec.Cmd, error)
+	// EditSnippet opens a library snippet in the editor; a built-in gets an editable copy first.
+	// add creates a new snippet from a template instead.
+	EditSnippet func(lang, name string, add bool) (*exec.Cmd, error)
+	// OpenSnippets opens the snippet library folder in the editor.
+	OpenSnippets func() (*exec.Cmd, error)
 	// StartSession begins a contest session (virtual or practice) and stores it; EndSession forgets it.
 	StartSession func(c cf.Contest, mode string) (session.Session, error)
 	EndSession   func() error
@@ -1459,7 +1464,7 @@ func (m Model) problemEdit(k string) (tea.Model, tea.Cmd, bool) {
 		nm, c := m.afterOpen(cmd, err, "note")
 		return nm, c, true
 	case "i":
-		return m.openSnippets(m.lang()), nil, true
+		return m.openSnippets(m.lang(), "copy"), nil, true
 	case "H":
 		nm, cmd := m.openEditorial(*m.open)
 		return nm, cmd, true
