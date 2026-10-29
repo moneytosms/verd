@@ -179,14 +179,39 @@ func installBinary(exe string, bin []byte) error {
 	return os.Rename(tmp.Name(), exe) // atomic; a running verd keeps its old inode
 }
 
+// retryDelay is the base wait between fetch attempts; it grows by one step per retry.
+var retryDelay = time.Second
+
+// fetch gets url, retrying up to 3 times when the network fails (a flaky TLS handshake, say).
+// A bad HTTP status is not retried: the server answered.
 func fetch(c *http.Client, url string) ([]byte, error) {
+	var err error
+	for try := 1; try <= 3; try++ {
+		var body []byte
+		body, err = fetchOnce(c, url)
+		var status *statusError
+		if err == nil || errors.As(err, &status) {
+			return body, err
+		}
+		if try < 3 {
+			time.Sleep(time.Duration(try) * retryDelay)
+		}
+	}
+	return nil, err
+}
+
+type statusError struct{ msg string }
+
+func (e *statusError) Error() string { return e.msg }
+
+func fetchOnce(c *http.Client, url string) ([]byte, error) {
 	resp, err := c.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("%s: %s", url, resp.Status)
+		return nil, &statusError{fmt.Sprintf("%s: %s", url, resp.Status)}
 	}
 	return io.ReadAll(resp.Body)
 }

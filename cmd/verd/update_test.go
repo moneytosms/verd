@@ -4,8 +4,11 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -65,4 +68,43 @@ func TestSkippedReleasesBetweenCurAndLatest(t *testing.T) {
 	if err != nil || len(rels) != 2 || rels[0].Tag != "v0.3.0" || rels[1].Tag != "v0.2.0" {
 		t.Fatalf("%+v %v", rels, err)
 	}
+}
+
+type flakyTransport struct{ fails int }
+
+func (f *flakyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if f.fails > 0 {
+		f.fails--
+		return nil, errors.New("TLS handshake timeout")
+	}
+	return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader("ok")), Request: r}, nil
+}
+
+func TestFetchRetriesNetworkErrorsOnly(t *testing.T) {
+	old := retryDelay
+	retryDelay = 0
+	defer func() { retryDelay = old }()
+	c := &http.Client{Transport: &flakyTransport{fails: 2}}
+	if body, err := fetch(c, "http://x/checksums.txt"); err != nil || string(body) != "ok" {
+		t.Fatalf("%q %v", body, err)
+	}
+	c = &http.Client{Transport: &flakyTransport{fails: 3}}
+	if _, err := fetch(c, "http://x/checksums.txt"); err == nil {
+		t.Fatal("want error after 3 failed attempts")
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+	tr := &countingTransport{}
+	if _, err := fetch(&http.Client{Transport: tr}, srv.URL); err == nil || tr.calls != 1 {
+		t.Fatalf("404 retried: calls %d, %v", tr.calls, err)
+	}
+}
+
+type countingTransport struct{ calls int }
+
+func (c *countingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	c.calls++
+	return http.DefaultTransport.RoundTrip(r)
 }
