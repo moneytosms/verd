@@ -479,6 +479,8 @@ func runTUI(path string) error {
 		LangSummary: langSummary(cfg),
 	}
 	deps.NewerVersion = newerRelease
+	deps.Update = runUpdate
+	deps.WhatsNew = whatsNew
 	submitDeps(&deps, sub)
 	editDeps(&deps, cfg, path, ctrl, pickMux)
 	problemDeps(&deps, cfg, s, client, ctx)

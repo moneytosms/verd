@@ -17,6 +17,7 @@ import (
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/moneytosms/verd/internal/cf"
 	"github.com/moneytosms/verd/internal/editorial"
+	"github.com/moneytosms/verd/internal/relnotes"
 	"github.com/moneytosms/verd/internal/runner"
 	"github.com/moneytosms/verd/internal/scrape"
 	"github.com/moneytosms/verd/internal/session"
@@ -36,6 +37,10 @@ type Deps struct {
 	Now     func() time.Time // defaults to time.Now
 	// NewerVersion returns the latest release tag when it is newer than this build, else "".
 	NewerVersion func() string
+	// WhatsNew returns the release notes to show on this launch (none when there are none).
+	WhatsNew func() []relnotes.Release
+	// Update replaces the running verd with the latest release; text is one line for the toast.
+	Update func() (text string, err error)
 	// Edit creates the Problem's Solution if needed and opens it in the editor.
 	// A nil cmd with a nil error means the editor opened in a split pane (see EditorAlive).
 	Edit func(p cf.Problem, lang string) (*exec.Cmd, error)
@@ -230,6 +235,10 @@ type Model struct {
 	pstate      ProblemState
 	sub         *subState
 	toast       *toast
+	news        []relnotes.Release // What's new: release notes shown on this launch (nil = closed)
+	newsOff     int
+	updAsk      string // a newer release offered in the update question modal ("" = none)
+	updHint     string // a newer release left for later, shown at the bottom
 	toastSeq    int
 	confirm     bool         // asking whether to submit despite failing local tests
 	pending     *ExternalRun // run waiting for its Problem's detail to load
@@ -608,6 +617,14 @@ func (m Model) Init() tea.Cmd {
 	if p := m.resume; p != nil {
 		cmds = append(cmds, func() tea.Msg { return resumeMsg{*p} })
 	}
+	if check := m.deps.WhatsNew; check != nil {
+		cmds = append(cmds, func() tea.Msg {
+			if rels := check(); len(rels) > 0 {
+				return whatsNewMsg{rels}
+			}
+			return nil
+		})
+	}
 	if check := m.deps.NewerVersion; check != nil {
 		cmds = append(cmds, func() tea.Msg {
 			if tag := check(); tag != "" {
@@ -846,8 +863,16 @@ func (m Model) updateRun(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		nm, cmd := m.onTestEvent(msg)
 		return nm, cmd, true
 	case updateAvailMsg:
-		if m.toast == nil { // never replace a Submission toast
-			m.toast = &toast{text: fmt.Sprintf("verd %s available: run `verd update`  x dismiss", msg.tag)}
+		m.updAsk = msg.tag
+		return m, nil, true
+	case whatsNewMsg:
+		m.news, m.newsOff = msg.rels, 0
+		return m, nil, true
+	case updateDoneMsg:
+		m.updAsk, m.updHint = "", ""
+		m.toast = &toast{text: msg.text + "  x dismiss", bad: msg.err != nil}
+		if msg.err != nil {
+			m.toast.text = "update failed: " + msg.err.Error() + "  x dismiss"
 		}
 		return m, nil, true
 	case resumeMsg:
@@ -1103,6 +1128,14 @@ func (m Model) updateKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 // updatePanel sends a key to the first open panel that takes input.
 func (m Model) updatePanel(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
+	if m.updateAskShown() {
+		nm, cmd := m.updateAsk(msg)
+		return nm, cmd, true
+	}
+	if m.news != nil {
+		nm, cmd := m.updateNews(msg)
+		return nm, cmd, true
+	}
 	if m.edv != nil {
 		nm, cmd := m.updateEditorial(msg)
 		return nm, cmd, true
@@ -1150,6 +1183,15 @@ func (m Model) updateDialog(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 		return nm, cmd, true
 	}
 	return m, nil, false
+}
+
+// runUpdate replaces verd in the background; updateDoneMsg reports the outcome.
+func (m Model) runUpdate() tea.Cmd {
+	up := m.deps.Update
+	return func() tea.Msg {
+		text, err := up()
+		return updateDoneMsg{text, err}
+	}
 }
 
 // globalKey handles the keys that work on every screen: toast, palette, zen and help.

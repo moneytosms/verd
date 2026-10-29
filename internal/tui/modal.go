@@ -9,9 +9,23 @@ import (
 )
 
 // modalBox is the open modal drawn as a centered frame, or nil when none is open.
-// Modals close with q or esc and sit on top of the screen they were opened from.
+// Modals close with q or esc and sit on top of the screen they were opened from. The update
+// question waits behind every other modal.
 func (m Model) modalBox() []string {
+	if b := m.otherModalBox(); b != nil {
+		return b
+	}
+	if m.updateAskShown() {
+		return m.updateBox()
+	}
+	return nil
+}
+
+// otherModalBox is the open modal other than the update question, or nil.
+func (m Model) otherModalBox() []string {
 	switch {
+	case m.news != nil:
+		return m.newsBox()
 	case m.pal != nil:
 		return m.paletteBox()
 	case m.langAsk:

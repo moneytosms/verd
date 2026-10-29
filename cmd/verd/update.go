@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -16,6 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moneytosms/verd/internal/config"
+	"github.com/moneytosms/verd/internal/relnotes"
 )
 
 // releaseBase is where releases live; tests point it at a local server.
@@ -58,9 +62,18 @@ func updateCmd(out io.Writer, check bool) error {
 	if err := installBinary(exe, bin); err != nil {
 		return err
 	}
+	markSeen(cur) // the new verd shows every release since this one on its first launch
 	fmt.Fprintf(out, "updated verd %s -> %s (restart verd to use it)\n", cur, latest)
 	printSkippedNotes(out, cur, latest)
 	return nil
+}
+
+// runUpdate is verd update for the TUI: the first line of its output, which says what happened.
+func runUpdate() (string, error) {
+	var buf bytes.Buffer
+	err := updateCmd(&buf, false)
+	line, _, _ := strings.Cut(buf.String(), "\n")
+	return line, err
 }
 
 // newerRelease returns the latest release tag when it is newer than this build, else "".
@@ -76,11 +89,6 @@ func newerRelease() string {
 	return tag
 }
 
-type release struct {
-	Tag  string `json:"tag_name"`
-	Body string `json:"body"`
-}
-
 // printSkippedNotes prints the notes of every release after cur up to latest, newest first.
 func printSkippedNotes(out io.Writer, cur, latest string) {
 	rels, err := skippedReleases(cur, latest)
@@ -89,28 +97,82 @@ func printSkippedNotes(out io.Writer, cur, latest string) {
 		return
 	}
 	for _, r := range rels {
-		fmt.Fprintf(out, "\n%s\n%s\n", r.Tag, strings.TrimSpace(r.Body))
+		fmt.Fprint(out, "\n"+relnotes.Text(r))
 	}
 }
 
-// skippedReleases returns the releases with cur < version <= latest, newest first.
-func skippedReleases(cur, latest string) ([]release, error) {
+// fetchReleases returns every published release, newest first.
+func fetchReleases() ([]relnotes.Release, error) {
 	body, err := fetch(&http.Client{Timeout: 10 * time.Second}, apiBase+"/releases?per_page=100")
 	if err != nil {
 		return nil, err
 	}
-	var all []release
-	if err := json.Unmarshal(body, &all); err != nil {
+	var all []relnotes.Release
+	return all, json.Unmarshal(body, &all)
+}
+
+// skippedReleases returns the releases with cur < version <= latest, newest first.
+func skippedReleases(cur, latest string) ([]relnotes.Release, error) {
+	all, err := fetchReleases()
+	if err != nil {
 		return nil, err
 	}
-	var out []release
+	return releasesBetween(all, cur, latest), nil
+}
+
+// releasesBetween keeps the releases with lo < version <= hi, in the order given.
+func releasesBetween(all []relnotes.Release, lo, hi string) []relnotes.Release {
+	var out []relnotes.Release
 	for _, r := range all {
 		v := strings.TrimPrefix(r.Tag, "v")
-		if newer(v, cur) && !newer(v, latest) {
+		if newer(v, lo) && !newer(v, hi) {
 			out = append(out, r)
 		}
 	}
-	return out, nil
+	return out
+}
+
+// seenFile records the version whose release notes the user has been shown.
+func seenFile() string { return filepath.Join(config.DataDir(), "last-seen") }
+
+// whatsNew returns the release notes to show on this launch: everything since the last version
+// seen, or just this version's notes when no record exists yet (a fresh install or an update from
+// a verd that predates the record). It records this version once the notes are known.
+func whatsNew() []relnotes.Release {
+	if version == "dev" {
+		return nil
+	}
+	cur := strings.TrimPrefix(version, "v")
+	seen := ""
+	if b, err := os.ReadFile(seenFile()); err == nil {
+		seen = strings.TrimSpace(string(b))
+	}
+	if seen != "" && !newer(cur, seen) {
+		return nil
+	}
+	all, err := fetchReleases()
+	if err != nil {
+		return nil // not recorded: the next launch tries again
+	}
+	var rels []relnotes.Release
+	if seen == "" {
+		for _, r := range all {
+			if strings.TrimPrefix(r.Tag, "v") == cur {
+				rels = append(rels, r)
+			}
+		}
+	} else {
+		rels = releasesBetween(all, seen, cur)
+	}
+	markSeen(cur)
+	return rels
+}
+
+// markSeen records v as seen. Best effort: a missing record only means the notes show once more.
+func markSeen(v string) {
+	if err := os.MkdirAll(filepath.Dir(seenFile()), 0o755); err == nil {
+		os.WriteFile(seenFile(), []byte(v+"\n"), 0o644)
+	}
 }
 
 // latestTag reads the newest release tag from the /latest redirect.

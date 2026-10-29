@@ -55,7 +55,11 @@ type (
 	}
 	toastClearMsg  struct{ id int }
 	updateAvailMsg struct{ tag string }
-	reloadMsg      struct{ data Data }
+	updateDoneMsg  struct {
+		text string
+		err  error
+	}
+	reloadMsg struct{ data Data }
 )
 
 func listenSub(ch <-chan submit.Update) tea.Cmd {
@@ -185,6 +189,9 @@ func (m Model) reload() tea.Cmd {
 
 func (m Model) viewToast() string {
 	if m.toast == nil {
+		if m.updHint != "" {
+			return m.styles().Dim.Render("verd " + m.updHint + " available: run verd update")
+		}
 		return ""
 	}
 	st := m.styles()
