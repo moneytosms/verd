@@ -9,33 +9,81 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="apple-touch-icon" href="assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="assets/site.css"><script>document.documentElement.className="js"</script>
 </head>
 <body>
-<nav class="nav" aria-label="Site"><a class="logo" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="index.html#features">Features</a><a href="guide/index.html">Guide</a><a href="docs/index.html">Docs</a><a href="install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav>
+<header class="bar" id="bar"><a class="logo" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">verd</a><nav class="links" id="menu" aria-label="Site"><a href="index.html#how">How it works</a><a href="index.html#features">Features</a><a href="guide/index.html">Guide</a><a href="docs/index.html">Reference</a><a href="install.html">Install</a></nav><div class="acts"><a class="gh" href="https://github.com/moneytosms/verd">GitHub</a><a class="key blue" href="index.html#install">Get verd</a><button class="key burger" type="button" aria-expanded="false" aria-controls="menu">Menu</button></div><span class="prog"></span></header>
 
 <header class="hero" id="top">
-  <h1>Codeforces, one key at a time.</h1>
-  <p class="lead">verd is a terminal app for Codeforces and CSES. Read the problem, solve it in Neovim, test, stress and submit without opening a browser.</p>
-  <a class="key blue btn" href="#install">Install verd</a>
-  <button class="key now" id="now" type="button" aria-label="Press the next key of the loop">t</button>
-  <div class="stage">
-    <p class="cue" id="cue" aria-live="polite">Run the samples</p>
-    <div class="term" id="term" data-ui role="img" aria-label="verd's own interface on Codeforces 4A Watermelon, stepping from the first test run to Accepted">
-      <noscript><img src="assets/launch.jpg" width="1920" height="1080" alt="verd showing a problem beside its tests"></noscript>
+  <div class="pitch">
+    <h1>Codeforces, one key at a time.</h1>
+    <p class="lead"><b>verd is a terminal app for Codeforces and CSES.</b> Read the problem, solve it in Neovim, test and stress it locally, submit, and watch the verdict land. No browser tab in the loop.</p>
+    <div class="cmdbar" id="cmdbar">
+      <code><i>$</i>curl -fsSL https://raw.githubusercontent.com/<wbr>moneytosms/verd/main/install.sh | sh</code>
+      <button class="key blue" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh">Copy</button>
+    </div>
+    <p class="after">Then <code>verd init</code> and <code>verd</code>. Free and open source, for Linux, macOS and WSL.</p>
+    <p class="more">
+      <a href="guide/start.html">Five-minute quick start <span class="key" aria-hidden="true">&rarr;</span></a>
+      <a href="#film">Watch the 88-second film <span class="key" aria-hidden="true">&rarr;</span></a>
+    </p>
+  </div>
+  <div class="rig" id="rig">
+    <button class="key now" id="now" type="button" aria-label="Press the next key of the loop">t</button>
+    <div class="stage" id="stage">
+      <p class="cue" id="cue" aria-live="polite">Press t to run the samples</p>
+      <div class="term" id="term" data-ui role="img" aria-label="verd's own interface on Codeforces 4A Watermelon, stepping from the first test run to Accepted">
+        <noscript><img src="assets/launch.jpg" width="1920" height="1080" alt="verd showing a problem beside its tests"></noscript>
+      </div>
     </div>
   </div>
-  <ol class="steps" id="steps">
-    <li><button type="button"><span class="key">t</span>Run the samples</button></li>
-    <li><button type="button"><span class="key">S</span>Hunt a counterexample</button></li>
-    <li><button type="button"><span class="key">w</span>Save it as a test</button></li>
-    <li><button type="button"><span class="key">e</span>Fix it in Neovim</button></li>
-    <li><button type="button"><span class="key">t</span>Test again</button></li>
-    <li><button type="button"><span class="key">s</span>Submit, get Accepted</button></li>
-  </ol>
 </header>
+
+<div class="band" id="band" aria-hidden="true"><div class="track"></div></div>
+
+<section class="how" id="how">
+  <div class="sec-head">
+    <h2>Problem to Accepted in six keys</h2>
+    <p class="rv" style="--i:1">Everything a contest loop needs is one press away, and each screen on the right is verd's real output on a real problem.</p>
+  </div>
+  <div class="scrolly">
+    <ol class="chapters" id="chapters">
+      <li data-f="01">
+        <h3><span class="key">/</span>Find a problem</h3>
+        <p>Codeforces and the CSES Problem Set in one list, drawn from a local cache so it opens instantly and keeps working offline. Search by name, filter by rating, tags and status, or let the picker choose from your weak topics.</p>
+        <p class="ks"><span><kbd>/</kbd> search</span><span><kbd>f</kbd> filters</span><span><kbd>4</kbd> picker</span></p>
+      </li>
+      <li data-f="05">
+        <h3><span class="key">&crarr;</span>Read it</h3>
+        <p>The statement, its limits and every sample sit side by side in the terminal. Reading width, spacing and palette are yours to set, and <kbd>y</kbd> copies the whole problem.</p>
+        <p class="ks"><span><kbd>enter</kbd> open</span><span><kbd>y</kbd> copy statement</span><span><kbd>v</kbd> show tags</span></p>
+      </li>
+      <li data-f="nfix">
+        <h3><span class="key">e</span>Solve it</h3>
+        <p>Your editor opens beside verd on a file made from your template: in a tmux or herdr split, or inside verd's own window. Neovim by default; Vim, Helix, Emacs or VS Code if you prefer.</p>
+        <p class="ks"><span><kbd>e</kbd> edit</span><span><kbd>i</kbd> insert a snippet</span></p>
+      </li>
+      <li data-f="12">
+        <h3><span class="key">t</span>Test it</h3>
+        <p>Every sample and custom test gets a verdict with time and memory, decided on your machine. Turn on autotest and saving the file is enough.</p>
+        <p class="ks"><span><kbd>t</kbd> run</span><span><kbd>d</kbd> diff a failure</span><span><kbd>a</kbd> add a test</span></p>
+      </li>
+      <li data-f="19">
+        <h3><span class="key">S</span>Break it</h3>
+        <p>Stress testing runs your solution against a brute force on generated inputs until they disagree, shows the diff, and saves the counterexample as your next test.</p>
+        <p class="ks"><span><kbd>S</kbd> stress</span><span><kbd>w</kbd> save the counterexample</span></p>
+      </li>
+      <li data-f="32">
+        <h3><span class="key">s</span>Submit it</h3>
+        <p>verd copies the solution, opens the submit page and follows the verdict into the pane. No password is asked for; submitting without the browser is opt-in.</p>
+        <p class="ks"><span><kbd>s</kbd> submit</span><span><kbd>H</kbd> editorial, hint by hint</span></p>
+      </li>
+    </ol>
+    <div class="pin"><div class="term" id="howterm" data-ui role="img" aria-label="verd's screen for the current step"></div></div>
+  </div>
+</section>
 
 <section class="film" id="film">
   <div class="sec-head">
-    <h2 class="rv">The whole loop in 88 seconds</h2>
-    <p class="rv" style="--i:1">Sound on. Every terminal frame in the film is verd's own output, driven by real key presses on a real problem.</p>
+    <h2>The whole loop in 88 seconds</h2>
+    <p class="rv" style="--i:1">Sound on. Every terminal frame in the film is verd's own output, driven by real key presses.</p>
   </div>
   <div class="player shutter" id="player">
     <video id="vid" poster="assets/poster.jpg" preload="none" playsinline width="1920" height="1080" aria-label="verd launch film">
@@ -46,17 +94,54 @@
 </section>
 
 <section class="verdict" id="verdict">
-  <h2 class="rv">Local verdict: <span id="vword">wrong answer</span></h2>
+  <h2>Know the verdict before the judge does</h2>
   <p class="rv" style="--i:1">AC, WA, TLE, RE, MLE and CE are decided on your machine, with time and memory per test, before you spend a real submission. A failure says why in plain words and points at the source line when it can.</p>
   <p class="readout rv" style="--i:2" id="vread" aria-live="polite">custom-2 &nbsp;WA<br>want NO, got YES</p>
   <p class="hint rv" style="--i:3" id="vhint">Fix the w = 2 case, then press <kbd>t</kbd>.</p>
   <button class="key big" id="vkey" type="button" aria-label="Run the tests again"><span>t</span></button>
 </section>
 
+<section id="features">
+  <div class="sec-head">
+    <h2>And everything around the loop</h2>
+    <p class="rv" style="--i:1">The parts you reach for between problems, built in instead of bolted on.</p>
+  </div>
+  <div class="board">
+    <div class="tile wide rv" style="--c:6;--r:4">
+      <div class="frag" data-ui role="img" aria-label="The command palette filtering actions and settings"><pre data-f="pal01" style="--x:7;--y:1;--fs:20px"></pre></div>
+      <div class="cap"><b>Command palette</b><span>Press ctrl+k, type a few letters, and run any action or flip any setting.</span></div>
+    </div>
+    <div class="tile blue rv" style="--c:3;--r:4;--i:1;--fs:76px">
+      <div class="keys" aria-hidden="true"><span class="key">S</span><span class="key" style="--k:1">w</span></div>
+      <div class="cap"><b>Stress testing</b><span>Generator and brute-force templates for each language, run in parallel.</span></div>
+    </div>
+    <div class="tile t2 rv" style="--c:3;--r:4;--i:2">
+      <div class="frag" data-ui role="img" aria-label="An editorial with two hints open and the solution still locked"><pre data-f="ed02" style="--x:4;--y:7;--fs:18px"></pre></div>
+      <div class="cap"><b>Editorials, hint by hint</b><span>Opens locked. Enter reveals the next hint, strictly in order.</span></div>
+    </div>
+    <div class="tile wide rv" style="--c:6;--r:3">
+      <div class="frag" data-ui role="img" aria-label="The Stats tab: rating history drawn in the terminal"><pre data-f="st00" style="--x:0;--y:2;--fs:18px"></pre></div>
+      <div class="cap"><b>Your history, put to work</b><span>Rating chart, per-topic strengths, and a picker that knows your weak topics.</span></div>
+    </div>
+    <div class="tile t2 rv" style="--c:3;--r:3;--i:1">
+      <div class="frag" data-ui role="img" aria-label="A contest session with its timer"><pre data-f="ct04" style="--x:0;--y:0;--fs:24px"></pre></div>
+      <div class="cap"><b>Contest sessions</b><span>Replay a past round on a timer, practice one, or join a live one.</span></div>
+    </div>
+    <div class="tile ink rv" style="--c:3;--r:3;--i:2;--fs:104px">
+      <div class="keys" aria-hidden="true"><span class="key">i</span></div>
+      <div class="cap"><b>Snippet library</b><span>35 algorithms for C++, C and Python, plus your own.</span></div>
+    </div>
+    <div class="tile wide t2 rv" style="--c:12;--r:3">
+      <div class="frag" data-ui role="img" aria-label="A failed test with the sanitizer's overflow report"><pre data-f="fv00" style="--x:2;--y:5;--fs:17px"></pre></div>
+      <div class="cap"><b>Failures, explained</b><span>The first difference, your debug output, and the exact line that overflowed.</span></div>
+    </div>
+  </div>
+</section>
+
 <section class="themes" id="themes">
   <div class="say">
     <h2><span id="tname">terminal</span>, applied live</h2>
-    <p>Eight themes ship, or write your own palette in <code>config.toml</code>. Arrow through them in Settings and the whole interface follows as you move.</p>
+    <p>Eight themes ship, or write your own palette in <code>config.toml</code>. Every key can be rebound too, with vim, emacs and arrow presets. Drag the slider.</p>
   </div>
   <div class="frag"><div data-ui role="img" aria-label="verd's Settings tab listing its eight themes"><pre id="tframe"></pre></div></div>
   <div class="dial">
@@ -65,75 +150,58 @@
   </div>
 </section>
 
-<section id="features">
-  <div class="board">
-    <div class="tile head" style="--c:6;--r:2"><h2 class="rv">The rest of the loop</h2></div>
-    <div class="tile wide rv" style="--c:6;--r:4">
-      <div class="frag" data-ui role="img" aria-label="The command palette filtering actions and settings"><pre data-f="pal01" style="--x:7;--y:1;--fs:21px"></pre></div>
-      <div class="cap"><b>Command palette</b><span>ctrl+k, a few letters, and any action or setting runs.</span></div>
-    </div>
-    <div class="tile blue rv" style="--c:3;--r:4">
-      <div class="keys" aria-hidden="true"><span class="key">S</span><span class="key">w</span></div>
-      <div class="cap"><b>Stress testing</b><span>gen and brute templates per language. S finds the counterexample, w keeps it.</span></div>
-    </div>
-    <div class="tile t2 rv" style="--c:3;--r:4;--i:1">
-      <div class="frag" data-ui role="img" aria-label="An editorial with two hints open and the solution still locked"><pre data-f="ed02" style="--x:4;--y:7;--fs:19px"></pre></div>
-      <div class="cap"><b>Editorials, hint by hint</b><span>H opens it locked. Enter reveals the next hint, strictly in order.</span></div>
-    </div>
-    <div class="tile t2 rv" style="--c:3;--r:2">
-      <div class="frag" data-ui role="img" aria-label="A contest session with its timer"><pre data-f="ct04" style="--x:0;--y:0;--fs:26px"></pre></div>
-      <div class="cap"><b>Contest sessions</b><span>Virtual, practice or live.</span></div>
-    </div>
-    <div class="tile ink rv" style="--c:3;--r:2;--i:1;--fs:104px">
-      <div class="keys" aria-hidden="true"><span class="key">i</span></div>
-      <div class="cap"><b>Snippet library</b><span>35 algorithms, one key.</span></div>
-    </div>
-    <div class="tile wide rv" style="--c:6;--r:2">
-      <div class="frag" data-ui role="img" aria-label="The Stats tab: rating history drawn in the terminal"><pre data-f="st00" style="--x:0;--y:3;--fs:19px"></pre></div>
-      <div class="cap"><b>Your history, used</b><span>Rating chart, per-topic stats, and a picker that knows your weak topics.</span></div>
-    </div>
-    <div class="tile wide t2 rv" style="--c:6;--r:2;--i:1">
-      <div class="frag" data-ui role="img" aria-label="A failed test with the sanitizer's overflow report"><pre data-f="fv00" style="--x:4;--y:15;--fs:17px"></pre></div>
-      <div class="cap"><b>Failures, explained</b><span>The first difference, your debug output, and the line that overflowed.</span></div>
-    </div>
+<section class="lineup fits" id="fits">
+  <div class="sec-head">
+    <h2>Fits the setup you already have</h2>
+    <p class="rv" style="--i:1">Nothing to migrate. verd sits next to your editor, your shell and your dotfiles.</p>
   </div>
+  <table>
+    <tbody>
+      <tr><td>Judges</td><td>Codeforces and the CSES Problem Set</td></tr>
+      <tr><td>Languages</td><td>C++, C and Python, or any compiler you configure</td></tr>
+      <tr><td>Editors</td><td>Neovim, Vim, Helix, Emacs, Kakoune, nano, micro, VS Code, Zed, Sublime</td></tr>
+      <tr><td>Splits</td><td>tmux, herdr, or embedded in verd's own window</td></tr>
+      <tr><td>Submitting</td><td>Browser handoff by default, direct submit if you opt in</td></tr>
+      <tr><td>Platforms</td><td>Linux and macOS on amd64 and arm64, Windows through WSL</td></tr>
+    </tbody>
+  </table>
 </section>
 
 <section class="lineup" id="cli">
-  <h2 class="rv">Every key is also a command</h2>
+  <div class="sec-head">
+    <h2>Every key is also a command</h2>
+    <p class="rv" style="--i:1">Run the loop from a shell, a Makefile or a Neovim keymap. Exit codes tell scripts what happened. <a href="guide/cli.html">Full command reference</a></p>
+  </div>
   <table>
     <tbody>
-      <tr><th colspan="3">The contest loop</th></tr>
-      <tr><td>verd</td><td>open the app</td><td></td></tr>
       <tr><td>verd test main.cpp</td><td>run sample and custom tests</td><td>t</td></tr>
       <tr><td>verd stress main.cpp</td><td>search for a counterexample</td><td>S</td></tr>
       <tr><td>verd submit main.cpp</td><td>submit and track the verdict</td><td>s</td></tr>
       <tr><td>verd editorial 4/A</td><td>read the editorial, hints first</td><td>H</td></tr>
       <tr><td>verd snippet dijkstra</td><td>print or copy a library snippet</td><td>i</td></tr>
-      <tr><td>verd daily</td><td>today's unsolved pick</td><td></td></tr>
-    </tbody>
-    <tbody>
-      <tr><th colspan="3">Make it yours</th></tr>
-      <tr><td>verd setup</td><td>guided setup for a new install</td><td></td></tr>
       <tr><td>verd config set theme nord</td><td>change one setting, comments kept</td><td></td></tr>
-      <tr><td>verd keys preset vim</td><td>rebind every shortcut at once</td><td></td></tr>
-      <tr><td>verd themes show gruvbox</td><td>print a palette you can edit</td><td></td></tr>
       <tr><td>verd doctor</td><td>check config, compilers and editor</td><td></td></tr>
-    </tbody>
-    <tbody>
-      <tr><th colspan="3">Accounts and upkeep</th></tr>
-      <tr><td>verd sync cses</td><td>pull your solved CSES tasks</td><td></td></tr>
-      <tr><td>verd login</td><td>save a session for direct submit</td><td></td></tr>
       <tr><td>verd update</td><td>install the latest release</td><td></td></tr>
-      <tr><td>verd completions zsh</td><td>print a shell completion script</td><td></td></tr>
     </tbody>
   </table>
 </section>
 
+<section class="faq" id="faq">
+  <h2>Questions people ask first</h2>
+  <div class="qs">
+    <details class="rv"><summary>Do I have to use Neovim?</summary><p>No. Neovim is the default and has the tightest integration, but the <code>editor</code> setting takes Vim, Helix, Emacs, Kakoune, nano, micro, VS Code, Zed, Sublime or any command. You can switch it live in Settings.</p></details>
+    <details class="rv"><summary>Does verd need my Codeforces password?</summary><p>No. By default it copies your solution, opens the submit page in your own browser, and follows the verdict from there. Direct submit is opt-in and experimental, and reuses a browser session you save with <code>verd login</code>.</p></details>
+    <details class="rv"><summary>Does it work offline?</summary><p>Yes for everything you have already opened. Problems render from a local cache and the network only refreshes it in the background. Testing and stress testing never leave your machine.</p></details>
+    <details class="rv"><summary>Which languages can I solve in?</summary><p>C++, C and Python work out of the box. Any other language is a small <code>[lang.name]</code> block in <code>config.toml</code> with its compile and run commands.</p></details>
+    <details class="rv"><summary>How do I stay up to date?</summary><p>verd tells you inside the app when a release is out and asks whether to update. From a shell, <code>verd update</code> does the same and prints what changed.</p></details>
+    <details class="rv"><summary>What does it cost?</summary><p>Nothing. verd is open source under the MIT license. It is not affiliated with Codeforces or CSES.</p></details>
+  </div>
+</section>
+
 <section class="cta" id="install">
   <div class="say">
-    <h2 class="rv">Get Accepted.</h2>
-    <p class="rv" style="--i:1">One binary in <code>~/.local/bin</code>, checksum verified. Linux and macOS, amd64 and arm64; on Windows, inside WSL. You also need <code>nvim</code> and a compiler for your languages.</p>
+    <h2>Get Accepted.</h2>
+    <p class="rv" style="--i:1">One binary in <code>~/.local/bin</code>, checksum verified. You also need a compiler for your languages, and <code>nvim</code> if you keep the default editor.</p>
   </div>
   <div class="dialog rv" data-ui style="--i:2">
     <h3>Install verd</h3>
@@ -156,9 +224,6 @@ verd</pre>
 <footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="guide/index.html">Guide</a><a href="docs/index.html">Docs</a><a href="usage.html">Usage</a></div><div><a href="install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="index.html#install">Install verd</a></div></footer>
 <script src="assets/frames.js" defer></script>
 <script src="assets/home.js" defer></script>
-<script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
-if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
-var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
-els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script>
+<script src="assets/site.js" defer></script>
 </body>
 </html>
