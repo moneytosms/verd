@@ -116,7 +116,7 @@ func build(out string) (err error) {
 	// hand-written home page: only the chrome placeholders are filled in
 	home, err := os.ReadFile("site/content/index.html")
 	must(err)
-	s := strings.NewReplacer("{{ROOT}}", "", "{{HEADX}}", headX(""), "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer(""), "{{TAIL}}", tailHTML()).Replace(string(home))
+	s := strings.NewReplacer("{{ROOT}}", "", "{{HEADX}}", headX(""), "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer(""), "{{TAIL}}", tailHTML("")).Replace(string(home))
 	must(os.WriteFile(filepath.Join(out, "index.html"), []byte(s), 0o644))
 
 	// prose pages: install, usage
@@ -266,7 +266,7 @@ func guideLink(h string) string {
 
 func decorate(p *page, root, on string) {
 	p.Nav, p.Footer = template.HTML(nav(root, on)), template.HTML(footer(root))
-	p.HeadX, p.Tail = template.HTML(headX(root)), template.HTML(tailHTML())
+	p.HeadX, p.Tail = template.HTML(headX(root)), template.HTML(tailHTML(root))
 }
 
 // headX is the shared <head> tail: icons, social card, fonts and the stylesheet. The "js" class lets
@@ -278,28 +278,25 @@ func headX(root string) string {
 		`<link rel="stylesheet" href="` + root + `assets/site.css"><script>document.documentElement.className="js"</script>`
 }
 
-// tailHTML reveals the parts of each section as they scroll in.
-func tailHTML() string {
-	return `<script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
-if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
-var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
-els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script>`
+// tailHTML loads the script every page shares: the bar, entrances, copy buttons and scroll position.
+func tailHTML(root string) string {
+	return `<script src="` + root + `assets/site.js" defer></script>`
 }
 
+// nav is the bar: the wordmark, the places to go (the current one marked), and the one action.
 func nav(root, on string) string {
 	l := func(key, href, label string) string {
 		c := ""
-		if key == on && on != "home" {
+		if key == on {
 			c = ` class="on"`
-		}
-		if key == "home" {
-			c = ` class="opt"`
 		}
 		return `<a` + c + ` href="` + root + href + `">` + label + `</a>`
 	}
-	return `<nav class="nav" aria-label="Site"><a class="logo" href="` + root + `index.html"><img src="` + root + `assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links">` +
-		l("home", "index.html#features", "Features") + l("guide", "guide/index.html", "Guide") + l("docs", "docs/index.html", "Docs") +
-		l("install", "install.html", "Install") + `<a href="` + repo + `">GitHub</a></div></nav>`
+	return `<header class="bar" id="bar"><a class="logo" href="` + root + `index.html"><img src="` + root + `assets/favicon.svg" alt="" width="28" height="28">verd</a>` +
+		`<nav class="links" id="menu" aria-label="Site">` + l("how", "index.html#how", "How it works") + l("features", "index.html#features", "Features") +
+		l("guide", "guide/index.html", "Guide") + l("docs", "docs/index.html", "Reference") + l("install", "install.html", "Install") + `</nav>` +
+		`<div class="acts"><a class="gh" href="` + repo + `">GitHub</a><a class="key blue" href="` + root + `index.html#install">Get verd</a>` +
+		`<button class="key burger" type="button" aria-expanded="false" aria-controls="menu">Menu</button></div><span class="prog"></span></header>`
 }
 
 // footer closes every page with the name built from four keys.
@@ -341,10 +338,7 @@ const head = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <title>{{.Title}} · verd</title><meta name="description" content="{{.Desc}}"><meta name="theme-color" content="#0f1012">
 {{.HeadX}}</head><body class="docs">{{.Nav}}`
 
-const tail = `{{.Footer}}{{.Tail}}<script>
-document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
-b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
-</script></body></html>`
+const tail = `{{.Footer}}{{.Tail}}</body></html>`
 
 const tocBlock = `{{if .TOC}}<aside class="toc"><h4>On this page</h4>{{range .TOC}}<a href="{{.Href}}">{{.Title}}</a>{{end}}</aside>{{end}}`
 
