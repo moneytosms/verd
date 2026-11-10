@@ -19,7 +19,7 @@ entries="$out/tree.jsonl"
 	echo "  $f"
 done
 tree=$(jq -s '{tree:.}' "$entries" | gh api "repos/$repo/git/trees" --input - -q .sha)
-parent=$(gh api "repos/$repo/git/ref/heads/gh-pages" -q .object.sha 2>/dev/null || true)
+parent=$(gh api "repos/$repo/git/ref/heads/gh-pages" -q .object.sha 2>/dev/null | grep -E '^[0-9a-f]{40}$' || true) # a 404 prints its error body
 src=$(git rev-parse --short HEAD)
 commit=$(jq -n --arg m "site: publish from $src" --arg t "$tree" --arg p "$parent" \
 	'{message:$m,tree:$t,parents:(if $p=="" then [] else [$p] end)}' | gh api "repos/$repo/git/commits" --input - -q .sha)
