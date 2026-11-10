@@ -14,9 +14,7 @@ run_tests = "ctrl+t"
 submit = ["s", "ctrl+s"]   # a list gives several keys
 ```
 
-Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `contest_mode`, `stats`, `picker`, `settings`, `problem`, `editorial`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
-
-Other changes in this release: opening a Problem and switching tabs no longer closes it (it is hidden until you return to its tab; `esc` closes it).
+Contexts: `common`, `tabs`, `app`, `problems`, `contests`, `contest`, `contest_mode`, `stats`, `picker`, `settings`, `problem`, `full`, `editorial`, `testmgr`, `submission`, `help`, `editor`. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. `ctrl+c` always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; `?` shows your current keys.
 
 <!-- keys:begin -->
 ## Everywhere
@@ -299,7 +297,7 @@ Click a tab pill to switch screens. Click a row to select it and the selected ro
 
 ## Modals
 
-Small things open in a modal over the screen you were on. `q` or `esc` closes a modal; `q` only quits verd when no modal is open.
+Small things open in a modal over the screen you were on. `q` or `esc` closes a modal (the update question closes with `n` or `esc`); `q` only quits verd when no modal is open.
 
 | Modal | Opened by | Keys |
 | --- | --- | --- |
@@ -310,6 +308,9 @@ Small things open in a modal over the screen you were on. `q` or `esc` closes a 
 | Contest Problems | `enter` on a contest | `j`/`k` move, `enter` opens, `s` starts a [session](./contests.md), `H` editorial, `q` closes |
 | Editorial | `H` | `enter` reveals the next hint, `j`/`k` scroll, `o` opens the post, `q` closes. See [Editorials](./editorials.md) |
 | Snippets | `i` | Type to filter, `enter` copies, `tab` switches language, `esc` closes. See [Snippets](./config.md#snippets) |
+| Add / Edit snippet | Settings (`5`) > **Snippets** | Type to filter (Edit) or type a new name (Add), `enter` opens the file in your editor, `tab` switches language, `esc` closes. Not rebindable. See [Snippets](./config.md#snippets) |
+| Update question | appears when a newer release exists | `y` updates now, `n` or `esc` dismisses it and leaves a hint at the bottom. Only shown when no other modal or text entry is open. Not rebindable. |
+| What's new | the first launch after an update | `j`/`k` or `↑`/`↓` scroll, `pgdown`/`space` and `pgup` page, `g`/`home` and `G`/`end` jump, `enter`, `esc` or `q` closes. Not rebindable. |
 | Session summary | `e` in the contest modal, or when the time is up | `e`/`enter` ends the session, `esc` keeps it |
 | Test manager | `T` | `j`/`k` move, `a` add, `e` edit, `c` copy (also works on samples), `d` delete (asks first), `E` add in Neovim, `t` run, `q` closes |
 | Test editor | `a`, `e` or `c` in the manager | Type, arrows move, `tab` switches input / expected, `ctrl+s` saves, `esc` cancels. Paste works. |

@@ -30,7 +30,7 @@ Edit one from Settings (`5`) > **Snippets**, or open the file yourself. `gen.<la
 
 ## The snippet library
 
-verd ships 35 snippets for C++, C and Python: input readers (`vecinput`, `matinput`, `gridinput`, `graphinput`), `prefix_sum`, `prefix_sum_2d`, `diff_array`, `modpow`, `modinv`, `extgcd`, `sieve`, `spf_factorize`, `miller_rabin`, `divisors`, `ncr_mod`, `matrix_pow`, `bfs`, `grid_bfs`, `dfs`, `dijkstra`, `topo_sort`, `floyd_warshall`, `dsu`, `fenwick`, `segment_tree`, `sparse_table`, `binary_search`, `lis`, `compress`, `prefix_function`, `z_function`, `string_hash`, `debug`.
+verd ships 35 snippets for C++ and Python and 34 for C (C has no `wgraphinput`): input readers (`vecinput`, `matinput`, `gridinput`, `graphinput`, `wgraphinput`), `fastio`, `prefix_sum`, `prefix_sum_2d`, `diff_array`, `modpow`, `modinv`, `extgcd`, `sieve`, `spf_factorize`, `miller_rabin`, `divisors`, `ncr_mod`, `matrix_pow`, `bfs`, `grid_bfs`, `dfs`, `dijkstra`, `topo_sort`, `floyd_warshall`, `dsu`, `fenwick`, `segment_tree`, `sparse_table`, `binary_search`, `lis`, `compress`, `prefix_function`, `z_function`, `string_hash`, `debug`.
 
 ### Use one
 
@@ -46,7 +46,17 @@ verd snippet --copy modpow           # to the clipboard
 
 In Neovim, `:r !verd snippet dijkstra` inserts it at the cursor. A unique prefix is enough (`verd snippet dijk`).
 
-### Add your own
+### Add and edit from the TUI
+
+Settings (`5`) > **Snippets** has three rows besides the Template:
+
+- **Edit snippet**: `enter` opens a picker. Type to filter, `enter` opens the snippet in your editor. A built-in gets an editable copy in your library first, which then replaces it.
+- **Add snippet**: `enter` opens the picker; type a new name (letters, digits, `_`, `-`) and press `enter`. verd creates the file with a placeholder description line and opens it. A name that already exists is refused: edit it instead.
+- **Snippet folder**: opens the library folder in your editor.
+
+In the pickers `tab` changes language and `esc` closes. They start on the language shown by the **Template** row (`←`/`→` there). The command palette (`ctrl+k`, type `snippet`) jumps to these rows, except while a Problem is on screen.
+
+### Add your own from the shell
 
 ```sh
 verd snippet add --desc "double it" twice twice.cpp     # from a file

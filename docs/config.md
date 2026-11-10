@@ -31,8 +31,12 @@ verd reads `~/.config/verd/config.toml` (`$XDG_CONFIG_HOME/verd/config.toml` if 
 | `submit_mode` | `"browser"` | `browser` or `direct`. See [Submitting](./submit.md). |
 | `browser` | `"default"` | Browser for submit pages and Problem links: `default` (the system opener: xdg-open, open, wslview) or a command with optional arguments (`"firefox"`, `"chromium --new-window"`). |
 | `border` | `"rounded"` | Box border glyphs: `rounded`, `square`, `heavy`, `double`, `ascii`, or `none` (no frame, title line only). |
+| `header` | `true` | Show the tab bar and the rule under it. The tab keys (`1`-`5`, `tab`) still work when it is hidden. |
+| `footer` | `true` | Show the footer with key hints and status badges. |
+| `tabs` | `["problems", "contests", "stats", "picker", "settings"]` | Visible tabs, in order. Names are `problems`, `contests`, `stats`, `picker`, `settings`; `settings` cannot be hidden. `verd config set tabs problems,stats,settings`. |
+| `embed_zoom` | `false` | Start the embedded Neovim zoomed (fullscreen, verd hidden) when it opens. `alt+z` toggles it. |
 
-An unknown `submit_mode`, `embed_side` or `border` is a config error.
+An unknown `submit_mode`, `embed_side`, `border`, `background` or tab name is a config error.
 
 Tables: `[lang.*]` (below), `[keys.<context>]` for shortcuts and `[themes.<name>]` for color themes. Both are covered in [Customizing](./customizing.md), along with the CLI that edits them (`verd config set`, `verd keys`, `verd themes`). `theme` accepts any theme you define there.
 
@@ -42,8 +46,8 @@ Three languages ship by default, mirroring the Codeforces compilers:
 
 | Key | Ext | Compile | Run | `cf_compiler_id` |
 | --- | --- | --- | --- | --- |
-| `c` | `c` | `gcc -std=c11 -O2 -Wall -o {bin} {src} -lm` | `{bin}` | 43 |
-| `cpp` | `cpp` | `g++ -std=c++20 -O2 -Wall -o {bin} {src}` | `{bin}` | 89 |
+| `c` | `c` | `gcc -std=c11 -O2 -Wall -DLOCAL -I{include} -o {bin} {src} -lm` | `{bin}` | 43 |
+| `cpp` | `cpp` | `g++ -std=c++20 -O2 -Wall -DLOCAL -I{include} -o {bin} {src}` | `{bin}` | 89 |
 | `python` | `py` | none (interpreted) | `python3 {src}` | 31 |
 
 Override only what you change; omitted keys are inherited from the default of the same name:
@@ -71,7 +75,7 @@ cf_compiler_id = 75
 | `memory_multiplier` | Multiplies the Problem's memory limit for this language (default `0` = 1). For JVM languages that need more heap. |
 | `template` | Path to a custom Solution template for this language (overrides the default from the `templates/` folder of `snippets_dir`). |
 
-Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Problem directory. Compiled binaries are cached by content, so an unchanged Solution is never rebuilt.
+Placeholders: `{src}` the Solution, `{bin}` the compiled output, `{dir}` the Problem directory, `{include}` the folder of headers verd ships (`~/.local/share/verd/include`). On macOS the default compilers are the newest Homebrew `g++-N` / `gcc-N` found (15 down to 9), since plain `g++` there is Apple Clang. Compiled binaries are cached by content, so an unchanged Solution is never rebuilt.
 
 ## Templates
 
@@ -87,10 +91,11 @@ Solution Templates are Go `text/template` files. Variables: `{{.Problem.ID}}`, `
 
 ## Snippets
 
-`verd init` also copies the built-in snippet library to `<snippets_dir>/library/<lang>/<name>.<ext>` (C++, C and Python: bfs, dfs, dijkstra, dsu, segment tree, modpow, sieve, prefix sums, vector input, and more). Edit them or add your own: the file name is the snippet name and a comment on the first line is its description. A file with a built-in's name replaces it; verd also works without running `init` (the built-ins are embedded).
+`verd init` also copies the built-in snippet library to `<snippets_dir>/library/<lang>/<name>.<ext>` (35 for C++ and Python, 34 for C, which has no `wgraphinput`: bfs, dfs, dijkstra, dsu, segment tree, modpow, sieve, prefix sums, vector input, and more). Edit them or add your own: the file name is the snippet name and a comment on the first line is its description. A file with a built-in's name replaces it; verd also works without running `init` (the built-ins are embedded).
 
 - Manage your own: `verd snippet add [--lang L] [--desc D] <name> [file|-]` adds one from a file or stdin (with no source it creates a stub and opens your editor); `verd snippet edit <name>` edits one (a built-in gets an editable copy first); `verd snippet rm <name>` removes your file (a built-in of that name comes back); `verd snippet open` opens the library folder in your editor; `verd snippet path` prints the snippets dir. A first-line comment is the description; `add` writes one for you (`--desc`, else the name) when the code has none. In Neovim: `:'<,'>w !verd snippet add mysnip -` saves the selection.
 - In the Problem view press `i`: type to filter, `tab` switches language, `enter` copies the snippet to the clipboard.
+- From the TUI: Settings (`5`) > **Snippets** has **Edit snippet** (pick one, it opens in your editor; a built-in gets an editable copy first), **Add snippet** (type a name, `enter` creates it with a placeholder description line and opens it) and **Snippet folder**. `tab` in the picker changes language; the picker starts on the language shown by the **Template** row (`←`/`→` there). Names use letters, digits, `_` and `-`, and an existing name is refused. In the command palette (`ctrl+k`, type `snippet`) they jump to that row in Settings, except while a Problem is on screen.
 - `verd snippet --list [--lang python]` lists them; `verd snippet dijkstra` prints one (`--copy` puts it on the clipboard). In Neovim: `:r !verd snippet dijkstra`.
 - C snippets for graphs (`bfs`, `dfs`, `dijkstra`, `topo_sort`) build on `graphinput`; paste that first. Everything else is self-contained.
 - `verd snippet --export --lang cpp > ~/.config/nvim/snippets/verd-cpp.json` writes the library as VSCode-style JSON (prefix = snippet name). With LuaSnip: `require("luasnip.loaders.from_vscode").load_standalone({ path = "~/.config/nvim/snippets/verd-cpp.json", lang = "cpp" })`. VSCode takes the same file as a user snippet file. Re-export after you edit the library.
@@ -113,4 +118,4 @@ Set `snippets_dir = "~/dotfiles/verd"` to keep Templates and snippets elsewhere 
 
 `tests/` holds `sample-N.in/.ans` (written from the statement) and `custom-N.in/.ans` (yours). Only complete `.in`/`.ans` pairs run.
 
-The workspace is created on first use. Under WSL, keep it on the Linux filesystem; verd warns when it is under `/mnt/`.
+The workspace is created on first use. verd runs on Linux and macOS; on Windows run it inside WSL (native Windows is not supported) and keep the workspace on the Linux filesystem. verd warns when it is under `/mnt/`.

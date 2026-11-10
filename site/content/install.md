@@ -1,6 +1,6 @@
 # Install
 
-verd is one static binary for **Linux and macOS** (amd64 and arm64). On Windows, run it inside WSL.
+verd is one static binary for **Linux and macOS** (amd64 and arm64). On Windows, run it inside WSL; native Windows is not supported.
 
 ## One line
 
@@ -8,7 +8,7 @@ verd is one static binary for **Linux and macOS** (amd64 and arm64). On Windows,
 curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh
 ```
 
-It installs the latest release to `~/.local/bin` after checking its SHA-256. Make sure that directory is on your `PATH`. Set `VERD_VERSION=v0.8.1` to pin a version, or `VERD_INSTALL_DIR` to change the target.
+It installs the latest release to `~/.local/bin` after checking its SHA-256. Make sure that directory is on your `PATH`. Set `VERD_VERSION=v0.8.4` to pin a version, or `VERD_INSTALL_DIR` to change the target.
 
 ## Other ways
 
@@ -59,7 +59,17 @@ verd update --check   # is there a newer release?
 verd update           # replace the binary (checksum verified)
 ```
 
-Uninstall by deleting the binary. verd keeps its data in `~/.config/verd`, `~/.local/share/verd` and `~/.cache/verd`; see [Configuration](docs/config.html#files-verd-writes).
+You do not have to remember. When a newer release exists, verd tells you inside the TUI and asks whether to update: `y` updates now, `n` or `esc` dismisses the question and leaves a hint at the bottom of the screen. Restart verd afterwards to use the new version.
+
+The first launch after an update shows a **What's new** screen with the release notes. `j`/`k` or the arrow keys scroll, `enter`, `esc` or `q` closes it. `verd update` also prints the notes of every release you skipped. It retries a few times when the network fails, so a flaky connection is not fatal. A source build (version `dev`) is refused: update those with `go install`.
+
+```sh
+verd uninstall        # asks what to remove
+verd uninstall --keep           # the binary only
+verd uninstall --backup ~/verd-backup --yes   # archive config and data, then remove everything
+```
+
+`verd uninstall` removes the binary and, as you choose, your config, data and cache. Your Solutions in the Workspace are never touched. verd keeps its data in `~/.config/verd`, `~/.local/share/verd` and `~/.cache/verd`; see [Configuration](docs/config.html#files-verd-writes).
 
 ## Build from source (for development)
 
@@ -109,6 +119,7 @@ Tests use temporary directories and fake servers, not a Codeforces account.
 - **Add a config key.** Add the field and default in `internal/config/config.go`, register it in `settable` in `set.go`, document it in `default.toml` and `docs/config.md`, and, if it should be live in the TUI, add a row to `settingDefs` and a case in `applyLive` in `internal/tui/settings.go`.
 - **Add a theme.** Add an entry to `themes` in `internal/theme/theme.go` (a dark and a light palette), or try colors first with a `[themes.*]` block in your config; `verd themes show nord` prints a template.
 - **Preview the site.** `go run ./site/gen -out _site && python3 -m http.server -d _site 8000`.
+- **Publish the site.** `bash site/publish.sh` builds it and pushes it to the `gh-pages` branch through the GitHub API (needs `gh` and `jq`).
 - **Try a release build.** `goreleaser release --snapshot --clean` builds every target without publishing.
 
 Issues and pull requests are welcome on [GitHub](https://github.com/moneytosms/verd/issues); the vocabulary used in the code (Problem, Solution, Sample Test, Verdict) is defined in [CONTEXT.md](https://github.com/moneytosms/verd/blob/main/CONTEXT.md).

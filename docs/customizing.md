@@ -114,10 +114,12 @@ down = ["j", "down", "ctrl+n"]
 | `problems`, `contests`, `stats`, `picker`, `settings` | That tab. |
 | `contest` | The contest modal on the Contests tab. |
 | `problem` | The Problem view, including the diff and stress overlays. |
+| `full` | The full-screen test view. |
 | `editorial` | The editorial modal (`H`): reveal, scroll, open the post. |
 | `testmgr` | The test manager modal (`T`). |
 | `submission` | The Submission modal. |
 | `help` | The help overlay. |
+| `contest_mode` | Contest mode: next and previous Problem, jump to one, the rail, ending the session. |
 | `editor` | The embedded editor pane: `focus`, `focus_left`, `focus_right`, `zoom`, `wider`, `narrower`, `swap_side`. These work even while Neovim has the keyboard. |
 
 The same shortcuts can be edited in the TUI: Settings (`5`) > **Keyboard shortcuts**. `/` fuzzy-searches by description, group, id or key; `enter` rebinds, `a` adds a key, `backspace` resets one action, `R` resets all (with y/n confirmation).

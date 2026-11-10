@@ -9,7 +9,6 @@
 <p align="center">
   <a href="https://moneytosms.github.io/verd/"><img alt="Website" src="https://img.shields.io/badge/website-moneytosms.github.io%2Fverd-7aa2f7?labelColor=1a1b26"></a>
   <a href="https://github.com/moneytosms/verd/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/moneytosms/verd?color=9ece6a&labelColor=1a1b26"></a>
-  <a href="https://github.com/moneytosms/verd/actions/workflows/pages.yml"><img alt="Pages deploy" src="https://github.com/moneytosms/verd/actions/workflows/pages.yml/badge.svg"></a>
   <a href="https://github.com/moneytosms/verd/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/moneytosms/verd/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/go-1.27-7aa2f7?labelColor=1a1b26">
   <img alt="Platforms" src="https://img.shields.io/badge/linux%20%C2%B7%20macos-9ece6a?labelColor=1a1b26">
@@ -52,7 +51,7 @@ These are real frames rendered by verd's own model (Tokyo Night theme), not mock
 curl -fsSL https://raw.githubusercontent.com/moneytosms/verd/main/install.sh | sh
 ```
 
-It installs the latest release to `~/.local/bin` after checking its SHA-256. Set `VERD_VERSION=v0.1.0` to pin a version or `VERD_INSTALL_DIR` to change the target, and make sure the target is on your `PATH`.
+It installs the latest release to `~/.local/bin` after checking its SHA-256. Set `VERD_VERSION=v0.8.4` to pin a version or `VERD_INSTALL_DIR` to change the target, and make sure the target is on your `PATH`.
 
 **Other ways**
 
@@ -62,7 +61,7 @@ go install github.com/moneytosms/verd/cmd/verd@latest   # needs Go
 
 Or download a tarball from the [Releases](https://github.com/moneytosms/verd/releases) page and put `verd` on your `PATH`. Packages for the AUR (`verd-bin`) and Homebrew (`moneytosms/tap/verd`) are planned, see [#49](https://github.com/moneytosms/verd/issues/49).
 
-Check it worked with `verd --version`. Update later with `verd update` (or re-run the installer).
+Check it worked with `verd --version`. Update later with `verd update` (or re-run the installer). When a newer release exists, verd also tells you inside the TUI and asks whether to update (`y` updates, `n` or `esc` dismisses). The first launch after an update shows a **What's new** screen with the release notes; `verd update` prints the notes of every release you skipped.
 
 You also need `nvim` for editing, a compiler or interpreter for your languages (`g++`, `gcc`, `python3` by default), and optionally `tmux` or `herdr` for the editor split.
 
@@ -115,21 +114,26 @@ More in [docs/neovim.md](./docs/neovim.md).
 | `verd [--here]` | Open the TUI. `--here` keeps Solutions in the current directory (`<dir>/<contest>/<index>/`) instead of the configured Workspace. |
 | `verd init [--force] [--no-setup]` | Write the default config, Templates and snippet library, then offer the guided setup (skipped when not in a terminal). |
 | `verd setup` | Guided setup: handle, Workspace, language, theme, editor split and submit mode, written into `config.toml`. Safe to re-run. |
+| `verd doctor` | Check the config, handle, Workspace, compilers, editor, tmux or herdr and terminal; prints `ok`, `warn` or `fail` for each. Run it first when something does not work. |
 | `verd help [command]`, `verd <command> --help` | Detailed help for every command: usage, options, examples and exit codes. Colored on a terminal, plain text when piped, with `NO_COLOR` or `TERM=dumb` (`FORCE_COLOR=1` forces colors). |
 | `verd config [path\|keys\|get <key>\|set <key> <value>]` | Print the effective config, or read and change one key. |
-| `verd keys [--json]`, `verd keys set <ctx.action> <key>...` | List and rebind every shortcut. See [Customizing](./docs/customizing.md). |
+| `verd schema` | Print the JSON Schema of `config.toml` for editors such as taplo. |
+| `verd completions bash\|zsh\|fish` | Print a shell completion script for commands, config keys, key actions and themes. |
+| `verd keys [--json]`, `verd keys set <ctx.action> <key>...`, `verd keys reset <ctx.action>` | List, rebind and reset every shortcut. See [Customizing](./docs/customizing.md). |
+| `verd keys presets\|preset <name>\|export\|import <file\|->` | List and apply a preset (`default`, `vim`, `arrows`, `emacs`), or dump and load your bindings as TOML. |
 | `verd themes [show <name>]` | List themes, or print an editable `[themes.*]` block. |
-| `verd test <file>` | Run Sample and Custom Tests. Exit `0` only if every test is AC. |
+| `verd test <file> [-v] [-t NAME]` | Run Sample and Custom Tests; `-v` for full detail, `-t` for one test. Exit `0` only if every test is AC. |
 | `verd editorial [--reveal N \| --all] <file\|contest/index>` | Print a problem's editorial with hints withheld until you ask. In the TUI press `H`. See [Editorials](./docs/editorials.md). |
-| `verd snippet [--lang L] --list \| --export \| [--copy] <name>` | Print, copy or export (VSCode JSON) library snippets (bfs, dijkstra, modpow, ...). In the TUI press `i`. See [Snippets](./docs/config.md#snippets). |
+| `verd snippet [--lang L] --list \| --export \| [--copy] <name>` | Print, copy or export (VSCode JSON) library snippets (bfs, dijkstra, modpow, ...). In the TUI press `i`; add and edit your own from Settings. See [Snippets](./docs/config.md#snippets). |
+| `verd snippet add\|edit\|rm\|open\|path ...` | Add a snippet from a file or stdin, edit one in your editor, remove your file, open the library folder, print the snippets directory. |
 | `verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>` | Search for a counterexample. Exit `0` only if none was found. `--batch N` runs gen as `gen <seed> <N>` and expects N cases separated by `---` lines. `--multi N` runs N cases per Solution/brute process: both must read `t` then `t` cases, and gen prints one case without `t`. |
 | `verd submit <file>` | Submit and track the Verdict. Exit `0` only on Accepted. |
-| `verd update [--check]` | Replace verd with the latest release (checksum verified); `--check` only reports. |
-| `verd uninstall [--all\|--keep\|--backup DIR]` | Remove verd; delete, back up or keep its config and data. Solutions are never touched. |
+| `verd update [--check]` | Replace verd with the latest release (checksum verified) and print the release notes of every release you skipped; retries transient network errors. `--check` only reports. |
+| `verd uninstall [--all\|--keep\|--backup DIR] [--yes]` | Remove verd; delete, back up or keep its config and data. Solutions are never touched. `--yes` skips the confirmation. |
 | `verd daily` | Today's pick: an unsolved Codeforces Problem near your rating, from your weak topics when you have any. Same all day. |
 | `verd sync [cses]` | Pull your solved CSES tasks into verd as marks. Asks for your CSES login the first time; the password is never stored. |
 | `verd login` / `verd logout [cses]` | Save or delete the browser session used by [direct submit](./docs/submit.md#direct-mode). |
-| `verd --version` | Print the version. |
+| `verd version`, `verd --version` | Print the version and commit. |
 
 Exit codes: `0` success, `1` the thing you asked about failed (WA, counterexample, rejected), `2` verd could not do it (bad input, build error, offline).
 
@@ -150,12 +154,12 @@ New here? Follow the **[Guide](./docs/guide/start.md)** (also at [moneytosms.git
 | [Submitting](./docs/submit.md) | Browser handoff, direct mode, `verd login`, risks. |
 | [Embedded pane](./docs/embedded-pane.md) | Running Neovim inside verd, known gaps, promotion checklist. |
 | [Design decisions](./docs/adr) | Why submit defaults to the browser, why a multiplexer split, why no daemon. |
-| [Website](https://moneytosms.github.io/verd/) | The landing page, built from [`site/`](./site) and deployed to GitHub Pages on every change. |
+| [Website](https://moneytosms.github.io/verd/) | The landing page, built from [`site/`](./site). `bash site/publish.sh` builds it and publishes it to the `gh-pages` branch. |
 | [Glossary](./CONTEXT.md) | Problem, Solution, Local Verdict, Comparison Mode and the rest. |
 
 ## Limits
 
-- Linux and macOS only. Windows is not supported.
+- Linux and macOS. On Windows, run it inside WSL; native Windows is not supported.
 - CSES has no API: no verdict tracking, so solved marks come from `m` or `verd sync cses`.
 - Interactive Problems cannot be run locally; verd tells you so and you can still submit.
 - Direct submit is experimental and carries account risk. Read [the risks](./docs/submit.md#direct-mode) before turning it on.

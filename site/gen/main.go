@@ -23,7 +23,10 @@ import (
 	ghtml "github.com/yuin/goldmark/renderer/html"
 )
 
-const repo = "https://github.com/moneytosms/verd"
+const (
+	repo    = "https://github.com/moneytosms/verd"
+	siteURL = "https://moneytosms.github.io/verd/" // social cards need absolute image URLs
+)
 
 // docOrder is the sidebar order; blurb is the card text on the docs index.
 var docOrder = []struct{ file, blurb string }{
@@ -64,13 +67,12 @@ type page struct {
 	Title, Desc, Root, Body string
 	Nav                     template.HTML
 	Footer                  template.HTML
-	HeadX, Boot, Tail       template.HTML
+	HeadX, Tail             template.HTML
 	Side                    []navItem
 	SideTitle               string
 	TOC                     []navItem
 	Prev, Next              *navItem
-	Kicker, Heading, Lead   string // heading of an index page
-	Numbered                bool   // number the cards (a reading order)
+	Heading, Lead           string // heading of an index page
 }
 
 var md = goldmark.New(
@@ -114,7 +116,7 @@ func build(out string) (err error) {
 	// hand-written home page: only the chrome placeholders are filled in
 	home, err := os.ReadFile("site/content/index.html")
 	must(err)
-	s := strings.NewReplacer("{{ROOT}}", "", "{{HEADX}}", headX(""), "{{BOOT}}", bootHTML(""), "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer(""), "{{TAIL}}", tailHTML()).Replace(string(home))
+	s := strings.NewReplacer("{{ROOT}}", "", "{{HEADX}}", headX(""), "{{NAV}}", nav("", "home"), "{{FOOTER}}", footer(""), "{{TAIL}}", tailHTML()).Replace(string(home))
 	must(os.WriteFile(filepath.Join(out, "index.html"), []byte(s), 0o644))
 
 	// prose pages: install, usage
@@ -161,7 +163,7 @@ func build(out string) (err error) {
 		must(write(filepath.Join(out, "docs", d.file+".html"), docTmpl, pg))
 	}
 	idx := page{Title: "Documentation", Desc: "Guides and references for verd.", Root: "../", Side: nil,
-		Kicker: "Documentation", Heading: "References", Lead: "Every option, key and file, written to be read by people and to be followed by agents. New here? Start with the Guide."}
+		Heading: "References", Lead: "Every option, key and file, written to be read by people and to be followed by agents. New here? Start with the Guide."}
 	decorate(&idx, "../", "docs")
 	idx.TOC = items
 	must(write(filepath.Join(out, "docs", "index.html"), docIndexTmpl, idx))
@@ -194,7 +196,7 @@ func build(out string) (err error) {
 		must(write(filepath.Join(out, "guide", g.file+".html"), docTmpl, pg))
 	}
 	gidx := page{Title: "Guide", Desc: "A step-by-step guide to everything verd does, with small examples.", Root: "../",
-		Kicker: "Guide", Heading: "Learn verd, step by step", Lead: "Short chapters with examples you can copy. Read them in order, or jump to the one you need. For every option and key, see the References.", Numbered: true}
+		Heading: "Learn verd, step by step", Lead: "Short chapters with examples you can copy. Read them in order, or jump to the one you need. For every option and key, see the References."}
 	decorate(&gidx, "../", "guide")
 	gidx.TOC = gitems
 	must(write(filepath.Join(out, "guide", "index.html"), docIndexTmpl, gidx))
@@ -264,50 +266,50 @@ func guideLink(h string) string {
 
 func decorate(p *page, root, on string) {
 	p.Nav, p.Footer = template.HTML(nav(root, on)), template.HTML(footer(root))
-	p.HeadX, p.Boot, p.Tail = template.HTML(headX(root)), template.HTML(bootHTML(root)), template.HTML(tailHTML())
+	p.HeadX, p.Tail = template.HTML(headX(root)), template.HTML(tailHTML())
 }
 
-// headX is the shared <head> tail: icons, stylesheet and the once-per-session boot flag.
+// headX is the shared <head> tail: icons, social card, fonts and the stylesheet. The "js" class lets
+// the stylesheet hide things for an entrance only when the script that reveals them is running.
 func headX(root string) string {
 	return `<link rel="icon" type="image/svg+xml" href="` + root + `assets/favicon.svg"><link rel="apple-touch-icon" href="` + root + `assets/favicon.svg">` +
-		`<meta property="og:title" content="verd"><meta property="og:image" content="` + root + `assets/logo.svg">` +
-		`<link rel="stylesheet" href="` + root + `assets/site.css">` +
-		`<script>try{if(sessionStorage.getItem("verd-boot"))document.documentElement.classList.add("noboot");else sessionStorage.setItem("verd-boot","1")}catch(e){document.documentElement.classList.add("noboot")}</script>` +
-		`<noscript><style>#boot{display:none}</style></noscript>`
+		`<meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="` + siteURL + `assets/launch.jpg"><meta name="twitter:card" content="summary_large_image">` +
+		`<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap">` +
+		`<link rel="stylesheet" href="` + root + `assets/site.css"><script>document.documentElement.className="js"</script>`
 }
 
-// bootHTML is the loading screen: the animated logo, shown on the first page of a visit.
-func bootHTML(root string) string {
-	return `<div id="boot" aria-hidden="true"><img src="` + root + `assets/logo-anim.svg" alt="" width="132" height="132"><span class="bt">verd<i>_</i></span></div>`
-}
-
-// tailHTML hides the loading screen once the page has loaded and reveals sections as they scroll in.
+// tailHTML reveals the parts of each section as they scroll in.
 func tailHTML() string {
-	return `<script>(function(){var t=Date.now(),b=document.getElementById("boot");
-function hide(){if(b)b.classList.add("done")}
-addEventListener("load",function(){setTimeout(hide,Math.max(0,2900-(Date.now()-t)))});setTimeout(hide,5000);
-if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&"IntersectionObserver"in window){
-var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -8% 0px"});
-document.querySelectorAll(".card,.steps li,.shot,.cta,.table,.prose h2,.prose table,.prose pre,.docgrid a,.pager a").forEach(function(el,i){el.classList.add("rv");el.style.transitionDelay=Math.min(i%6,5)*45+"ms";io.observe(el)})}})()</script>`
+	return `<script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script>`
 }
 
 func nav(root, on string) string {
 	l := func(key, href, label string) string {
 		c := ""
-		if key == on {
+		if key == on && on != "home" {
 			c = ` class="on"`
+		}
+		if key == "home" {
+			c = ` class="opt"`
 		}
 		return `<a` + c + ` href="` + root + href + `">` + label + `</a>`
 	}
-	return `<nav><div class="wrap"><a class="logo" href="` + root + `index.html"><img class="mark" src="` + root + `assets/favicon.svg" alt="" width="26" height="26">verd<span>_</span></a>` +
-		l("home", "index.html#features", "Features") + l("install", "install.html", "Install") + l("usage", "usage.html", "Usage") +
-		l("guide", "guide/index.html", "Guide") + l("docs", "docs/index.html", "Docs") + `<a class="gh" href="` + repo + `">GitHub</a></div></nav>`
+	return `<nav class="nav" aria-label="Site"><a class="logo" href="` + root + `index.html"><img src="` + root + `assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links">` +
+		l("home", "index.html#features", "Features") + l("guide", "guide/index.html", "Guide") + l("docs", "docs/index.html", "Docs") +
+		l("install", "install.html", "Install") + `<a href="` + repo + `">GitHub</a></div></nav>`
 }
 
+// footer closes every page with the name built from four keys.
 func footer(root string) string {
-	return `<footer><div class="wrap"><span>verd · MIT licensed · not affiliated with Codeforces or CSES</span><span>` +
-		`<a href="` + repo + `">GitHub</a> · <a href="` + repo + `/releases">Releases</a> · <a href="` + root + `guide/index.html">Guide</a> · <a href="` + root + `docs/index.html">Docs</a> · ` +
-		`<a href="` + repo + `/issues">Issues</a></span></div></footer>`
+	return `<footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot">` +
+		`<div><a href="` + root + `guide/index.html">Guide</a><a href="` + root + `docs/index.html">Docs</a><a href="` + root + `usage.html">Usage</a></div>` +
+		`<div><a href="` + root + `install.html">Install</a><a href="` + repo + `/releases">Releases</a><a href="` + root + `docs/keys.html">Keys</a></div>` +
+		`<div><a href="` + repo + `">GitHub</a><a href="` + repo + `/issues">Issues</a><a href="` + root + `guide/troubleshooting.html">Troubleshooting</a></div>` +
+		`<div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div>` +
+		`<div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="` + root + `index.html#install">Install verd</a></div></footer>`
 }
 
 func write(path string, t *template.Template, p page) error {
@@ -336,8 +338,8 @@ func copyDir(src, dst string) error {
 }
 
 const head = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}} · verd</title><meta name="description" content="{{.Desc}}"><meta name="theme-color" content="#16161e">
-{{.HeadX}}</head><body>{{.Boot}}{{.Nav}}`
+<title>{{.Title}} · verd</title><meta name="description" content="{{.Desc}}"><meta name="theme-color" content="#0f1012">
+{{.HeadX}}</head><body class="docs">{{.Nav}}`
 
 const tail = `{{.Footer}}{{.Tail}}<script>
 document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
@@ -346,13 +348,13 @@ b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboar
 
 const tocBlock = `{{if .TOC}}<aside class="toc"><h4>On this page</h4>{{range .TOC}}<a href="{{.Href}}">{{.Title}}</a>{{end}}</aside>{{end}}`
 
-var proseTmpl = template.Must(template.New("prose").Parse(head + `<div class="wrap"><div class="layout nosidebar"><article class="prose">{{.BodyHTML}}</article>` + tocBlock + `</div></div>` + tail))
+var proseTmpl = template.Must(template.New("prose").Parse(head + `<div class="layout nosidebar"><article class="prose">{{.BodyHTML}}</article>` + tocBlock + `</div>` + tail))
 
-var docTmpl = template.Must(template.New("doc").Funcs(nil).Parse(head + `<div class="wrap"><div class="layout"><nav class="side" aria-label="Documentation"><h4>{{.SideTitle}}</h4>{{range .Side}}<a{{if .On}} class="on"{{end}} href="{{.Href}}">{{.Title}}</a>{{end}}</nav>
-<article class="prose">{{.BodyHTML}}<div class="pager">{{if .Prev}}<a href="{{.Prev.Href}}"><small>Previous</small>{{.Prev.Title}}</a>{{else}}<span></span>{{end}}{{if .Next}}<a class="next" href="{{.Next.Href}}"><small>Next</small>{{.Next.Title}}</a>{{end}}</div></article>` + tocBlock + `</div></div>` + tail))
+var docTmpl = template.Must(template.New("doc").Funcs(nil).Parse(head + `<div class="layout"><nav class="side" aria-label="Documentation"><h4>{{.SideTitle}}</h4>{{range .Side}}<a{{if .On}} class="on"{{end}} href="{{.Href}}">{{.Title}}</a>{{end}}</nav>
+<article class="prose">{{.BodyHTML}}<div class="pager">{{if .Prev}}<a href="{{.Prev.Href}}"><small>Previous</small>{{.Prev.Title}}</a>{{else}}<span></span>{{end}}{{if .Next}}<a class="next" href="{{.Next.Href}}"><small>Next</small>{{.Next.Title}}</a>{{end}}</div></article>` + tocBlock + `</div>` + tail))
 
-var docIndexTmpl = template.Must(template.New("idx").Funcs(template.FuncMap{"inc": func(i int) int { return i + 1 }}).Parse(head + `<div class="wrap"><div class="pagehead"><div class="kicker">{{.Kicker}}</div><h1>{{.Heading}}</h1><p>{{.Lead}}</p></div>
-<div class="docgrid">{{range $i, $c := .TOC}}<a class="card" href="{{$c.Href}}"><h3>{{if $.Numbered}}<span class="num">{{inc $i}}</span>{{end}}{{$c.Title}}</h3><p>{{$c.Blurb}}</p></a>{{end}}</div></div>` + tail))
+var docIndexTmpl = template.Must(template.New("idx").Parse(head + `<div class="pagehead"><h1>{{.Heading}}</h1><p>{{.Lead}}</p></div>
+<div class="docgrid">{{range $c := .TOC}}<a href="{{$c.Href}}"><h3>{{$c.Title}}</h3><p>{{$c.Blurb}}</p></a>{{end}}</div>` + tail))
 
 // BodyHTML is Body as trusted HTML.
 func (p page) BodyHTML() template.HTML { return template.HTML(p.Body) }

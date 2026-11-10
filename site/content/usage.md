@@ -47,7 +47,7 @@ Start a contest session from the Contests tab and verd switches to contest mode:
 | `verd keys` | List every shortcut; `keys set <context.action> <key>` rebinds one. |
 | `verd themes` | List themes; `themes show <name>` prints an editable block. |
 | `verd doctor` | Check compilers, editor and terminal. |
-| `verd update` | Update to the latest release. |
+| `verd update` | Update to the latest release and print the notes of every release you skipped. |
 
 ## Make it yours
 

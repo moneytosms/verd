@@ -28,7 +28,7 @@ This makes the commands usable in scripts, git hooks and editor jobs.
 | `verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] <file>` | search for a counterexample | `verd stress --iter 5000 main.cpp` |
 | `verd submit <file>` | submit and track the verdict | `verd submit main.cpp` |
 | `verd editorial [--reveal N \| --all] <file\|contest/index>` | read the editorial, hints withheld | `verd editorial --reveal 1 1900/A` |
-| `verd snippet ...` | print, copy, add, edit, remove, export snippets | `verd snippet --copy dijkstra` |
+| `verd snippet ...` | print, copy, add, edit, remove, export snippets (`add`, `edit`, `rm`, `open`, `path`; the TUI adds and edits from Settings) | `verd snippet --copy dijkstra` |
 | `verd daily` | today's unsolved pick | |
 
 `<file>` is a solution inside the workspace (`<workspace>/<contest>/<index>/main.<ext>`); the problem and language come from its path. When the TUI is running, `test`, `stress` and `submit` are handed to it and show in its pane; otherwise they run headless.
@@ -40,9 +40,11 @@ This makes the commands usable in scripts, git hooks and editor jobs.
 | `verd init [--force] [--no-setup]` | write the config, Templates and snippet library, offer the guided setup |
 | `verd setup` | guided setup for handle, workspace, language, theme, editor split, submit mode; safe to re-run |
 | `verd doctor` | check config, handle, workspace, compilers, editor, tmux/herdr, terminal |
-| `verd update [--check]` | replace verd with the latest release (checksum verified) |
-| `verd uninstall [--all\|--keep\|--backup DIR]` | remove verd; keep, back up or delete config and data |
+| `verd update [--check]` | replace verd with the latest release (checksum verified), then print the release notes of every release you skipped; `--check` only reports |
+| `verd uninstall [--all\|--keep\|--backup DIR] [--yes]` | remove verd; keep, back up or delete config and data; `--yes` skips the confirmation |
 | `verd version`, `verd --version` | print the version and commit |
+
+`verd update` retries a few times when the network fails. A source build (version `dev`) is refused; update those with `go install`. verd also checks for a newer release when the TUI starts: it asks inside the TUI whether to update (`y` updates, `n` or `esc` dismisses), and the first launch after an update shows a **What's new** screen with the release notes.
 
 ## Configuration
 

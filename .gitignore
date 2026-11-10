@@ -6,3 +6,6 @@ _site/
 
 # repowise audit cache
 /.repowise/
+brag-output/
+.taste-skill/
+.impeccable/

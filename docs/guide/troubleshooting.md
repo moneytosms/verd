@@ -50,6 +50,14 @@ It prints `ok`, `warn` or `fail` for your config, handle, workspace, the compile
 - **"not in the standings"**: register for the contest on codeforces.com.
 - **A verdict is slow to show in a live session**: the standings refresh every minute (two minutes for very big rounds).
 
+## Updating
+
+- **verd asked me to update and I pressed `n`**: it leaves a hint at the bottom of the screen. Run `verd update` any time, or `verd update --check` to see what is available.
+- **`verd update` fails with a network error**: it already retried a few times. Run it again, or check your connection. A "checksum mismatch" means the download was damaged and nothing was replaced.
+- **"cannot write next to ..."**: verd cannot write where the binary lives. Re-run the installer with `sudo`, or from a directory you can write to.
+- **"this is a source build"**: a `dev` build does not self-update. Run `go install github.com/moneytosms/verd/cmd/verd@latest`.
+- **I missed the release notes**: `verd update` prints the notes of every release it skipped when it installs, and the **What's new** screen shows them once on the next launch (`esc`, `q` or `enter` closes it). If the notes cannot be fetched, verd says so and points at the Releases page.
+
 ## Files and data
 
 | Where | What |
@@ -62,7 +70,7 @@ It prints `ok`, `warn` or `fail` for your config, handle, workspace, the compile
 
 `$XDG_CONFIG_HOME`, `$XDG_DATA_HOME` and `$XDG_CACHE_HOME` are honored. Deleting `verd.db` resets the cache, which is rebuilt on the next start, along with your per-problem language and comparison choices and manual CSES marks. Your solutions and config are separate files and are untouched.
 
-On WSL keep the workspace on the Linux filesystem (`/home/...`); `/mnt/c/...` is slow and `verd doctor` warns about it.
+verd runs on Linux and macOS. On Windows, run it inside WSL; native Windows is not supported. Under WSL keep the workspace on the Linux filesystem (`/home/...`); `/mnt/c/...` is slow and `verd doctor` warns about it.
 
 ## Still stuck
 
