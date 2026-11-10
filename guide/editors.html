@@ -1,0 +1,128 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neovim and other editors · verd</title><meta name="description" content="Splits, the embedded pane, keymaps and snippets in your editor."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a class="on" href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="neovim-and-other-editors">Neovim and other editors</h1>
+<h2 id="how-the-editor-opens">How the editor opens<a class="anchor" href="#how-the-editor-opens">#</a></h2>
+<p><code>e</code> opens the solution in <code>editor</code> (default <code>nvim</code>), at the right place:</p>
+<table>
+<thead>
+<tr>
+<th><code>split</code></th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code> (default)</td>
+<td>a tmux or herdr split next to verd when you are inside one, otherwise Neovim drawn inside verd's window</td>
+</tr>
+<tr>
+<td><code>tmux</code>, <code>herdr</code></td>
+<td>force that multiplexer (verd must be running inside it)</td>
+</tr>
+<tr>
+<td><code>embedded</code></td>
+<td>Neovim inside verd, even in tmux</td>
+</tr>
+<tr>
+<td><code>suspend</code></td>
+<td>verd hands the whole terminal to the editor and resumes when you quit</td>
+</tr>
+</tbody>
+</table>
+<p>A new split opens without taking focus. <code>e</code> again reuses the open Neovim (<code>:edit</code> at the right line). GUI editors (<code>code</code>, <code>subl</code>, <code>zed</code>) open their own window.</p>
+<h3 id="the-embedded-pane">The embedded pane</h3>
+<p>Neovim runs in a pseudo-terminal inside verd. While it has the keyboard everything goes to Neovim; these verd keys always work:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctrl+\</code></td>
+<td>hand the keyboard between verd and the editor</td>
+</tr>
+<tr>
+<td><code>alt+h</code> / <code>alt+l</code></td>
+<td>keyboard to the left / right column</td>
+</tr>
+<tr>
+<td><code>alt+z</code></td>
+<td>zoom whichever side has the keyboard (editor or verd) to fill the window</td>
+</tr>
+<tr>
+<td><code>alt+]</code> / <code>alt+[</code></td>
+<td>grow / shrink the editor column</td>
+</tr>
+<tr>
+<td><code>alt+s</code></td>
+<td>swap the editor to the other side</td>
+</tr>
+</tbody>
+</table>
+<p>Clicking a column focuses it. Chords that only the Kitty keyboard protocol can send (some <code>ctrl+shift</code> combinations) are not passed through; use tmux or <code>split = &quot;suspend&quot;</code> if you depend on them. Details: <a href="../docs/embedded-pane.html">Embedded pane</a>.</p>
+<h2 id="run-verd-from-inside-neovim">Run verd from inside Neovim<a class="anchor" href="#run-verd-from-inside-neovim">#</a></h2>
+<p><code>verd test</code>, <code>verd stress</code> and <code>verd submit</code> need no plugin, only a job. Put this in <code>init.lua</code>:</p>
+<pre><code class="hl"><span class="kd">local</span> <span class="kr">function</span> <span class="nf">verd</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+  <span class="n">vim.cmd</span><span class="p">(</span><span class="s2">&#34;silent write&#34;</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="kd">local</span> <span class="kr">function</span> <span class="nf">collect</span><span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span> <span class="n">vim.list_extend</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span> <span class="kr">end</span>
+  <span class="n">vim.fn</span><span class="p">.</span><span class="n">jobstart</span><span class="p">({</span> <span class="s2">&#34;verd&#34;</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">vim.fn</span><span class="p">.</span><span class="n">expand</span><span class="p">(</span><span class="s2">&#34;%:p&#34;</span><span class="p">)</span> <span class="p">},</span> <span class="p">{</span>
+    <span class="n">stdout_buffered</span> <span class="o">=</span> <span class="kc">true</span><span class="p">,</span> <span class="n">stderr_buffered</span> <span class="o">=</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="n">on_stdout</span> <span class="o">=</span> <span class="n">collect</span><span class="p">,</span> <span class="n">on_stderr</span> <span class="o">=</span> <span class="n">collect</span><span class="p">,</span>
+    <span class="n">on_exit</span> <span class="o">=</span> <span class="kr">function</span><span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
+      <span class="n">vim.notify</span><span class="p">(</span><span class="n">vim.trim</span><span class="p">(</span><span class="n">table.concat</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="s2">&#34;</span><span class="se">\n</span><span class="s2">&#34;</span><span class="p">)),</span>
+        <span class="n">code</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">vim.log</span><span class="p">.</span><span class="n">levels.INFO</span> <span class="ow">or</span> <span class="n">vim.log</span><span class="p">.</span><span class="n">levels.WARN</span><span class="p">,</span> <span class="p">{</span> <span class="n">title</span> <span class="o">=</span> <span class="s2">&#34;verd &#34;</span> <span class="o">..</span> <span class="n">cmd</span> <span class="p">})</span>
+    <span class="kr">end</span><span class="p">,</span>
+  <span class="p">})</span>
+<span class="kr">end</span>
+
+<span class="n">vim.keymap</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&#34;n&#34;</span><span class="p">,</span> <span class="s2">&#34;&lt;leader&gt;vt&#34;</span><span class="p">,</span> <span class="kr">function</span><span class="p">()</span> <span class="n">verd</span><span class="p">(</span><span class="s2">&#34;test&#34;</span><span class="p">)</span> <span class="kr">end</span><span class="p">,</span>   <span class="p">{</span> <span class="n">desc</span> <span class="o">=</span> <span class="s2">&#34;verd test&#34;</span> <span class="p">})</span>
+<span class="n">vim.keymap</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&#34;n&#34;</span><span class="p">,</span> <span class="s2">&#34;&lt;leader&gt;vs&#34;</span><span class="p">,</span> <span class="kr">function</span><span class="p">()</span> <span class="n">verd</span><span class="p">(</span><span class="s2">&#34;submit&#34;</span><span class="p">)</span> <span class="kr">end</span><span class="p">,</span> <span class="p">{</span> <span class="n">desc</span> <span class="o">=</span> <span class="s2">&#34;verd submit&#34;</span> <span class="p">})</span>
+<span class="n">vim.keymap</span><span class="p">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&#34;n&#34;</span><span class="p">,</span> <span class="s2">&#34;&lt;leader&gt;vx&#34;</span><span class="p">,</span> <span class="kr">function</span><span class="p">()</span> <span class="n">verd</span><span class="p">(</span><span class="s2">&#34;stress&#34;</span><span class="p">)</span> <span class="kr">end</span><span class="p">,</span> <span class="p">{</span> <span class="n">desc</span> <span class="o">=</span> <span class="s2">&#34;verd stress&#34;</span> <span class="p">})</span>
+</code></pre>
+<p>If the TUI is running the result also shows in its pane; otherwise the command runs headless and prints. Useful one-liners:</p>
+<pre><code class="hl"><span class="p">:</span><span class="nx">r</span> <span class="p">!</span><span class="nx">verd</span> <span class="nx">snippet</span> <span class="nx">dijkstra</span>                    <span class="c">&#34; insert a snippet at the cursor</span>
+<span class="p">:</span><span class="s1">&#39;&lt;,&#39;</span><span class="p">&gt;</span><span class="nx">w</span> <span class="p">!</span><span class="nx">verd</span> <span class="nx">snippet</span> <span class="nx">add</span> <span class="nx">mysnip</span> <span class="p">-</span>           <span class="c">&#34; save the selected lines as a snippet</span>
+<span class="p">:!</span><span class="nx">verd</span> <span class="nx">editorial</span> <span class="p">--</span><span class="nx">reveal</span> <span class="m">1</span> <span class="m">1900</span>/<span class="nx">A</span>           <span class="c">&#34; peek at the first hint of a problem</span>
+</code></pre>
+<h2 id="other-editors">Other editors<a class="anchor" href="#other-editors">#</a></h2>
+<p>Any editor works. verd knows how each takes a line number:</p>
+<table>
+<thead>
+<tr>
+<th>Editor</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nvim</code></td>
+<td>the one verd integrates deeply (pane reuse, <code>--listen</code> socket)</td>
+</tr>
+<tr>
+<td><code>vim</code>, <code>hx</code>, <code>nano</code>, <code>micro</code>, <code>emacs</code>, <code>kak</code></td>
+<td>open in the same split or embedded pane; a second <code>e</code> replaces the pane</td>
+</tr>
+<tr>
+<td><code>code</code>, <code>subl</code>, <code>zed</code></td>
+<td>open their own window; use <code>&quot;code -w&quot;</code> to wait</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="hl"><span class="sc">verd</span> config set editor <span class="ss">&#34;code -w&#34;</span></code></pre>
+<h2 id="luasnip">LuaSnip<a class="anchor" href="#luasnip">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> snippet <span class="sf">--export</span> <span class="sf">--lang</span> cpp <span class="so">&gt;</span> ~/.config/nvim/snippets/verd-cpp.json</code></pre>
+<pre><code class="hl"><span class="n">require</span><span class="p">(</span><span class="s2">&#34;luasnip.loaders.from_vscode&#34;</span><span class="p">).</span><span class="n">load_standalone</span><span class="p">({</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">&#34;~/.config/nvim/snippets/verd-cpp.json&#34;</span><span class="p">,</span> <span class="n">lang</span> <span class="o">=</span> <span class="s2">&#34;cpp&#34;</span> <span class="p">})</span>
+</code></pre>
+<p>Reference: <a href="../docs/neovim.html">Neovim</a>. Next: <a href="troubleshooting.html">Troubleshooting</a>.</p>
+<div class="pager"><a href="cli.html"><small>Previous</small>Command line</a><a class="next" href="troubleshooting.html"><small>Next</small>Troubleshooting</a></div></article><aside class="toc"><h4>On this page</h4><a href="#how-the-editor-opens">How the editor opens</a><a href="#run-verd-from-inside-neovim">Run verd from inside Neovim</a><a href="#other-editors">Other editors</a><a href="#luasnip">LuaSnip</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

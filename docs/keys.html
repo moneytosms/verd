@@ -1,0 +1,1194 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keys · verd</title><meta name="description" content="Every shortcut, generated from the keymap, plus search and filter syntax."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a class="on" href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="keys">Keys</h1>
+<p>Press <code>?</code> on any screen to see its keys. Keys are the same everywhere the same action exists.</p>
+<p><strong>Start with <code>ctrl+k</code>.</strong> The command palette fuzzy-runs any action on the current screen and any setting, so you do not need to know a key first. In Settings, <code>/</code> searches every setting by name, key and description. In a Problem, <code>P</code> cycles the reading palette.</p>
+<h2 id="rebinding">Rebinding<a class="anchor" href="#rebinding">#</a></h2>
+<p>Every shortcut can be changed: Settings (<code>5</code>) &gt; <strong>Keyboard shortcuts</strong>. <code>enter</code> rebinds the selected action (press the new key), <code>a</code> adds a second key, <code>backspace</code> resets it, and changes apply at once. They are saved to <code>config.toml</code>:</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">keys</span><span class="p">.</span><span class="nx">problem</span><span class="p">]</span>
+<span class="nx">run_tests</span> <span class="p">=</span> <span class="s2">&#34;ctrl+t&#34;</span>
+<span class="nx">submit</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;s&#34;</span><span class="p">,</span> <span class="s2">&#34;ctrl+s&#34;</span><span class="p">]</span>   <span class="c"># a list gives several keys</span>
+</code></pre>
+<p>Contexts: <code>common</code>, <code>tabs</code>, <code>app</code>, <code>problems</code>, <code>contests</code>, <code>contest</code>, <code>contest_mode</code>, <code>stats</code>, <code>picker</code>, <code>settings</code>, <code>problem</code>, <code>full</code>, <code>editorial</code>, <code>testmgr</code>, <code>submission</code>, <code>help</code>, <code>editor</code>. A rebound action stops answering to its old key; two actions on one key (in the same screen) are refused. <code>ctrl+c</code> always quits. Text entry (prompts, the filters modal, the test editor, confirmations) is not rebindable. The tables below list the defaults; <code>?</code> shows your current keys.</p>
+<!-- keys:begin -->
+<h2 id="everywhere">Everywhere<a class="anchor" href="#everywhere">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>?</code></td>
+<td><code>help</code></td>
+<td>toggle help</td>
+</tr>
+<tr>
+<td><code>ctrl+k</code></td>
+<td><code>palette</code></td>
+<td>command palette: fuzzy-run any action or setting</td>
+</tr>
+<tr>
+<td><code>Z</code></td>
+<td><code>zen</code></td>
+<td>zen mode: hide everything but the statement and tests</td>
+</tr>
+<tr>
+<td><code>x</code></td>
+<td><code>dismiss_toast</code></td>
+<td>dismiss a notification</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tabs">Tabs<a class="anchor" href="#tabs">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>tab_1</code></td>
+<td>switch tab: Problems</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>tab_2</code></td>
+<td>switch tab: Contests</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>tab_3</code></td>
+<td>switch tab: Stats</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>tab_4</code></td>
+<td>switch tab: Picker</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>tab_5</code></td>
+<td>switch tab: Settings</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tab-screens">Tab screens<a class="anchor" href="#tab-screens">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctrl+r</code></td>
+<td><code>refresh</code></td>
+<td>refresh from the network</td>
+</tr>
+<tr>
+<td><code>tab</code></td>
+<td><code>next_tab</code></td>
+<td>next tab</td>
+</tr>
+</tbody>
+</table>
+<h2 id="problems">Problems<a class="anchor" href="#problems">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>move up</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>move down</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>open</code></td>
+<td>open Problem</td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td><code>filters</code></td>
+<td>filters modal (rating, status, sort, tags)</td>
+</tr>
+<tr>
+<td><code>:</code></td>
+<td><code>filter_expr</code></td>
+<td>filter expression: 800-1200 +dp -graphs unsolved</td>
+</tr>
+<tr>
+<td><code>X</code></td>
+<td><code>clear_filters</code></td>
+<td>clear all filters</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td><code>search</code></td>
+<td>live fuzzy search</td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td><code>mark_solved</code></td>
+<td>mark a CSES task solved or not</td>
+</tr>
+<tr>
+<td><code>Y</code></td>
+<td><code>sync_cses</code></td>
+<td>sync solved marks from CSES</td>
+</tr>
+</tbody>
+</table>
+<h2 id="contests">Contests<a class="anchor" href="#contests">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>move up</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>move down</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>open</code></td>
+<td>list the contest's Problems</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td><code>search</code></td>
+<td>fuzzy-find a contest by name or id</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td><code>chip_all</code></td>
+<td>all contests</td>
+</tr>
+<tr>
+<td><code>u</code></td>
+<td><code>chip_upcoming</code></td>
+<td>upcoming only</td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>chip_past</code></td>
+<td>past only</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>chip_running</code></td>
+<td>in progress only</td>
+</tr>
+<tr>
+<td><code>s</code></td>
+<td><code>chip_started</code></td>
+<td>contests with a solve</td>
+</tr>
+<tr>
+<td><code>o</code></td>
+<td><code>sort</code></td>
+<td>least solved first</td>
+</tr>
+</tbody>
+</table>
+<h2 id="contest-modal">Contest modal<a class="anchor" href="#contest-modal">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code>, <code>esc</code></td>
+<td><code>close</code></td>
+<td>close</td>
+</tr>
+<tr>
+<td><code>s</code></td>
+<td><code>start</code></td>
+<td>start a session: virtual (finished contest), live (running) or wait for the start (upcoming)</td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>practice</code></td>
+<td>start a practice session: no timer or penalty</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td><code>end_session</code></td>
+<td>show the session summary and end it</td>
+</tr>
+<tr>
+<td><code>H</code></td>
+<td><code>editorial</code></td>
+<td>editorial of the selected problem</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>move up</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>move down</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>open</code></td>
+<td>open the Problem</td>
+</tr>
+</tbody>
+</table>
+<h2 id="stats">Stats<a class="anchor" href="#stats">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>scroll down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>scroll up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td><code>next_problem</code></td>
+<td>select next attempted Problem</td>
+</tr>
+<tr>
+<td><code>N</code></td>
+<td><code>prev_problem</code></td>
+<td>select previous attempted Problem</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>open</code></td>
+<td>open the selected Problem</td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>picker</code></td>
+<td>Problem Picker with the weak-topics preset</td>
+</tr>
+</tbody>
+</table>
+<h2 id="picker">Picker<a class="anchor" href="#picker">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>r</code>, <code>space</code></td>
+<td><code>reroll</code></td>
+<td>re-roll</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>open</code></td>
+<td>open the Problem</td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td><code>filters</code></td>
+<td>filters: 800-1200 +dp -graphs</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>weak_topics</code></td>
+<td>weak-topics preset</td>
+</tr>
+</tbody>
+</table>
+<h2 id="settings">Settings<a class="anchor" href="#settings">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td><code>search</code></td>
+<td>fuzzy-find a setting</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>move down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>move up</td>
+</tr>
+<tr>
+<td><code>home</code>, <code>g</code></td>
+<td><code>top</code></td>
+<td>first setting</td>
+</tr>
+<tr>
+<td><code>end</code>, <code>G</code></td>
+<td><code>bottom</code></td>
+<td>last setting</td>
+</tr>
+<tr>
+<td><code>right</code>, <code>l</code>, <code>space</code></td>
+<td><code>next_value</code></td>
+<td>next value / toggle</td>
+</tr>
+<tr>
+<td><code>left</code>, <code>h</code></td>
+<td><code>prev_value</code></td>
+<td>previous value</td>
+</tr>
+<tr>
+<td><code>enter</code></td>
+<td><code>edit</code></td>
+<td>edit a text value / open the shortcut editor</td>
+</tr>
+<tr>
+<td><code>L</code></td>
+<td><code>login</code></td>
+<td>paste a browser session (direct submit)</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td><code>edit_config</code></td>
+<td>open config.toml in your editor</td>
+</tr>
+</tbody>
+</table>
+<h2 id="problem-view">Problem view<a class="anchor" href="#problem-view">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code></td>
+<td><code>quit</code></td>
+<td>quit</td>
+</tr>
+<tr>
+<td><code>esc</code></td>
+<td><code>back</code></td>
+<td>back (also cancels a stress run)</td>
+</tr>
+<tr>
+<td><code>tab</code></td>
+<td><code>pane_next</code></td>
+<td>next pane: statement, tests, detail</td>
+</tr>
+<tr>
+<td><code>shift+tab</code></td>
+<td><code>pane_prev</code></td>
+<td>previous pane</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>scroll up / previous test</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>scroll down / next test</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>home</code>, <code>g</code></td>
+<td><code>top</code></td>
+<td>jump to the top</td>
+</tr>
+<tr>
+<td><code>end</code>, <code>G</code></td>
+<td><code>bottom</code></td>
+<td>jump to the bottom</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td><code>edit</code></td>
+<td>edit the Solution in your editor</td>
+</tr>
+<tr>
+<td><code>N</code></td>
+<td><code>notes</code></td>
+<td>edit the Problem's notes.md</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td><code>copy</code></td>
+<td>copy the focused pane</td>
+</tr>
+<tr>
+<td><code>I</code></td>
+<td><code>copy_input</code></td>
+<td>copy the selected test's input only (tests/detail pane)</td>
+</tr>
+<tr>
+<td><code>E</code></td>
+<td><code>copy_expected</code></td>
+<td>copy the selected test's expected output only (tests/detail pane)</td>
+</tr>
+<tr>
+<td><code>O</code></td>
+<td><code>copy_output</code></td>
+<td>copy the selected test's actual output only (tests/detail pane)</td>
+</tr>
+<tr>
+<td><code>T</code></td>
+<td><code>manage_tests</code></td>
+<td>manage tests: view, add, edit, copy, delete</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td><code>add_test</code></td>
+<td>add a Custom Test</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>language</code></td>
+<td>switch language</td>
+</tr>
+<tr>
+<td><code>s</code></td>
+<td><code>submit</code></td>
+<td>submit the Solution</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>run_tests</code></td>
+<td>run tests</td>
+</tr>
+<tr>
+<td><code>i</code></td>
+<td><code>snippets</code></td>
+<td>snippet library: copy bfs, dijkstra, modpow, ...</td>
+</tr>
+<tr>
+<td><code>H</code></td>
+<td><code>editorial</code></td>
+<td>editorial: hints and solution, revealed one at a time</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td><code>stress</code></td>
+<td>stress test</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>stress_save</code></td>
+<td>save the stress counterexample as a test</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td><code>cycle_mode</code></td>
+<td>cycle Comparison Mode</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td><code>next_test</code></td>
+<td>select next test</td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>prev_test</code></td>
+<td>select previous test</td>
+</tr>
+<tr>
+<td><code>space</code></td>
+<td><code>mark_test</code></td>
+<td>mark or unmark the selected test for a partial run</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td><code>run_marked</code></td>
+<td>run only the marked tests (or the selected one if none is marked)</td>
+</tr>
+<tr>
+<td><code>F</code></td>
+<td><code>run_failed</code></td>
+<td>rerun only the tests that did not pass</td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td><code>fullview</code></td>
+<td>full-screen view of the selected test: input, expected, stdout, stderr</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td><code>diff</code></td>
+<td>diff the selected failing test</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>refetch</code></td>
+<td>refetch statement</td>
+</tr>
+<tr>
+<td><code>o</code></td>
+<td><code>open_browser</code></td>
+<td>open in the browser</td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td><code>mark_solved</code></td>
+<td>mark a CSES task solved or not</td>
+</tr>
+<tr>
+<td><code>v</code></td>
+<td><code>toggle_tags</code></td>
+<td>show or hide the tags</td>
+</tr>
+<tr>
+<td><code>P</code></td>
+<td><code>reading_palette</code></td>
+<td>cycle the reading palette: app, paper, sepia, cool, night, mono, contrast, auto</td>
+</tr>
+<tr>
+<td><code>&gt;</code>, <code>.</code></td>
+<td><code>widen</code></td>
+<td>widen the right column</td>
+</tr>
+<tr>
+<td><code>&lt;</code>, <code>,</code></td>
+<td><code>narrow</code></td>
+<td>narrow the right column</td>
+</tr>
+<tr>
+<td><code>+</code>, <code>=</code></td>
+<td><code>grow_tests</code></td>
+<td>grow the test list</td>
+</tr>
+<tr>
+<td><code>-</code></td>
+<td><code>shrink_tests</code></td>
+<td>shrink the test list</td>
+</tr>
+</tbody>
+</table>
+<h2 id="full-screen-test-view">Full-screen test view<a class="anchor" href="#full-screen-test-view">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>esc</code>, <code>f</code>, <code>q</code></td>
+<td><code>close</code></td>
+<td>close the full-screen test view</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>scroll down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>scroll up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>home</code>, <code>g</code></td>
+<td><code>top</code></td>
+<td>jump to the top</td>
+</tr>
+<tr>
+<td><code>end</code>, <code>G</code></td>
+<td><code>bottom</code></td>
+<td>jump to the bottom</td>
+</tr>
+<tr>
+<td><code>l</code>, <code>right</code></td>
+<td><code>pan_right</code></td>
+<td>pan right (no wrap)</td>
+</tr>
+<tr>
+<td><code>h</code>, <code>left</code></td>
+<td><code>pan_left</code></td>
+<td>pan left (no wrap)</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>wrap</code></td>
+<td>toggle wrap and pan</td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td><code>raw</code></td>
+<td>toggle folding of sanitizer noise in stderr</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td><code>next</code></td>
+<td>next test</td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td><code>prev</code></td>
+<td>previous test</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td><code>copy</code></td>
+<td>copy the section at the top</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>rerun</code></td>
+<td>rerun just this test</td>
+</tr>
+</tbody>
+</table>
+<h2 id="editorial">Editorial<a class="anchor" href="#editorial">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code>, <code>esc</code></td>
+<td><code>close</code></td>
+<td>close the editorial</td>
+</tr>
+<tr>
+<td><code>enter</code>, <code>space</code>, <code>n</code></td>
+<td><code>reveal</code></td>
+<td>reveal the next hint or the solution</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>scroll down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>scroll up</td>
+</tr>
+<tr>
+<td><code>pgdown</code></td>
+<td><code>page_down</code></td>
+<td>page down</td>
+</tr>
+<tr>
+<td><code>pgup</code></td>
+<td><code>page_up</code></td>
+<td>page up</td>
+</tr>
+<tr>
+<td><code>home</code>, <code>g</code></td>
+<td><code>top</code></td>
+<td>jump to the top</td>
+</tr>
+<tr>
+<td><code>end</code>, <code>G</code></td>
+<td><code>bottom</code></td>
+<td>jump to the bottom</td>
+</tr>
+<tr>
+<td><code>o</code></td>
+<td><code>browser</code></td>
+<td>open the post in the browser</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>retry</code></td>
+<td>retry after a failed load</td>
+</tr>
+</tbody>
+</table>
+<h2 id="test-manager">Test manager<a class="anchor" href="#test-manager">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code>, <code>esc</code></td>
+<td><code>close</code></td>
+<td>close</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>down</code></td>
+<td>move down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>up</code></td>
+<td>move up</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td><code>add</code></td>
+<td>add a Custom Test here</td>
+</tr>
+<tr>
+<td><code>e</code>, <code>enter</code></td>
+<td><code>edit</code></td>
+<td>edit the selected Custom Test</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td><code>copy</code></td>
+<td>copy the selected test into a new Custom Test</td>
+</tr>
+<tr>
+<td><code>d</code>, <code>x</code></td>
+<td><code>delete</code></td>
+<td>delete the selected Custom Test</td>
+</tr>
+<tr>
+<td><code>E</code></td>
+<td><code>add_in_editor</code></td>
+<td>add a Custom Test in your editor</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>run_tests</code></td>
+<td>run tests</td>
+</tr>
+</tbody>
+</table>
+<h2 id="submission-modal">Submission modal<a class="anchor" href="#submission-modal">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code>, <code>esc</code>, <code>enter</code></td>
+<td><code>close</code></td>
+<td>close the Submission modal</td>
+</tr>
+</tbody>
+</table>
+<h2 id="help">Help<a class="anchor" href="#help">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q</code>, <code>esc</code></td>
+<td><code>close</code></td>
+<td>close help</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td><code>search</code></td>
+<td>fuzzy-search every shortcut</td>
+</tr>
+<tr>
+<td><code>right</code>, <code>l</code>, <code>tab</code></td>
+<td><code>page_next</code></td>
+<td>next page</td>
+</tr>
+<tr>
+<td><code>left</code>, <code>h</code>, <code>shift+tab</code></td>
+<td><code>page_prev</code></td>
+<td>previous page</td>
+</tr>
+<tr>
+<td><code>j</code>, <code>down</code></td>
+<td><code>scroll_down</code></td>
+<td>scroll down</td>
+</tr>
+<tr>
+<td><code>k</code>, <code>up</code></td>
+<td><code>scroll_up</code></td>
+<td>scroll up</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>page_1</code></td>
+<td>page: This screen</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>page_2</code></td>
+<td>page: Everywhere</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>page_3</code></td>
+<td>page: Mouse</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>page_4</code></td>
+<td>page: Guide</td>
+</tr>
+</tbody>
+</table>
+<h2 id="embedded-editor">Embedded editor<a class="anchor" href="#embedded-editor">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctrl+\</code></td>
+<td><code>focus</code></td>
+<td>toggle the keyboard between verd and the embedded editor</td>
+</tr>
+<tr>
+<td><code>alt+h</code></td>
+<td><code>focus_left</code></td>
+<td>keyboard to the left column</td>
+</tr>
+<tr>
+<td><code>alt+l</code></td>
+<td><code>focus_right</code></td>
+<td>keyboard to the right column</td>
+</tr>
+<tr>
+<td><code>alt+z</code></td>
+<td><code>zoom</code></td>
+<td>zoom the focused side to fullscreen (toggle)</td>
+</tr>
+<tr>
+<td><code>alt+]</code></td>
+<td><code>wider</code></td>
+<td>grow the editor column</td>
+</tr>
+<tr>
+<td><code>alt+[</code></td>
+<td><code>narrower</code></td>
+<td>shrink the editor column</td>
+</tr>
+<tr>
+<td><code>alt+s</code></td>
+<td><code>swap_side</code></td>
+<td>move editor between left and right</td>
+</tr>
+</tbody>
+</table>
+<h2 id="contest-mode">Contest mode<a class="anchor" href="#contest-mode">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Action</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alt+n</code></td>
+<td><code>next</code></td>
+<td>next problem</td>
+</tr>
+<tr>
+<td><code>alt+p</code></td>
+<td><code>prev</code></td>
+<td>previous problem</td>
+</tr>
+<tr>
+<td><code>alt+1</code></td>
+<td><code>jump_1</code></td>
+<td>jump to problem 1 (A)</td>
+</tr>
+<tr>
+<td><code>alt+2</code></td>
+<td><code>jump_2</code></td>
+<td>jump to problem 2</td>
+</tr>
+<tr>
+<td><code>alt+3</code></td>
+<td><code>jump_3</code></td>
+<td>jump to problem 3</td>
+</tr>
+<tr>
+<td><code>alt+4</code></td>
+<td><code>jump_4</code></td>
+<td>jump to problem 4</td>
+</tr>
+<tr>
+<td><code>alt+5</code></td>
+<td><code>jump_5</code></td>
+<td>jump to problem 5</td>
+</tr>
+<tr>
+<td><code>alt+6</code></td>
+<td><code>jump_6</code></td>
+<td>jump to problem 6</td>
+</tr>
+<tr>
+<td><code>alt+7</code></td>
+<td><code>jump_7</code></td>
+<td>jump to problem 7</td>
+</tr>
+<tr>
+<td><code>alt+8</code></td>
+<td><code>jump_8</code></td>
+<td>jump to problem 8</td>
+</tr>
+<tr>
+<td><code>alt+9</code></td>
+<td><code>jump_9</code></td>
+<td>jump to problem 9</td>
+</tr>
+<tr>
+<td><code>alt+b</code></td>
+<td><code>rail</code></td>
+<td>cycle the problem rail: full, compact, hidden</td>
+</tr>
+<tr>
+<td><code>alt+x</code></td>
+<td><code>exit</code></td>
+<td>session summary: end the session and save its report</td>
+</tr>
+</tbody>
+</table>
+<!-- keys:end -->
+<h2 id="search">Search<a class="anchor" href="#search">#</a></h2>
+<p>Type letters in order (<code>wmln</code> finds Watermelon), several words must all match (<code>water 4a</code>), and <code>#dp</code> matches tags. <code>tab</code> inside the prompt cycles what is searched: all, name, tag, id. <code>enter</code> keeps the search, <code>esc</code> undoes it.</p>
+<h2 id="filter-syntax">Filter syntax<a class="anchor" href="#filter-syntax">#</a></h2>
+<p>A rating range (<code>800-1200</code>, <code>800-</code>, <code>-1200</code>, or one value), <code>+tag</code> to include, <code>-tag</code> to exclude (prefix match, <code>_</code> for a space: <code>+two_pointers</code>), and <code>unsolved</code> (or <code>u</code>).</p>
+<p>The filter bar above the list shows what is active as chips; click it to open the filters. In the filters modal <code>tab</code> moves between fields, digits type a rating, <code>←</code>/<code>→</code> change status, sort and source, typing in the tag list searches it, <code>space</code> cycles a tag (include, exclude, off), <code>ctrl+u</code> resets and <code>esc</code> closes.</p>
+<h2 id="mouse">Mouse<a class="anchor" href="#mouse">#</a></h2>
+<p>Click a tab pill to switch screens. Click a row to select it and the selected row again to open it. Click the filter bar to open the filters, a pane to focus it, a test to select it, a setting to select it and its value to change it. Click outside a modal to close it. The wheel scrolls whatever is under the pointer. In the Problem view, drag over the statement or the test detail to select whole lines; they are copied on release (OSC 52, so it works over ssh and tmux if your terminal allows it). Anywhere else, hold <code>shift</code> while dragging to select with your terminal.</p>
+<h2 id="modals">Modals<a class="anchor" href="#modals">#</a></h2>
+<p>Small things open in a modal over the screen you were on. <code>q</code> or <code>esc</code> closes a modal (the update question closes with <code>n</code> or <code>esc</code>); <code>q</code> only quits verd when no modal is open.</p>
+<table>
+<thead>
+<tr>
+<th>Modal</th>
+<th>Opened by</th>
+<th>Keys</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Help</td>
+<td><code>?</code></td>
+<td><code>←</code>/<code>→</code> page (this screen, everywhere, mouse, guide), <code>j</code>/<code>k</code> scroll, <code>q</code> closes</td>
+</tr>
+<tr>
+<td>Filters</td>
+<td><code>f</code></td>
+<td>see Problems</td>
+</tr>
+<tr>
+<td>Diff</td>
+<td><code>d</code> on a failing test, or a stress counterexample</td>
+<td><code>j</code>/<code>k</code> scroll, <code>w</code> saves a counterexample, <code>q</code> closes</td>
+</tr>
+<tr>
+<td>Submission</td>
+<td><code>s</code></td>
+<td>Live status and final Verdict; <code>q</code> closes, tracking continues</td>
+</tr>
+<tr>
+<td>Contest Problems</td>
+<td><code>enter</code> on a contest</td>
+<td><code>j</code>/<code>k</code> move, <code>enter</code> opens, <code>s</code> starts a <a href="contests.html">session</a>, <code>H</code> editorial, <code>q</code> closes</td>
+</tr>
+<tr>
+<td>Editorial</td>
+<td><code>H</code></td>
+<td><code>enter</code> reveals the next hint, <code>j</code>/<code>k</code> scroll, <code>o</code> opens the post, <code>q</code> closes. See <a href="editorials.html">Editorials</a></td>
+</tr>
+<tr>
+<td>Snippets</td>
+<td><code>i</code></td>
+<td>Type to filter, <code>enter</code> copies, <code>tab</code> switches language, <code>esc</code> closes. See <a href="config.html#snippets">Snippets</a></td>
+</tr>
+<tr>
+<td>Add / Edit snippet</td>
+<td>Settings (<code>5</code>) &gt; <strong>Snippets</strong></td>
+<td>Type to filter (Edit) or type a new name (Add), <code>enter</code> opens the file in your editor, <code>tab</code> switches language, <code>esc</code> closes. Not rebindable. See <a href="config.html#snippets">Snippets</a></td>
+</tr>
+<tr>
+<td>Update question</td>
+<td>appears when a newer release exists</td>
+<td><code>y</code> updates now, <code>n</code> or <code>esc</code> dismisses it and leaves a hint at the bottom. Only shown when no other modal or text entry is open. Not rebindable.</td>
+</tr>
+<tr>
+<td>What's new</td>
+<td>the first launch after an update</td>
+<td><code>j</code>/<code>k</code> or <code>↑</code>/<code>↓</code> scroll, <code>pgdown</code>/<code>space</code> and <code>pgup</code> page, <code>g</code>/<code>home</code> and <code>G</code>/<code>end</code> jump, <code>enter</code>, <code>esc</code> or <code>q</code> closes. Not rebindable.</td>
+</tr>
+<tr>
+<td>Session summary</td>
+<td><code>e</code> in the contest modal, or when the time is up</td>
+<td><code>e</code>/<code>enter</code> ends the session, <code>esc</code> keeps it</td>
+</tr>
+<tr>
+<td>Test manager</td>
+<td><code>T</code></td>
+<td><code>j</code>/<code>k</code> move, <code>a</code> add, <code>e</code> edit, <code>c</code> copy (also works on samples), <code>d</code> delete (asks first), <code>E</code> add in Neovim, <code>t</code> run, <code>q</code> closes</td>
+</tr>
+<tr>
+<td>Test editor</td>
+<td><code>a</code>, <code>e</code> or <code>c</code> in the manager</td>
+<td>Type, arrows move, <code>tab</code> switches input / expected, <code>ctrl+s</code> saves, <code>esc</code> cancels. Paste works.</td>
+</tr>
+</tbody>
+</table>
+<p>Samples are read-only; copy one to get an editable Custom Test.</p>
+<h2 id="problem-view-notes">Problem view notes<a class="anchor" href="#problem-view-notes">#</a></h2>
+<p>On a terminal at least 100 columns wide and 16 rows tall the Problem view is split: the statement on the left, and on the right the Problem's rating, limits and tags, every test with its Local Verdict, and the selected test's input, expected and actual output. Narrower terminals get a single column.</p>
+<div class="pager"><a href="config.html"><small>Previous</small>Configuration</a><a class="next" href="testing.html"><small>Next</small>Testing and stress</a></div></article><aside class="toc"><h4>On this page</h4><a href="#rebinding">Rebinding</a><a href="#everywhere">Everywhere</a><a href="#tabs">Tabs</a><a href="#tab-screens">Tab screens</a><a href="#problems">Problems</a><a href="#contests">Contests</a><a href="#contest-modal">Contest modal</a><a href="#stats">Stats</a><a href="#picker">Picker</a><a href="#settings">Settings</a><a href="#problem-view">Problem view</a><a href="#full-screen-test-view">Full-screen test view</a><a href="#editorial">Editorial</a><a href="#test-manager">Test manager</a><a href="#submission-modal">Submission modal</a><a href="#help">Help</a><a href="#embedded-editor">Embedded editor</a><a href="#contest-mode">Contest mode</a><a href="#search">Search</a><a href="#filter-syntax">Filter syntax</a><a href="#mouse">Mouse</a><a href="#modals">Modals</a><a href="#problem-view-notes">Problem view notes</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

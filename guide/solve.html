@@ -1,0 +1,137 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read, edit and test · verd</title><meta name="description" content="The Problem view, editors, test runs, verdicts, comparison modes and custom tests."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a class="on" href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="read-edit-and-test">Read, edit and test</h1>
+<h2 id="the-problem-view">The Problem view<a class="anchor" href="#the-problem-view">#</a></h2>
+<p><code>enter</code> on a problem opens it. On a terminal at least 100 columns wide the view is split: the statement on the left; on the right the rating, limits and tags, the list of tests with their verdicts, and the selected test's input, expected and output.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tab</code> / <code>shift+tab</code></td>
+<td>move between statement, tests and detail</td>
+</tr>
+<tr>
+<td><code>j</code> <code>k</code> <code>pgup</code> <code>pgdown</code></td>
+<td>scroll or move</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>copy the focused pane (the whole question with difficulty and tags, for pasting into notes or a chat)</td>
+</tr>
+<tr>
+<td><code>v</code></td>
+<td>show or hide the tags</td>
+</tr>
+<tr>
+<td><code>o</code></td>
+<td>open the problem in the browser</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td>refetch the statement</td>
+</tr>
+<tr>
+<td><code>esc</code></td>
+<td>close the problem</td>
+</tr>
+</tbody>
+</table>
+<p>Switching tabs does not close a problem; it waits for you on its own tab.</p>
+<p><strong>Images</strong> in statements are fetched in the background and drawn in place: as real pixels in kitty and Ghostty (the Kitty graphics protocol), and as colour half-blocks in every other terminal, Alacritty included. Until an image arrives, or when it cannot be fetched, you see <code>[image]</code> with its link. In tmux or zellij verd uses half-blocks. Change it with <code>verd config set images auto|kitty|blocks|off</code>.</p>
+<h2 id="edit">Edit<a class="anchor" href="#edit">#</a></h2>
+<p><code>e</code> creates <code>main.&lt;ext&gt;</code> from your <a href="snippets.html">Template</a> the first time and opens your editor.</p>
+<ul>
+<li><strong>Inside tmux or herdr</strong> the editor opens in a split next to verd. Pressing <code>e</code> again reuses it.</li>
+<li><strong>Anywhere else</strong> Neovim is drawn inside verd's own window (the embedded pane). Keys go to Neovim while it has focus; <code>ctrl+\</code> hands them back to verd.</li>
+<li><code>split = &quot;suspend&quot;</code> hands the whole terminal to the editor instead.</li>
+</ul>
+<pre><code class="hl"><span class="sc">verd</span> config set split suspend          <span class="cm"># the old behavior</span>
+<span class="sc">verd</span> config set editor <span class="ss">&#34;code -w&#34;</span>       <span class="cm"># any editor; extra arguments are allowed</span></code></pre>
+<p><code>l</code> switches the language for this problem (<code>cpp</code>, <code>c</code>, <code>python</code>, or your own). <code>N</code> opens <code>notes.md</code> for the problem. See <a href="editors.html">Neovim and editors</a>.</p>
+<h2 id="test">Test<a class="anchor" href="#test">#</a></h2>
+<p><code>t</code> compiles the solution (cached by content, so unchanged code is never rebuilt) and runs it against every test: the samples from the statement and your own. Each test gets a verdict, a time and peak memory.</p>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AC</code></td>
+<td>output matches</td>
+</tr>
+<tr>
+<td><code>WA</code></td>
+<td>output differs; the first mismatch (line, column, wanted, got) is shown</td>
+</tr>
+<tr>
+<td><code>TLE</code> / <code>MLE</code></td>
+<td>over the time or memory limit</td>
+</tr>
+<tr>
+<td><code>RE</code></td>
+<td>crashed or non-zero exit</td>
+</tr>
+<tr>
+<td><code>CE</code></td>
+<td>the compiler failed; its output is shown</td>
+</tr>
+</tbody>
+</table>
+<p>With <code>autotest</code> on (default) saving the file runs the tests. From the shell: <code>verd test main.cpp</code> (exit <code>0</code> only if everything is <code>AC</code>). Add <code>-v</code> to print every test's input, expected, stdout and stderr (your debug prints), and <code>-t sample-2</code> to run one test.</p>
+<h3 id="looking-at-a-failure">Looking at a failure</h3>
+<ul>
+<li><code>d</code> opens a side-by-side diff of expected and actual output, scrolled to the first mismatch.</li>
+<li><code>f</code> opens the selected test full-screen: input, expected, stdout and stderr, with panning for long lines.</li>
+<li><code>I</code>, <code>E</code>, <code>O</code> copy only the input, the expected output or the output of the selected test.</li>
+<li>A compile error shows the compiler output; <code>e</code> jumps to the first error line.</li>
+</ul>
+<h3 id="comparison-modes">Comparison modes</h3>
+<p><code>c</code> cycles how output is compared; the choice is saved per problem.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Matches when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tokens</code></td>
+<td>whitespace-separated tokens are equal (like the Codeforces checker)</td>
+</tr>
+<tr>
+<td><code>exact</code></td>
+<td>lines are equal after trimming trailing spaces</td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td>numbers within <code>float_eps</code> (a statement saying &quot;within 1e-6&quot; selects it)</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>never judged; output is only shown</td>
+</tr>
+</tbody>
+</table>
+<h3 id="your-own-tests">Your own tests</h3>
+<pre><code class="hl">a      add a Custom Test (creates tests/custom-N.in and .ans and opens them)
+T      manage tests: view, edit, copy a sample into an editable test, delete
+</code></pre>
+<p>Samples are read-only; copy one with <code>c</code> in the manager to change it.</p>
+<p>Next: <a href="stress.html">Stress testing</a>, or <a href="submit.html">submit</a>.</p>
+<div class="pager"><a href="problems.html"><small>Previous</small>Finding problems</a><a class="next" href="stress.html"><small>Next</small>Stress testing</a></div></article><aside class="toc"><h4>On this page</h4><a href="#the-problem-view">The Problem view</a><a href="#edit">Edit</a><a href="#test">Test</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

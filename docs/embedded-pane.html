@@ -1,0 +1,133 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embedded pane · verd</title><meta name="description" content="Running Neovim inside verd: focus keys, sides, zoom, known gaps."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a class="on" href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="embedded-pane">Embedded pane</h1>
+<p>The embedded pane draws Neovim <strong>inside</strong> verd's window, on the right, with verd on the left. It is the default when you are not in tmux or herdr (<code>split = &quot;auto&quot;</code>); inside one of them verd still opens a real split. Set <code>split = &quot;suspend&quot;</code> to get the old behavior (verd hands the terminal to Neovim and resumes when you quit), or <code>split = &quot;embedded&quot;</code> to use the pane inside tmux too.</p>
+<pre><code class="hl"><span class="nx">split</span> <span class="p">=</span> <span class="s2">&#34;embedded&#34;</span>
+<span class="nx">embed_ratio</span> <span class="p">=</span> <span class="mf">0.4</span>          <span class="c"># share of the width verd keeps</span>
+<span class="nx">embed_side</span> <span class="p">=</span> <span class="s2">&#34;right&#34;</span>        <span class="c"># which column Neovim takes: right | left</span>
+<span class="nx">embed_zoom</span> <span class="p">=</span> <span class="kc">false</span>          <span class="c"># start the editor zoomed (fullscreen) when it opens</span>
+<span class="nx">embed_focus_key</span> <span class="p">=</span> <span class="s2">&#34;ctrl+\\&#34;</span> <span class="c"># toggles keyboard focus between verd and Neovim</span>
+</code></pre>
+<p>Keys go to Neovim while it has focus. The following editor keys work while the editor is open and has the keyboard:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctrl+\</code></td>
+<td>toggle keyboard between verd and the editor</td>
+</tr>
+<tr>
+<td><code>alt+h</code></td>
+<td>keyboard to the left column</td>
+</tr>
+<tr>
+<td><code>alt+l</code></td>
+<td>keyboard to the right column</td>
+</tr>
+<tr>
+<td><code>alt+z</code></td>
+<td>zoom whichever side has the keyboard to the whole window (toggle)</td>
+</tr>
+<tr>
+<td><code>alt+]</code></td>
+<td>grow the editor column by 5%</td>
+</tr>
+<tr>
+<td><code>alt+[</code></td>
+<td>shrink the editor column by 5%</td>
+</tr>
+<tr>
+<td><code>alt+s</code></td>
+<td>swap editor between left and right column</td>
+</tr>
+</tbody>
+</table>
+<p>All of these are rebindable under <code>[keys.editor]</code>. Clicking a column also focuses it. If the window is too narrow for both, verd shows itself alone.</p>
+<h2 id="known-gaps">Known gaps<a class="anchor" href="#known-gaps">#</a></h2>
+<p>verd runs Neovim in a pseudo-terminal and renders it with <code>charmbracelet/x/vt</code>. That emulator does not implement the Kitty keyboard protocol, so chords that a terminal can only report through that protocol (for example some <code>ctrl+shift</code> combinations) are not encoded for Neovim. Everything a plain xterm-style terminal can send works.</p>
+<p>If you rely on such chords, use <code>tmux</code> or <code>herdr</code>, where Neovim runs in a real pane with full fidelity, or <code>split = &quot;suspend&quot;</code>.</p>
+<p>See <a href="https://github.com/moneytosms/verd/tree/main/docs/adr">ADR 0002</a> for why a multiplexer split is preferred when one is available.</p>
+<h2 id="promotion-checklist">Promotion checklist<a class="anchor" href="#promotion-checklist">#</a></h2>
+<p>The embedded pane was promoted to the default for <code>split = &quot;auto&quot;</code> outside a multiplexer (<a href="https://github.com/moneytosms/verd/issues/45">#45</a>) <strong>by the maintainer's decision, before this checklist was run on real terminals</strong>: the results below are still unrecorded. Run it and report failures; if a row fails, it is a bug to fix or a gap to list above, and <code>split = &quot;suspend&quot;</code> is the escape hatch.</p>
+<p>Run each item in an embedded session (<code>split = &quot;embedded&quot;</code>, LazyVim config) and record the result.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>LazyVim colors</td>
+<td>Open a Solution. The colorscheme, statusline and diagnostics render with correct true color, no stray glyphs.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mouse</td>
+<td>Click to place the cursor, drag to select, scroll with the wheel inside the pane.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Resize</td>
+<td>Resize the terminal and change <code>embed_ratio</code>. Neovim redraws to the new size with no corruption.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Paste</td>
+<td>Paste a multi-line block in insert mode. Bracketed paste applies it once, without auto-indent staircase.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Common chords</td>
+<td><code>&lt;leader&gt;</code> mappings, <code>ctrl+w</code> window commands, <code>ctrl+o</code> / <code>ctrl+i</code>, <code>:</code> commands, <code>ctrl+v</code> visual block.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Focus</td>
+<td>The focus key moves keys between verd and Neovim, in both directions, in the middle of an operator-pending command.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Round trip</td>
+<td><code>e</code> opens the Solution, <code>:w</code> triggers autotest, the Tests panel updates, <code>:q</code> closes the pane and verd takes the full width.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Terminal</th>
+<th>OS</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>not yet recorded</em></td>
+<td>Linux</td>
+<td></td>
+</tr>
+<tr>
+<td><em>not yet recorded</em></td>
+<td>macOS</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>List any degraded chords you find in <a href="#known-gaps">Known gaps</a>.</p>
+<div class="pager"><a href="neovim.html"><small>Previous</small>Neovim and editors</a><a class="next" href="sources.html"><small>Next</small>Sources</a></div></article><aside class="toc"><h4>On this page</h4><a href="#known-gaps">Known gaps</a><a href="#promotion-checklist">Promotion checklist</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

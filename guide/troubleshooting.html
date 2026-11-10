@@ -1,0 +1,117 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting · verd</title><meta name="description" content="The doctor, common errors and where verd keeps its files."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a class="on" href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="troubleshooting">Troubleshooting</h1>
+<p>Start with the doctor:</p>
+<pre><code class="hl"><span class="sc">verd</span> doctor</code></pre>
+<p>It prints <code>ok</code>, <code>warn</code> or <code>fail</code> for your config, handle, workspace, the compiler of every language, the editor (and Neovim 0.9 or newer), tmux or herdr, truecolor support and <code>$TERM</code>, and exits <code>1</code> if anything failed.</p>
+<h2 id="verd-will-not-start">verd will not start<a class="anchor" href="#verd-will-not-start">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>You see</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>no handle set: run verd init ...</code></td>
+<td><code>verd config set handle &lt;your handle&gt;</code></td>
+</tr>
+<tr>
+<td>an error naming <code>config.toml</code> and a key</td>
+<td>fix that line; verd never starts on a config it cannot load</td>
+</tr>
+<tr>
+<td><code>verd is already running</code></td>
+<td>only one TUI runs per user; close the other one (the message names the socket)</td>
+</tr>
+<tr>
+<td><code>TERM is 'dumb'</code></td>
+<td>run it in a real terminal</td>
+</tr>
+</tbody>
+</table>
+<h2 id="problems-and-statements">Problems and statements<a class="anchor" href="#problems-and-statements">#</a></h2>
+<ul>
+<li><strong>&quot;offline: statement not cached&quot;</strong>: no network and that statement was never fetched. Open it once online; after that it works offline. <code>ctrl+r</code> refreshes the lists.</li>
+<li><strong>&quot;Codeforces blocked the request (Cloudflare)&quot;</strong>: Codeforces sometimes challenges non-browser clients. Press <code>o</code> to read the problem in your browser; verd retries on the next fetch. The API (problem list, submissions, standings, editorials) is not affected.</li>
+<li><strong>The list is empty</strong>: the first start has to download the problem list. Wait for the sync or press <code>ctrl+r</code>.</li>
+<li><strong>CSES tasks are missing</strong>: <code>verd config set source_cses true</code>, then <code>ctrl+r</code> in verd.</li>
+</ul>
+<h2 id="tests">Tests<a class="anchor" href="#tests">#</a></h2>
+<ul>
+<li><strong><code>CE</code> with a wall of paths</strong>: the compiler output is shown with long paths shortened; <code>e</code> jumps to the first error.</li>
+<li><strong><code>bits/stdc++.h</code> not found on macOS</strong>: plain <code>g++</code> there is Apple Clang. Install GNU gcc (<code>brew install gcc</code>); verd prefers <code>g++-15</code> ... <code>g++-9</code> when present.</li>
+<li><strong>Wrong verdict on a float problem</strong>: <code>c</code> cycles the comparison mode; <code>float</code> compares within <code>float_eps</code>.</li>
+<li><strong>Tests are slow to start</strong>: the first build compiles; later runs of unchanged code use the cache.</li>
+<li><strong>An interactive problem</strong>: local runs are not supported; verd says so.</li>
+</ul>
+<h2 id="editor">Editor<a class="anchor" href="#editor">#</a></h2>
+<ul>
+<li><strong><code>e</code> does nothing / &quot;editor not found&quot;</strong>: <code>verd config set editor &lt;command&gt;</code> and check <code>verd doctor</code>.</li>
+<li><strong>Neovim looks wrong inside verd</strong>: set <code>split = &quot;suspend&quot;</code> (or run verd inside tmux) and report the terminal on <a href="https://github.com/moneytosms/verd/issues/45">issue #45</a>.</li>
+<li><strong>A chord does not reach Neovim</strong>: only the Kitty keyboard protocol can send some <code>ctrl+shift</code> combinations; use tmux or <code>suspend</code>.</li>
+<li><strong>Keys go to the wrong side</strong>: <code>ctrl+\</code> hands the keyboard between verd and the embedded editor.</li>
+</ul>
+<h2 id="submitting">Submitting<a class="anchor" href="#submitting">#</a></h2>
+<ul>
+<li><strong>Nothing is copied</strong>: install <code>wl-copy</code>, <code>xclip</code>, <code>xsel</code> (Linux) or use a terminal with OSC 52; verd prints the URL when no tool is found.</li>
+<li><strong>Direct mode falls back to the browser</strong>: the status notes say why (an expired session, a Cloudflare check). <code>verd login</code> again, or use the default browser mode.</li>
+</ul>
+<h2 id="contests">Contests<a class="anchor" href="#contests">#</a></h2>
+<ul>
+<li><strong><code>s</code> says &quot;set your handle first&quot;</strong>: live sessions find your row in the standings by handle.</li>
+<li><strong>&quot;not in the standings&quot;</strong>: register for the contest on codeforces.com.</li>
+<li><strong>A verdict is slow to show in a live session</strong>: the standings refresh every minute (two minutes for very big rounds).</li>
+</ul>
+<h2 id="updating">Updating<a class="anchor" href="#updating">#</a></h2>
+<ul>
+<li><strong>verd asked me to update and I pressed <code>n</code></strong>: it leaves a hint at the bottom of the screen. Run <code>verd update</code> any time, or <code>verd update --check</code> to see what is available.</li>
+<li><strong><code>verd update</code> fails with a network error</strong>: it already retried a few times. Run it again, or check your connection. A &quot;checksum mismatch&quot; means the download was damaged and nothing was replaced.</li>
+<li><strong>&quot;cannot write next to ...&quot;</strong>: verd cannot write where the binary lives. Re-run the installer with <code>sudo</code>, or from a directory you can write to.</li>
+<li><strong>&quot;this is a source build&quot;</strong>: a <code>dev</code> build does not self-update. Run <code>go install github.com/moneytosms/verd/cmd/verd@latest</code>.</li>
+<li><strong>I missed the release notes</strong>: <code>verd update</code> prints the notes of every release it skipped when it installs, and the <strong>What's new</strong> screen shows them once on the next launch (<code>esc</code>, <code>q</code> or <code>enter</code> closes it). If the notes cannot be fetched, verd says so and points at the Releases page.</li>
+</ul>
+<h2 id="files-and-data">Files and data<a class="anchor" href="#files-and-data">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.config/verd/config.toml</code></td>
+<td>your config</td>
+</tr>
+<tr>
+<td><code>~/.config/verd/snippets/</code></td>
+<td>Templates and the snippet library</td>
+</tr>
+<tr>
+<td><code>~/.local/share/verd/verd.db</code></td>
+<td>cache: problems, submissions, editorials, the running session</td>
+</tr>
+<tr>
+<td><code>~/.cache/verd/</code></td>
+<td>compiled binaries</td>
+</tr>
+<tr>
+<td><code>&lt;workspace&gt;/&lt;contest&gt;/&lt;index&gt;/</code></td>
+<td>your solutions and tests</td>
+</tr>
+</tbody>
+</table>
+<p><code>$XDG_CONFIG_HOME</code>, <code>$XDG_DATA_HOME</code> and <code>$XDG_CACHE_HOME</code> are honored. Deleting <code>verd.db</code> resets the cache, which is rebuilt on the next start, along with your per-problem language and comparison choices and manual CSES marks. Your solutions and config are separate files and are untouched.</p>
+<p>verd runs on Linux and macOS. On Windows, run it inside WSL; native Windows is not supported. Under WSL keep the workspace on the Linux filesystem (<code>/home/...</code>); <code>/mnt/c/...</code> is slow and <code>verd doctor</code> warns about it.</p>
+<h2 id="still-stuck">Still stuck<a class="anchor" href="#still-stuck">#</a></h2>
+<p><code>verd help &lt;command&gt;</code> has the exact options of each command. Report bugs, with the output of <code>verd doctor</code> and <code>verd --version</code>, on <a href="https://github.com/moneytosms/verd/issues">GitHub</a>.</p>
+<div class="pager"><a href="editors.html"><small>Previous</small>Neovim and editors</a></div></article><aside class="toc"><h4>On this page</h4><a href="#verd-will-not-start">verd will not start</a><a href="#problems-and-statements">Problems and statements</a><a href="#tests">Tests</a><a href="#editor">Editor</a><a href="#submitting">Submitting</a><a href="#contests">Contests</a><a href="#updating">Updating</a><a href="#files-and-data">Files and data</a><a href="#still-stuck">Still stuck</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

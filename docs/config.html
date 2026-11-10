@@ -1,0 +1,343 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration · verd</title><meta name="description" content="Every config key, languages, Templates and where verd keeps files."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a class="on" href="config.html">Configuration</a><a href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="configuration">Configuration</h1>
+<p>verd reads <code>~/.config/verd/config.toml</code> (<code>$XDG_CONFIG_HOME/verd/config.toml</code> if set). Every key is optional. <code>verd init</code> writes a fully commented file and offers <code>verd setup</code>, a guided walk through the main keys that edits the file in place (re-run it any time); <code>verd config</code> prints the effective, merged result.</p>
+<h2 id="keys">Keys<a class="anchor" href="#keys">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handle</code></td>
+<td>none, <strong>required</strong></td>
+<td>Your Codeforces handle. Solved marks, stats and Verdict tracking use it.</td>
+</tr>
+<tr>
+<td><code>workspace</code></td>
+<td><code>&quot;~/verd&quot;</code></td>
+<td>Where Solutions and tests live: <code>&lt;workspace&gt;/&lt;contest&gt;/&lt;index&gt;/</code>. A relative value such as <code>&quot;.&quot;</code> is resolved against the directory verd is started in; <code>verd --here</code> does the same for one run.</td>
+</tr>
+<tr>
+<td><code>snippets_dir</code></td>
+<td><code>&quot;~/.config/verd/snippets&quot;</code></td>
+<td>Where your Templates (<code>templates/</code>) and snippet library (<code>library/&lt;lang&gt;/</code>) live; <code>~</code> is expanded. See <a href="#snippets">Snippets</a>.</td>
+</tr>
+<tr>
+<td><code>default_lang</code></td>
+<td><code>&quot;cpp&quot;</code></td>
+<td>Language for new Solutions. Any <code>[lang.*]</code> key, or <code>ask</code>: the first time you open a Problem, a picker asks which language to solve it in (saved per Problem; <code>esc</code> asks again next time).</td>
+</tr>
+<tr>
+<td><code>time_multiplier</code></td>
+<td><code>1.0</code></td>
+<td>Scales every Problem's time limit for local runs. Use <code>2.0</code> on a slow machine.</td>
+</tr>
+<tr>
+<td><code>float_eps</code></td>
+<td><code>1e-6</code></td>
+<td>Absolute/relative tolerance for the <code>float</code> Comparison Mode.</td>
+</tr>
+<tr>
+<td><code>autotest</code></td>
+<td><code>true</code></td>
+<td>Run a Test Run whenever the active Solution is saved.</td>
+</tr>
+<tr>
+<td><code>resume</code></td>
+<td><code>true</code></td>
+<td>Start where you left off: tab, filter, sort, open contest and Problem (saved to <code>~/.local/share/verd/state.json</code> on quit).</td>
+</tr>
+<tr>
+<td><code>theme</code></td>
+<td><code>&quot;terminal&quot;</code></td>
+<td><code>terminal</code> (inherits your palette), <code>tokyo-night</code>, <code>dracula</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>one-dark</code> or <code>solarized</code>. Change it live in the Settings tab.</td>
+</tr>
+<tr>
+<td><code>background</code></td>
+<td><code>&quot;auto&quot;</code></td>
+<td><code>auto</code> detects the terminal, or force <code>dark</code> / <code>light</code>.</td>
+</tr>
+<tr>
+<td><code>editor</code></td>
+<td><code>&quot;nvim&quot;</code></td>
+<td>The editor command: <code>nvim</code>, <code>vim</code>, <code>hx</code>, <code>nano</code>, <code>micro</code>, <code>emacs</code>, <code>kak</code>, <code>code</code>, <code>subl</code>, <code>zed</code> or any other, with optional arguments (<code>&quot;code -w&quot;</code>). verd knows how each takes a line number. Only Neovim reuses its pane on the next <code>e</code>; GUI editors open their own window instead of a split. Change it live in Settings.</td>
+</tr>
+<tr>
+<td><code>source_cf</code></td>
+<td><code>true</code></td>
+<td>Show Codeforces Problems. See <a href="sources.html">Sources</a>.</td>
+</tr>
+<tr>
+<td><code>source_cses</code></td>
+<td><code>false</code></td>
+<td>Show the CSES Problem Set next to them. See <a href="sources.html">Sources</a>.</td>
+</tr>
+<tr>
+<td><code>split</code></td>
+<td><code>&quot;auto&quot;</code></td>
+<td>How the editor opens: <code>auto</code>, <code>tmux</code>, <code>herdr</code>, <code>embedded</code>, <code>suspend</code>. See <a href="neovim.html">Neovim</a>.</td>
+</tr>
+<tr>
+<td><code>embed_ratio</code></td>
+<td><code>0.4</code></td>
+<td>Share of the window verd keeps when Neovim is embedded.</td>
+</tr>
+<tr>
+<td><code>embed_side</code></td>
+<td><code>&quot;right&quot;</code></td>
+<td>Which column the embedded Neovim takes: <code>right</code> or <code>left</code>.</td>
+</tr>
+<tr>
+<td><code>embed_focus_key</code></td>
+<td><code>&quot;ctrl+\\&quot;</code></td>
+<td>Toggles keyboard focus between verd and the embedded Neovim. Same as <code>[keys.editor] focus</code>.</td>
+</tr>
+<tr>
+<td><code>images</code>, <code>reading_width</code>, <code>reading_margin</code>, <code>reading_spacing</code>, <code>reading_headings</code>, <code>reading_math</code>, <code>reading_emphasis</code></td>
+<td><code>auto</code>, <code>0</code>, <code>1</code>, <code>normal</code>, <code>bar</code>, <code>unicode</code>, <code>true</code></td>
+<td>How statements are laid out. See <a href="customizing.html#reading-and-fonts">Reading and fonts</a>.</td>
+</tr>
+<tr>
+<td><code>reading_split</code>, <code>reading_palette</code>, <code>reading_night_from</code></td>
+<td><code>&quot;full&quot;</code>, <code>&quot;app&quot;</code>, <code>20</code></td>
+<td><code>reading_split</code>: <code>full</code> or <code>cap</code>. <code>cap</code> limits the statement to 76 columns in the split view when <code>reading_width</code> is 0. <code>reading_palette</code>: <code>app</code>, <code>paper</code>, <code>sepia</code>, <code>cool</code>, <code>night</code>, <code>mono</code>, <code>contrast</code> or <code>auto</code>. <code>auto</code> is <code>night</code> from <code>reading_night_from</code> until 07:00, else <code>app</code>. It colors the statement only; <code>P</code> in a Problem cycles it. <code>reading_night_from</code>: hour 0–23 when <code>auto</code> switches to night. See <a href="customizing.html#reading-and-fonts">Reading and fonts</a>.</td>
+</tr>
+<tr>
+<td><code>mouse</code></td>
+<td><code>true</code></td>
+<td>Enable mouse reporting. <code>false</code> disables it for terminal-native selection everywhere.</td>
+</tr>
+<tr>
+<td><code>wheel_lines</code></td>
+<td><code>3</code></td>
+<td>Lines scrolled per mouse wheel notch (1–20).</td>
+</tr>
+<tr>
+<td><code>mouse_select</code></td>
+<td><code>true</code></td>
+<td>Enable drag-to-select-lines and copy in the Problem view.</td>
+</tr>
+<tr>
+<td><code>submit_mode</code></td>
+<td><code>&quot;browser&quot;</code></td>
+<td><code>browser</code> or <code>direct</code>. See <a href="submit.html">Submitting</a>.</td>
+</tr>
+<tr>
+<td><code>browser</code></td>
+<td><code>&quot;default&quot;</code></td>
+<td>Browser for submit pages and Problem links: <code>default</code> (the system opener: xdg-open, open, wslview) or a command with optional arguments (<code>&quot;firefox&quot;</code>, <code>&quot;chromium --new-window&quot;</code>).</td>
+</tr>
+<tr>
+<td><code>border</code></td>
+<td><code>&quot;rounded&quot;</code></td>
+<td>Box border glyphs: <code>rounded</code>, <code>square</code>, <code>heavy</code>, <code>double</code>, <code>ascii</code>, or <code>none</code> (no frame, title line only).</td>
+</tr>
+<tr>
+<td><code>header</code></td>
+<td><code>true</code></td>
+<td>Show the tab bar and the rule under it. The tab keys (<code>1</code>-<code>5</code>, <code>tab</code>) still work when it is hidden.</td>
+</tr>
+<tr>
+<td><code>footer</code></td>
+<td><code>true</code></td>
+<td>Show the footer with key hints and status badges.</td>
+</tr>
+<tr>
+<td><code>tabs</code></td>
+<td><code>[&quot;problems&quot;, &quot;contests&quot;, &quot;stats&quot;, &quot;picker&quot;, &quot;settings&quot;]</code></td>
+<td>Visible tabs, in order. Names are <code>problems</code>, <code>contests</code>, <code>stats</code>, <code>picker</code>, <code>settings</code>; <code>settings</code> cannot be hidden. <code>verd config set tabs problems,stats,settings</code>.</td>
+</tr>
+<tr>
+<td><code>embed_zoom</code></td>
+<td><code>false</code></td>
+<td>Start the embedded Neovim zoomed (fullscreen, verd hidden) when it opens. <code>alt+z</code> toggles it.</td>
+</tr>
+</tbody>
+</table>
+<p>An unknown <code>submit_mode</code>, <code>embed_side</code>, <code>border</code>, <code>background</code> or tab name is a config error.</p>
+<p>Tables: <code>[lang.*]</code> (below), <code>[keys.&lt;context&gt;]</code> for shortcuts and <code>[themes.&lt;name&gt;]</code> for color themes. Both are covered in <a href="customizing.html">Customizing</a>, along with the CLI that edits them (<code>verd config set</code>, <code>verd keys</code>, <code>verd themes</code>). <code>theme</code> accepts any theme you define there.</p>
+<h2 id="languages">Languages<a class="anchor" href="#languages">#</a></h2>
+<p>Three languages ship by default, mirroring the Codeforces compilers:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Ext</th>
+<th>Compile</th>
+<th>Run</th>
+<th><code>cf_compiler_id</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>c</code></td>
+<td><code>c</code></td>
+<td><code>gcc -std=c11 -O2 -Wall -DLOCAL -I{include} -o {bin} {src} -lm</code></td>
+<td><code>{bin}</code></td>
+<td>43</td>
+</tr>
+<tr>
+<td><code>cpp</code></td>
+<td><code>cpp</code></td>
+<td><code>g++ -std=c++20 -O2 -Wall -DLOCAL -I{include} -o {bin} {src}</code></td>
+<td><code>{bin}</code></td>
+<td>89</td>
+</tr>
+<tr>
+<td><code>python</code></td>
+<td><code>py</code></td>
+<td>none (interpreted)</td>
+<td><code>python3 {src}</code></td>
+<td>31</td>
+</tr>
+</tbody>
+</table>
+<p>Override only what you change; omitted keys are inherited from the default of the same name:</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">lang</span><span class="p">.</span><span class="nx">cpp</span><span class="p">]</span>
+<span class="nx">compile</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;g++&#34;</span><span class="p">,</span> <span class="s2">&#34;-std=c++23&#34;</span><span class="p">,</span> <span class="s2">&#34;-O2&#34;</span><span class="p">,</span> <span class="s2">&#34;-o&#34;</span><span class="p">,</span> <span class="s2">&#34;{bin}&#34;</span><span class="p">,</span> <span class="s2">&#34;{src}&#34;</span><span class="p">]</span>
+
+<span class="c"># Add a language</span>
+<span class="p">[</span><span class="nx">lang</span><span class="p">.</span><span class="nx">rust</span><span class="p">]</span>
+<span class="nx">ext</span> <span class="p">=</span> <span class="s2">&#34;rs&#34;</span>
+<span class="nx">compile</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;rustc&#34;</span><span class="p">,</span> <span class="s2">&#34;-O&#34;</span><span class="p">,</span> <span class="s2">&#34;-o&#34;</span><span class="p">,</span> <span class="s2">&#34;{bin}&#34;</span><span class="p">,</span> <span class="s2">&#34;{src}&#34;</span><span class="p">]</span>
+<span class="nx">run</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;{bin}&#34;</span><span class="p">]</span>
+<span class="nx">cf_compiler_id</span> <span class="p">=</span> <span class="mi">75</span>
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ext</code></td>
+<td>File extension of Solutions.</td>
+</tr>
+<tr>
+<td><code>compile</code></td>
+<td>Build command. Omit for interpreted languages.</td>
+</tr>
+<tr>
+<td><code>run</code></td>
+<td>Run command. With no <code>compile</code>, it runs <code>{src}</code> directly.</td>
+</tr>
+<tr>
+<td><code>cf_compiler_id</code></td>
+<td>The Codeforces <code>programTypeId</code>, used by <a href="submit.html#direct-mode">direct submit</a>.</td>
+</tr>
+<tr>
+<td><code>time_multiplier</code></td>
+<td>Scales this language's time limit (overrides global <code>time_multiplier</code>; <code>0</code> = inherit). Use for slow languages like Python or JVM.</td>
+</tr>
+<tr>
+<td><code>float_eps</code></td>
+<td>Float tolerance for this language (overrides global <code>float_eps</code>; <code>0</code> = inherit).</td>
+</tr>
+<tr>
+<td><code>memory_multiplier</code></td>
+<td>Multiplies the Problem's memory limit for this language (default <code>0</code> = 1). For JVM languages that need more heap.</td>
+</tr>
+<tr>
+<td><code>template</code></td>
+<td>Path to a custom Solution template for this language (overrides the default from the <code>templates/</code> folder of <code>snippets_dir</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>Placeholders: <code>{src}</code> the Solution, <code>{bin}</code> the compiled output, <code>{dir}</code> the Problem directory, <code>{include}</code> the folder of headers verd ships (<code>~/.local/share/verd/include</code>). On macOS the default compilers are the newest Homebrew <code>g++-N</code> / <code>gcc-N</code> found (15 down to 9), since plain <code>g++</code> there is Apple Clang. Compiled binaries are cached by content, so an unchanged Solution is never rebuilt.</p>
+<h2 id="templates">Templates<a class="anchor" href="#templates">#</a></h2>
+<p><code>verd init</code> writes starter Templates to <code>&lt;snippets_dir&gt;/templates/</code> (default <code>snippets_dir</code> is <code>~/.config/verd/snippets</code>) and never overwrites existing ones unless you pass <code>--force</code>. Moving from an older verd: move <code>~/.config/verd/templates/</code> to <code>~/.config/verd/snippets/templates/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;lang&gt;.&lt;ext&gt;</code> (<code>cpp.cpp</code>, <code>python.py</code>)</td>
+<td>New Solutions.</td>
+</tr>
+<tr>
+<td><code>gen.&lt;lang&gt;.&lt;ext&gt;</code></td>
+<td>The stress test input generator; <code>argv[1]</code> is the seed.</td>
+</tr>
+<tr>
+<td><code>brute.&lt;lang&gt;.&lt;ext&gt;</code></td>
+<td>The slow, obviously correct Solution stress compares against.</td>
+</tr>
+</tbody>
+</table>
+<p>Solution Templates are Go <code>text/template</code> files. Variables: <code>{{.Problem.ID}}</code>, <code>{{.Problem.Name}}</code>, <code>{{.Problem.URL}}</code>, <code>{{.Handle}}</code>, <code>{{.Contest}}</code>, <code>{{.Index}}</code>, <code>{{.Date}}</code> (2026-10-10), <code>{{.Time}}</code> (20:50), <code>{{.DateTime}}</code>. Edit one per language in Settings, <strong>Snippets</strong>. <code>{{cursor}}</code> marks where Neovim places the cursor and is removed from the output.</p>
+<h2 id="snippets">Snippets<a class="anchor" href="#snippets">#</a></h2>
+<p><code>verd init</code> also copies the built-in snippet library to <code>&lt;snippets_dir&gt;/library/&lt;lang&gt;/&lt;name&gt;.&lt;ext&gt;</code> (35 for C++ and Python, 34 for C, which has no <code>wgraphinput</code>: bfs, dfs, dijkstra, dsu, segment tree, modpow, sieve, prefix sums, vector input, and more). Edit them or add your own: the file name is the snippet name and a comment on the first line is its description. A file with a built-in's name replaces it; verd also works without running <code>init</code> (the built-ins are embedded).</p>
+<ul>
+<li>Manage your own: <code>verd snippet add [--lang L] [--desc D] &lt;name&gt; [file|-]</code> adds one from a file or stdin (with no source it creates a stub and opens your editor); <code>verd snippet edit &lt;name&gt;</code> edits one (a built-in gets an editable copy first); <code>verd snippet rm &lt;name&gt;</code> removes your file (a built-in of that name comes back); <code>verd snippet open</code> opens the library folder in your editor; <code>verd snippet path</code> prints the snippets dir. A first-line comment is the description; <code>add</code> writes one for you (<code>--desc</code>, else the name) when the code has none. In Neovim: <code>:'&lt;,'&gt;w !verd snippet add mysnip -</code> saves the selection.</li>
+<li>In the Problem view press <code>i</code>: type to filter, <code>tab</code> switches language, <code>enter</code> copies the snippet to the clipboard.</li>
+<li>From the TUI: Settings (<code>5</code>) &gt; <strong>Snippets</strong> has <strong>Edit snippet</strong> (pick one, it opens in your editor; a built-in gets an editable copy first), <strong>Add snippet</strong> (type a name, <code>enter</code> creates it with a placeholder description line and opens it) and <strong>Snippet folder</strong>. <code>tab</code> in the picker changes language; the picker starts on the language shown by the <strong>Template</strong> row (<code>←</code>/<code>→</code> there). Names use letters, digits, <code>_</code> and <code>-</code>, and an existing name is refused. In the command palette (<code>ctrl+k</code>, type <code>snippet</code>) they jump to that row in Settings, except while a Problem is on screen.</li>
+<li><code>verd snippet --list [--lang python]</code> lists them; <code>verd snippet dijkstra</code> prints one (<code>--copy</code> puts it on the clipboard). In Neovim: <code>:r !verd snippet dijkstra</code>.</li>
+<li>C snippets for graphs (<code>bfs</code>, <code>dfs</code>, <code>dijkstra</code>, <code>topo_sort</code>) build on <code>graphinput</code>; paste that first. Everything else is self-contained.</li>
+<li><code>verd snippet --export --lang cpp &gt; ~/.config/nvim/snippets/verd-cpp.json</code> writes the library as VSCode-style JSON (prefix = snippet name). With LuaSnip: <code>require(&quot;luasnip.loaders.from_vscode&quot;).load_standalone({ path = &quot;~/.config/nvim/snippets/verd-cpp.json&quot;, lang = &quot;cpp&quot; })</code>. VSCode takes the same file as a user snippet file. Re-export after you edit the library.</li>
+<li>Snippets are plain code, not Templates: no <code>{{...}}</code> variables.</li>
+</ul>
+<p>Set <code>snippets_dir = &quot;~/dotfiles/verd&quot;</code> to keep Templates and snippets elsewhere (<code>~</code> is expanded).</p>
+<h2 id="files-verd-writes">Files verd writes<a class="anchor" href="#files-verd-writes">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.config/verd/config.toml</code></td>
+<td>Your config.</td>
+</tr>
+<tr>
+<td><code>~/.config/verd/snippets/templates/</code></td>
+<td>Templates (in <code>snippets_dir</code>).</td>
+</tr>
+<tr>
+<td><code>~/.config/verd/snippets/library/&lt;lang&gt;/</code></td>
+<td>The snippet library, one file per snippet.</td>
+</tr>
+<tr>
+<td><code>~/.config/verd/credentials.json</code></td>
+<td>Only if the OS keyring was unavailable at <code>verd login</code>; mode <code>0600</code>.</td>
+</tr>
+<tr>
+<td><code>~/.local/share/verd/verd.db</code></td>
+<td>SQLite cache: Problems, Contests, Submissions, per-Problem choices. Settings, <strong>Clear cache</strong> empties the fetched data and refetches it (marks and per-Problem choices stay).</td>
+</tr>
+<tr>
+<td><code>~/.cache/verd/</code></td>
+<td>Compiled binaries.</td>
+</tr>
+<tr>
+<td><code>$XDG_RUNTIME_DIR/verd/verd.sock</code></td>
+<td>The socket <code>verd test</code> / <code>submit</code> / <code>stress</code> use to reach the TUI.</td>
+</tr>
+<tr>
+<td><code>&lt;workspace&gt;/&lt;contest&gt;/&lt;index&gt;/</code></td>
+<td><code>main.&lt;ext&gt;</code>, <code>gen.&lt;ext&gt;</code>, <code>brute.&lt;ext&gt;</code>, and <code>tests/</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><code>tests/</code> holds <code>sample-N.in/.ans</code> (written from the statement) and <code>custom-N.in/.ans</code> (yours). Only complete <code>.in</code>/<code>.ans</code> pairs run.</p>
+<p>The workspace is created on first use. verd runs on Linux and macOS; on Windows run it inside WSL (native Windows is not supported) and keep the workspace on the Linux filesystem. verd warns when it is under <code>/mnt/</code>.</p>
+<div class="pager"><a href="customizing.html"><small>Previous</small>Customizing</a><a class="next" href="keys.html"><small>Next</small>Keys</a></div></article><aside class="toc"><h4>On this page</h4><a href="#keys">Keys</a><a href="#languages">Languages</a><a href="#templates">Templates</a><a href="#snippets">Snippets</a><a href="#files-verd-writes">Files verd writes</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

@@ -1,0 +1,103 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stress testing · verd</title><meta name="description" content="Find the input where your solution and a brute force disagree, and make it fast."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a class="on" href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="stress-testing">Stress testing</h1>
+<p>Your solution passes the samples and gets Wrong Answer on the judge? A stress test finds an input where it disagrees with a slow, obviously correct version.</p>
+<h2 id="the-idea">The idea<a class="anchor" href="#the-idea">#</a></h2>
+<p>You provide two small programs next to your solution:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen.&lt;ext&gt;</code></td>
+<td>prints one random input; <code>argv[1]</code> is the seed</td>
+</tr>
+<tr>
+<td><code>brute.&lt;ext&gt;</code></td>
+<td>solves the problem slowly but surely</td>
+</tr>
+</tbody>
+</table>
+<p>verd runs seeds <code>1, 2, 3, ...</code>, feeds each generated input to your solution and to <code>brute</code>, and stops at the first disagreement.</p>
+<h2 id="try-it">Try it<a class="anchor" href="#try-it">#</a></h2>
+<ol>
+<li>
+<p>Press <code>S</code> in the Problem view (or run <code>verd stress main.cpp</code>). The first time, verd creates <code>gen</code> and <code>brute</code> from your Templates and opens them.</p>
+</li>
+<li>
+<p>Fill them in. A generator for &quot;read one integer&quot;:</p>
+<pre><code class="hl"><span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">random</span>
+<span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+</code></pre>
+</li>
+<li>
+<p>Press <code>S</code> again. Progress shows live; a counterexample opens in the diff view with the seed, the input and both outputs.</p>
+</li>
+<li>
+<p>Press <code>w</code> to save it as your next Custom Test (brute's output is the expected answer). Now <code>t</code> reproduces the bug every time.</p>
+</li>
+</ol>
+<pre><code class="hl">$ verd stress main.cpp
+MISMATCH at seed 7 (iteration 7)
+input:
+37
+brute:
+74
+solution:
+75
+$ echo $?
+1
+</code></pre>
+<h2 id="limits-and-results">Limits and results<a class="anchor" href="#limits-and-results">#</a></h2>
+<p>By default it stops after 1000 iterations or 30 seconds. <code>--iter N</code> and <code>--time S</code> change that. A stress run ends with one of:</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mismatch</td>
+<td>counterexample found (exit 1)</td>
+</tr>
+<tr>
+<td><code>solution-re</code> / <code>solution-tle</code></td>
+<td>your solution crashed or was too slow on that input (exit 1)</td>
+</tr>
+<tr>
+<td>no counterexample</td>
+<td>within the limits (exit 0)</td>
+</tr>
+<tr>
+<td>error</td>
+<td><code>gen</code> or <code>brute</code> failed or did not build; not a verdict on your solution (exit 2)</td>
+</tr>
+</tbody>
+</table>
+<p>Seeds are deterministic: the same bug gives the same counterexample every time.</p>
+<h2 id="making-it-faster">Making it faster<a class="anchor" href="#making-it-faster">#</a></h2>
+<p>Iterations already run in parallel (<code>--jobs N</code>, default one per CPU, at most 16). For tiny programs the cost is process startup, and two opt-in flags remove most of it:</p>
+<pre><code class="hl"><span class="sc">verd</span> stress <span class="sf">--batch</span> 100 main.cpp            <span class="cm"># gen runs once per 100 seeds</span>
+<span class="sc">verd</span> stress <span class="sf">--batch</span> 100 <span class="sf">--multi</span> 100 main.cpp</code></pre>
+<ul>
+<li><code>--batch N</code>: <code>gen</code> is run as <code>gen &lt;first seed&gt; &lt;N&gt;</code> and prints N cases, each followed by a line <code>---</code>.</li>
+<li><code>--multi N</code>: for problems with several test cases per input. Your solution and brute read <code>t</code> and then <code>t</code> cases, <code>gen</code> prints one case without <code>t</code>, and N cases go through one process pair. When a batch disagrees verd reruns its seeds one by one, so the reported seed is exact.</li>
+</ul>
+<p>On trivial C++ programs: about 3.8k iterations/s by default, about 290k with both flags.</p>
+<p>See <a href="../docs/testing.html">Testing and stress</a> for the details, and <a href="troubleshooting.html">Troubleshooting</a> if a build fails.</p>
+<p>Next: <a href="submit.html">Submitting</a>.</p>
+<div class="pager"><a href="solve.html"><small>Previous</small>Read, edit and test</a><a class="next" href="submit.html"><small>Next</small>Submitting</a></div></article><aside class="toc"><h4>On this page</h4><a href="#the-idea">The idea</a><a href="#try-it">Try it</a><a href="#limits-and-results">Limits and results</a><a href="#making-it-faster">Making it faster</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snippets and Templates · verd</title><meta name="description" content="Starter files and a library of ready algorithms: bfs, dijkstra, modpow and more."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a class="on" href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="snippets-and-templates">Snippets and Templates</h1>
+<p>Two different things live in <code>~/.config/verd/snippets/</code> (change it with <code>snippets_dir</code>).</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>What</th>
+<th>Used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Template</strong></td>
+<td>the starting text of a new solution, one per language</td>
+<td>automatically, when you press <code>e</code> the first time</td>
+</tr>
+<tr>
+<td><strong>Snippet</strong></td>
+<td>a reusable piece of code (bfs, dijkstra, modpow)</td>
+<td>only when you ask</td>
+</tr>
+</tbody>
+</table>
+<h2 id="templates">Templates<a class="anchor" href="#templates">#</a></h2>
+<p><code>templates/&lt;lang&gt;.&lt;ext&gt;</code> is a Go <code>text/template</code>. Variables: <code>{{.Problem.ID}}</code>, <code>{{.Problem.Name}}</code>, <code>{{.Problem.URL}}</code>, <code>{{.Handle}}</code>, <code>{{.Contest}}</code>, <code>{{.Index}}</code>, <code>{{.Date}}</code>, <code>{{.Time}}</code>, <code>{{.DateTime}}</code>. <code>{{cursor}}</code> marks where the editor cursor starts.</p>
+<pre><code class="hl"><span class="c1">// {{.Problem.ID}} {{.Problem.Name}}
+</span><span class="c1">// {{.Problem.URL}}
+</span><span class="c1"></span><span class="cp">#include</span> <span class="cpf">&lt;bits/stdc++.h&gt;</span><span class="cp">
+</span><span class="cp"></span><span class="k">using</span> <span class="k">namespace</span> <span class="n">std</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">ios</span><span class="o">::</span><span class="n">sync_with_stdio</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+    <span class="n">cin</span><span class="p">.</span><span class="n">tie</span><span class="p">(</span><span class="k">nullptr</span><span class="p">);</span>
+    <span class="p">{{</span><span class="n">cursor</span><span class="p">}}</span>
+<span class="p">}</span>
+</code></pre>
+<p>The default Templates (<code>verd init --force</code> refreshes yours) are tourist-style. C++ has <code>debug(...)</code> (a no-op <code>42</code> off <code>LOCAL</code>), <code>ll</code>, <code>ull</code>, <code>pii</code>, <code>vi</code>, <code>all(x)</code>, <code>sz(x)</code>, <code>pb</code>, <code>F</code>/<code>S</code>, <code>fors(i, n)</code>, <code>cin &gt;&gt; v</code> and <code>cout &lt;&lt; v</code> for a whole vector, <code>YES(b)</code>/<code>NO(b)</code>, fast IO and <code>while (T--) solve()</code>. C has <code>ll</code>, <code>ull</code>, <code>fors</code>, <code>min</code>/<code>max</code>, <code>read_int</code>, <code>read_ll</code> and <code>YES</code>. Python has <code>input</code>, <code>debug</code>, <code>INF</code>, <code>MOD</code>, <code>inp()</code>, <code>ints()</code>, <code>YES()</code> and a raised recursion limit. Delete what you do not use.</p>
+<p>Edit one from Settings (<code>5</code>) &gt; <strong>Snippets</strong>, or open the file yourself. <code>gen.&lt;lang&gt;.&lt;ext&gt;</code> and <code>brute.&lt;lang&gt;.&lt;ext&gt;</code> are the <a href="stress.html">stress</a> helpers' Templates. A language's <code>template = &quot;/path&quot;</code> in <code>[lang.*]</code> overrides all of this.</p>
+<h2 id="the-snippet-library">The snippet library<a class="anchor" href="#the-snippet-library">#</a></h2>
+<p>verd ships 35 snippets for C++ and Python and 34 for C (C has no <code>wgraphinput</code>): input readers (<code>vecinput</code>, <code>matinput</code>, <code>gridinput</code>, <code>graphinput</code>, <code>wgraphinput</code>), <code>fastio</code>, <code>prefix_sum</code>, <code>prefix_sum_2d</code>, <code>diff_array</code>, <code>modpow</code>, <code>modinv</code>, <code>extgcd</code>, <code>sieve</code>, <code>spf_factorize</code>, <code>miller_rabin</code>, <code>divisors</code>, <code>ncr_mod</code>, <code>matrix_pow</code>, <code>bfs</code>, <code>grid_bfs</code>, <code>dfs</code>, <code>dijkstra</code>, <code>topo_sort</code>, <code>floyd_warshall</code>, <code>dsu</code>, <code>fenwick</code>, <code>segment_tree</code>, <code>sparse_table</code>, <code>binary_search</code>, <code>lis</code>, <code>compress</code>, <code>prefix_function</code>, <code>z_function</code>, <code>string_hash</code>, <code>debug</code>.</p>
+<h3 id="use-one">Use one</h3>
+<ul>
+<li>In the Problem view press <code>i</code>: type to filter, <code>tab</code> switches language, <code>enter</code> copies the snippet to the clipboard. Paste it into your editor.</li>
+<li>From the shell:</li>
+</ul>
+<pre><code class="hl"><span class="sc">verd</span> snippet <span class="sf">--list</span>                  <span class="cm"># names and descriptions (C++)</span>
+<span class="sc">verd</span> snippet <span class="sf">--lang</span> python <span class="sf">--list</span>
+<span class="sc">verd</span> snippet dijkstra                <span class="cm"># print it</span>
+<span class="sc">verd</span> snippet <span class="sf">--copy</span> modpow           <span class="cm"># to the clipboard</span></code></pre>
+<p>In Neovim, <code>:r !verd snippet dijkstra</code> inserts it at the cursor. A unique prefix is enough (<code>verd snippet dijk</code>).</p>
+<h3 id="add-and-edit-from-the-tui">Add and edit from the TUI</h3>
+<p>Settings (<code>5</code>) &gt; <strong>Snippets</strong> has three rows besides the Template:</p>
+<ul>
+<li><strong>Edit snippet</strong>: <code>enter</code> opens a picker. Type to filter, <code>enter</code> opens the snippet in your editor. A built-in gets an editable copy in your library first, which then replaces it.</li>
+<li><strong>Add snippet</strong>: <code>enter</code> opens the picker; type a new name (letters, digits, <code>_</code>, <code>-</code>) and press <code>enter</code>. verd creates the file with a placeholder description line and opens it. A name that already exists is refused: edit it instead.</li>
+<li><strong>Snippet folder</strong>: opens the library folder in your editor.</li>
+</ul>
+<p>In the pickers <code>tab</code> changes language and <code>esc</code> closes. They start on the language shown by the <strong>Template</strong> row (<code>←</code>/<code>→</code> there). The command palette (<code>ctrl+k</code>, type <code>snippet</code>) jumps to these rows, except while a Problem is on screen.</p>
+<h3 id="add-your-own-from-the-shell">Add your own from the shell</h3>
+<pre><code class="hl"><span class="sc">verd</span> snippet add <span class="sf">--desc</span> <span class="ss">&#34;double it&#34;</span> twice twice.cpp     <span class="cm"># from a file</span>
+<span class="sc">echo</span> <span class="ss">&#39;x = 1&#39;</span> <span class="so">|</span> <span class="sc">verd</span> snippet add <span class="sf">--lang</span> python xone -    <span class="cm"># from stdin</span>
+<span class="sc">verd</span> snippet add <span class="sf">--desc</span> <span class="ss">&#34;my helper&#34;</span> helper              <span class="cm"># no source: a stub opens in your editor</span></code></pre>
+<p>In Neovim, <code>:'&lt;,'&gt;w !verd snippet add mysnip -</code> saves the selected lines.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd snippet edit &lt;name&gt;</code></td>
+<td>edit one (a built-in gets an editable copy first)</td>
+</tr>
+<tr>
+<td><code>verd snippet rm &lt;name&gt;</code></td>
+<td>remove your file; a built-in of that name comes back</td>
+</tr>
+<tr>
+<td><code>verd snippet open</code></td>
+<td>open the library folder in your editor</td>
+</tr>
+<tr>
+<td><code>verd snippet path</code></td>
+<td>print the snippets directory</td>
+</tr>
+</tbody>
+</table>
+<p>A snippet is a file <code>library/&lt;lang&gt;/&lt;name&gt;.&lt;ext&gt;</code>; the comment on its first line is its description. A file with a built-in's name replaces it. They are plain code, with no <code>{{...}}</code> variables.</p>
+<h3 id="for-luasnip-or-vscode">For LuaSnip or VSCode</h3>
+<pre><code class="hl"><span class="sc">verd</span> snippet <span class="sf">--export</span> <span class="sf">--lang</span> cpp <span class="so">&gt;</span> ~/.config/nvim/snippets/verd-cpp.json</code></pre>
+<pre><code class="hl"><span class="n">require</span><span class="p">(</span><span class="s2">&#34;luasnip.loaders.from_vscode&#34;</span><span class="p">).</span><span class="n">load_standalone</span><span class="p">({</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">&#34;~/.config/nvim/snippets/verd-cpp.json&#34;</span><span class="p">,</span> <span class="n">lang</span> <span class="o">=</span> <span class="s2">&#34;cpp&#34;</span> <span class="p">})</span>
+</code></pre>
+<p>Re-export after you edit the library.</p>
+<h3 id="in-c-graphs">In C: graphs</h3>
+<p><code>bfs</code>, <code>dfs</code>, <code>dijkstra</code> and <code>topo_sort</code> build on <code>graphinput</code> (edge arrays); paste that one first. Everything else is self-contained.</p>
+<p>Next: <a href="customize.html">Customize</a>. Reference: <a href="../docs/config.html#snippets">Configuration</a>.</p>
+<div class="pager"><a href="editorials.html"><small>Previous</small>Editorials</a><a class="next" href="customize.html"><small>Next</small>Customize</a></div></article><aside class="toc"><h4>On this page</h4><a href="#templates">Templates</a><a href="#the-snippet-library">The snippet library</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="verd: a judge's gavel gives the verdict, AC">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1b1c20"/><stop offset="1" stop-color="#0a0b0d"/></linearGradient>
+    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8792a8"/><stop offset=".28" stop-color="#eef1f7"/><stop offset=".6" stop-color="#b9c2d3"/><stop offset="1" stop-color="#5a6378"/></linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a404c"/><stop offset=".3" stop-color="#6a7385"/><stop offset="1" stop-color="#2c313b"/></linearGradient>
+    <linearGradient id="grip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f7"/><stop offset=".5" stop-color="#aeb8ca"/><stop offset="1" stop-color="#5f687c"/></linearGradient>
+    <linearGradient id="ok" x1="20" y1="100" x2="108" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6ee7a0"/><stop offset=".6" stop-color="#4ade80"/><stop offset="1" stop-color="#22c55e"/></linearGradient>
+    <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#bg)"/>
+  <rect x="3.75" y="3.75" width="120.5" height="120.5" rx="27.25" fill="none" stroke="#2f3550" stroke-width="1.5"/>
+  <g class="block"><rect x="26" y="108" width="76" height="9" rx="4" fill="#1b1e30" stroke="#33395a" stroke-width="1.2"/><path d="M30 100h68a4 4 0 0 1 4 4v4H26v-4a4 4 0 0 1 4-4z" fill="#2b3150" stroke="#414868" stroke-width="1.2"/><rect x="31" y="101.5" width="66" height="1.8" rx=".9" fill="#7a88c8" opacity=".5"/></g>
+  <g class="gavel">
+    <rect x="16" y="75.5" width="42" height="9" rx="4.5" fill="url(#grip)"/>
+    <path d="M24 75.5v9M29 75.5v9M34 75.5v9" stroke="#6b4217" stroke-width="1.6" opacity=".5"/>
+    <circle cx="16" cy="80" r="6.5" fill="url(#grip)"/>
+    <rect x="52" y="60" width="30" height="40" rx="9" fill="url(#barrel)"/>
+    <rect x="52" y="60" width="30" height="9" rx="4.5" fill="url(#cap)"/><rect x="52" y="91" width="30" height="9" rx="4.5" fill="url(#cap)"/>
+    <rect x="57" y="64" width="3.4" height="32" rx="1.7" fill="#fff" opacity=".28"/>
+    <path d="M52 69.5h30M52 90.5h30" stroke="#2a1d12" stroke-width="1.4" opacity=".55"/>
+    <rect x="49.5" y="72" width="5" height="16" rx="2" fill="#5f687c"/>
+  </g>
+  <g class="badge"><circle cx="102" cy="31" r="17" fill="url(#ok)"/><path d="M93 31.5l6.5 6.5L112 24" fill="none" stroke="#0a0b0d" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg>

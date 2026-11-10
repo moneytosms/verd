@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finding problems · verd</title><meta name="description" content="Search, filters, the Picker, stats, CSES and working offline."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a class="on" href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="finding-problems">Finding problems</h1>
+<h2 id="the-problems-tab">The Problems tab<a class="anchor" href="#the-problems-tab">#</a></h2>
+<p>Every Codeforces problem in one list with its rating, solver count and tags. <code>✓</code> marks a problem you solved and <code>✗</code> one you attempted, both taken from your Codeforces submissions. <code>j</code>/<code>k</code> move, <code>enter</code> opens.</p>
+<h3 id="search">Search</h3>
+<p>Press <code>/</code> and type. It is a live fuzzy search.</p>
+<pre><code class="hl">wmln          finds Watermelon (letters in order)
+water 4a      several words must all match
+#dp           matches tags
+</code></pre>
+<p><code>tab</code> inside the prompt cycles what is searched: all, name, tag, id. <code>enter</code> keeps the search, <code>esc</code> clears it.</p>
+<h3 id="filters">Filters</h3>
+<p>Press <code>f</code> for the filter modal (rating range, status, sort, source, tags), or <code>:</code> to type a filter expression:</p>
+<pre><code class="hl">800-1200 +dp -graphs unsolved
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>800-1200</code>, <code>800-</code>, <code>-1200</code>, <code>1500</code></td>
+<td>rating range or exact rating</td>
+</tr>
+<tr>
+<td><code>+dp</code> / <code>-graphs</code></td>
+<td>include / exclude a tag (prefix match; <code>_</code> for a space: <code>+two_pointers</code>)</td>
+</tr>
+<tr>
+<td><code>unsolved</code> or <code>u</code></td>
+<td>only problems you have not solved</td>
+</tr>
+<tr>
+<td><code>src:cses</code></td>
+<td>one source (see below)</td>
+</tr>
+</tbody>
+</table>
+<p>The chips above the list show what is active; <code>X</code> clears everything.</p>
+<h2 id="the-picker">The Picker<a class="anchor" href="#the-picker">#</a></h2>
+<p>Press <code>4</code> for a random unsolved problem in your rating band. <code>r</code> or <code>space</code> re-rolls, <code>f</code> changes the filter, <code>w</code> picks from your weak topics, <code>enter</code> opens it.</p>
+<pre><code class="hl"><span class="sc">verd</span> daily      <span class="cm"># today&#39;s pick, from the shell; the same all day</span></code></pre>
+<h2 id="stats">Stats<a class="anchor" href="#stats">#</a></h2>
+<p><code>3</code> shows your totals, a rating chart, a difficulty histogram, per-topic strengths, streaks and a solve heatmap. Press <code>n</code>/<code>N</code> to walk through problems you attempted and did not solve, <code>enter</code> opens one, <code>p</code> opens the Picker on your weak topics.</p>
+<h2 id="other-sources">Other sources<a class="anchor" href="#other-sources">#</a></h2>
+<p>verd can show the <a href="https://cses.fi/problemset/">CSES Problem Set</a> next to Codeforces.</p>
+<pre><code class="hl"><span class="sc">verd</span> config set source_cses true     <span class="cm"># then press ctrl+r in verd to load the tasks</span>
+<span class="sc">verd</span> sync cses                       <span class="cm"># pull in what you already solved</span></code></pre>
+<p>CSES tasks appear as <code>CSES1068</code> and open, test and stress like any other. See <a href="../docs/sources.html">Sources</a> for how submitting and solved marks work there.</p>
+<h2 id="offline">Offline<a class="anchor" href="#offline">#</a></h2>
+<p>The problem list, statements, your submissions and editorials are cached in <code>~/.local/share/verd/verd.db</code>. Without a network verd works from the cache and says &quot;offline&quot;; <code>ctrl+r</code> refreshes when you are back.</p>
+<p>Next: <a href="solve.html">Read, edit and test</a>.</p>
+<div class="pager"><a href="start.html"><small>Previous</small>Quick start</a><a class="next" href="solve.html"><small>Next</small>Read, edit and test</a></div></article><aside class="toc"><h4>On this page</h4><a href="#the-problems-tab">The Problems tab</a><a href="#the-picker">The Picker</a><a href="#stats">Stats</a><a href="#other-sources">Other sources</a><a href="#offline">Offline</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

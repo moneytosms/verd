@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick start · verd</title><meta name="description" content="Install, set up and solve your first problem in five minutes."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a class="on" href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="quick-start">Quick start</h1>
+<p>From nothing to a submitted solution in about five minutes.</p>
+<h2 id="1-install">1. Install<a class="anchor" href="#1-install">#</a></h2>
+<pre><code class="hl"><span class="sc">curl</span> <span class="sf">-fsSL</span> https://raw.githubusercontent.com/moneytosms/verd/main/install.sh <span class="so">|</span> <span class="sc">sh</span>
+<span class="sc">verd</span> <span class="sf">--version</span></code></pre>
+<p>Other ways (<code>go install</code>, tarballs) are on the <a href="https://moneytosms.github.io/verd/install.html">Install</a> page. You also need a compiler or interpreter for the language you solve in (<code>g++</code>, <code>gcc</code> or <code>python3</code> by default) and, for editing, <code>nvim</code> (any editor works).</p>
+<h2 id="2-set-up">2. Set up<a class="anchor" href="#2-set-up">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> init            <span class="cm"># writes config.toml, Templates and the snippet library</span>
+<span class="sc">verd</span> doctor          <span class="cm"># checks compilers, editor and terminal</span></code></pre>
+<p><code>verd init</code> asks for your Codeforces handle, the only required setting. To skip the questions:</p>
+<pre><code class="hl"><span class="sc">verd</span> init <span class="sf">--no-setup</span>
+<span class="sc">verd</span> config set handle tourist</code></pre>
+<h2 id="3-open-verd">3. Open verd<a class="anchor" href="#3-open-verd">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span></code></pre>
+<p>The first start downloads the problem list, then works offline from its cache. Five tabs sit along the top, switched with <code>1</code> to <code>5</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code> Problems</td>
+<td>every problem, with search, filters and solved marks</td>
+</tr>
+<tr>
+<td><code>2</code> Contests</td>
+<td>contests (<code>/</code> to search), and timed <a href="contests.html">sessions</a></td>
+</tr>
+<tr>
+<td><code>3</code> Stats</td>
+<td>your rating, topics and streaks</td>
+</tr>
+<tr>
+<td><code>4</code> Picker</td>
+<td>a random unsolved problem in your rating band</td>
+</tr>
+<tr>
+<td><code>5</code> Settings</td>
+<td>every option, live</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lost? Press <code>ctrl+k</code>.</strong> The command palette fuzzy-runs any action or setting, so you can find a feature without knowing its key. Press <code>?</code> on any screen for its keys. <code>Z</code> toggles zen mode (just the statement and tests).</p>
+<h2 id="4-solve-one-problem">4. Solve one problem<a class="anchor" href="#4-solve-one-problem">#</a></h2>
+<ol>
+<li>On Problems press <code>/</code>, type <code>water</code>, press <code>enter</code> to keep the search, then <code>enter</code> again to open a problem.</li>
+<li>Read the statement on the left. The right side lists the sample tests.</li>
+<li>Press <code>e</code>. verd creates <code>main.cpp</code> from your Template and opens Neovim next to verd.</li>
+<li>Write the solution and save. With <code>autotest</code> on (default) the tests run by themselves; or press <code>t</code>.</li>
+<li>All <code>AC</code>? Press <code>s</code>. verd copies the solution, opens the submit page and shows the verdict as it arrives.</li>
+</ol>
+<pre><code class="hl">~/verd/1900/A/
+├── main.cpp          your solution
+├── tests/            sample-N and custom-N .in/.ans files
+└── notes.md          your notes (N in the Problem view)
+</code></pre>
+<h2 id="what-next">What next<a class="anchor" href="#what-next">#</a></h2>
+<ul>
+<li><a href="problems.html">Finding problems</a>: search, filters, the Picker and your stats.</li>
+<li><a href="solve.html">Read, edit and test</a>: the everyday loop in detail.</li>
+<li><a href="stress.html">Stress testing</a>: when a solution passes the samples and still fails.</li>
+<li><a href="customize.html">Customize</a>: themes, shortcuts, layout.</li>
+</ul>
+<div class="pager"><span></span><a class="next" href="problems.html"><small>Next</small>Finding problems</a></div></article><aside class="toc"><h4>On this page</h4><a href="#1-install">1. Install</a><a href="#2-set-up">2. Set up</a><a href="#3-open-verd">3. Open verd</a><a href="#4-solve-one-problem">4. Solve one problem</a><a href="#what-next">What next</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

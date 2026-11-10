@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customize · verd</title><meta name="description" content="Config, themes, shortcuts, reading, layout and your own languages."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a class="on" href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="customize">Customize</h1>
+<p>Everything is configurable, live, from the Settings tab (<code>5</code>) or from <code>~/.config/verd/config.toml</code>. Edits to the file apply within about a second, so you can keep the editor open next to verd.</p>
+<h2 id="three-ways-to-change-a-setting">Three ways to change a setting<a class="anchor" href="#three-ways-to-change-a-setting">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> config                        <span class="cm"># print the effective config</span>
+<span class="sc">verd</span> config get theme              <span class="cm"># read one key</span>
+<span class="sc">verd</span> config set theme nord         <span class="cm"># change one key; your comments in the file stay</span>
+<span class="sc">verd</span> config keys                   <span class="cm"># every key set accepts</span></code></pre>
+<p>In the TUI, <code>5</code> opens Settings: <code>j</code>/<code>k</code> move, <code>left</code>/<code>right</code> change a value, <code>enter</code> edits text, <code>e</code> opens <code>config.toml</code> in your editor. A bad value is refused (or named in an error), never silently ignored.</p>
+<h2 id="themes">Themes<a class="anchor" href="#themes">#</a></h2>
+<p>Eight ship: <code>terminal</code> (inherits your palette, the default), <code>tokyo-night</code>, <code>dracula</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>one-dark</code>, <code>solarized</code>.</p>
+<pre><code class="hl"><span class="sc">verd</span> themes                        <span class="cm"># list them</span>
+<span class="sc">verd</span> config set theme tokyo-night
+<span class="sc">verd</span> config set background dark    <span class="cm"># auto | dark | light</span></code></pre>
+<p>Make your own: start from a built-in and change what you like.</p>
+<pre><code class="hl"><span class="sc">verd</span> themes show nord <span class="so">&gt;&gt;</span> ~/.config/verd/config.toml    <span class="cm"># appends a [themes.my-nord] block</span>
+<span class="sc">verd</span> config set theme my-nord</code></pre>
+<pre><code class="hl"><span class="p">[</span><span class="nx">themes</span><span class="p">.</span><span class="nx">my-nord</span><span class="p">.</span><span class="nx">dark</span><span class="p">]</span>
+<span class="nx">accent</span> <span class="p">=</span> <span class="s2">&#34;#88c0d0&#34;</span>       <span class="c"># titles, focused borders, the active tab</span>
+<span class="nx">good</span>   <span class="p">=</span> <span class="s2">&#34;#a3be8c&#34;</span>       <span class="c"># AC and solved marks</span>
+</code></pre>
+<h2 id="shortcuts">Shortcuts<a class="anchor" href="#shortcuts">#</a></h2>
+<p>Every key is an action in a context, written <code>context.action</code> (for example <code>problem.stress</code>).</p>
+<pre><code class="hl"><span class="sc">verd</span> keys                          <span class="cm"># all shortcuts: default and current</span>
+<span class="sc">verd</span> keys set problem.run_tests ctrl+t
+<span class="sc">verd</span> keys set problem.submit s ctrl+s      <span class="cm"># several keys are allowed</span>
+<span class="sc">verd</span> keys reset problem.run_tests
+<span class="sc">verd</span> keys check                    <span class="cm"># conflicts and unknown actions</span>
+<span class="sc">verd</span> keys presets                  <span class="cm"># default, vim, arrows, emacs</span>
+<span class="sc">verd</span> keys preset vim</code></pre>
+<p>A rebound action stops answering to its old key, and two actions on one key within a screen are refused. <code>ctrl+c</code> always quits. In the TUI: Settings &gt; <strong>Keyboard shortcuts</strong> (<code>/</code> searches, <code>enter</code> rebinds, <code>a</code> adds a second key, <code>backspace</code> resets). The full table is <a href="../docs/keys.html">Keys</a>.</p>
+<p><strong>Command palette.</strong> <code>ctrl+k</code> (action <code>common.palette</code>) opens one fuzzy box over every action on the current screen and every setting. <code>enter</code> runs the action (using your own binding), flips a yes/no setting such as <code>Show footer</code> in place, or jumps to any other setting. In Settings, <code>/</code> fuzzy-searches settings by name, key and description; <code>?</code> then <code>/</code> searches all shortcuts.</p>
+<h2 id="reading">Reading<a class="anchor" href="#reading">#</a></h2>
+<p>How statements look:</p>
+<pre><code class="hl"><span class="sc">verd</span> config set images blocks         <span class="cm"># auto | kitty | blocks | off: statement images in the terminal</span>
+<span class="sc">verd</span> config set reading_width 90         <span class="cm"># cap the line length (0 = the whole pane)</span>
+<span class="sc">verd</span> config set reading_spacing relaxed  <span class="cm"># compact | normal | relaxed</span>
+<span class="sc">verd</span> config set reading_headings bar     <span class="cm"># plain | bold | bar | underline</span>
+<span class="sc">verd</span> config set reading_math latex       <span class="cm"># unicode (default) shows 1 ≤ w ≤ 10⁹; latex shows the TeX source</span>
+<span class="sc">verd</span> config set reading_emphasis false   <span class="cm"># no italics or bold, for fonts that render them badly</span></code></pre>
+<p>Your terminal sets the font.</p>
+<p><strong>Line length</strong> is how many characters fit across one line of text. Lines of 60 to 75 columns are the easiest to read: the eye finds the start of the next line without losing its place. Much wider lines make the eye hunt. <code>reading_width</code> caps the statement at a number of columns (<code>0</code> uses the whole pane). <code>reading_margin</code> adds empty columns on the left.</p>
+<p>Two more settings:</p>
+<pre><code class="hl"><span class="sc">verd</span> config set reading_split cap       <span class="cm"># full | cap: in the split view, cap caps the statement at 76 columns (when reading_width is 0)</span>
+<span class="sc">verd</span> config set reading_palette sepia   <span class="cm"># colors for the statement only</span>
+<span class="sc">verd</span> config set reading_night_from 21   <span class="cm"># hour (0-23) when auto switches to night</span></code></pre>
+<p><code>reading_palette</code> takes <code>app</code> (your theme, the default), <code>paper</code>, <code>sepia</code>, <code>cool</code>, <code>night</code>, <code>mono</code>, <code>contrast</code> or <code>auto</code>. <code>auto</code> uses <code>night</code> from <code>reading_night_from</code> (default 20) until 07:00, then <code>app</code>. In a Problem, <code>P</code> cycles through the palettes.</p>
+<h2 id="layout-mouse-and-tabs">Layout, mouse and tabs<a class="anchor" href="#layout-mouse-and-tabs">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> config set tabs problems,stats,settings   <span class="cm"># which tabs, in what order</span>
+<span class="sc">verd</span> config set header false                   <span class="cm"># hide the tab bar</span>
+<span class="sc">verd</span> config set footer false                   <span class="cm"># hide the key hints</span>
+<span class="sc">verd</span> config set border square                  <span class="cm"># rounded | square | heavy | double | ascii | none</span>
+<span class="sc">verd</span> config set mouse false                    <span class="cm"># native terminal selection everywhere</span></code></pre>
+<h2 id="editor-and-workspace">Editor and workspace<a class="anchor" href="#editor-and-workspace">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> config set editor hx                  <span class="cm"># any editor command; &#34;code -w&#34; works too</span>
+<span class="sc">verd</span> config set split auto                 <span class="cm"># auto | tmux | herdr | embedded | suspend</span>
+<span class="sc">verd</span> config set embed_side left            <span class="cm"># which column the embedded editor takes</span>
+<span class="sc">verd</span> config set workspace ~/cp             <span class="cm"># where solutions live: &lt;workspace&gt;/&lt;contest&gt;/&lt;index&gt;/</span>
+<span class="sc">verd</span> <span class="sf">--here</span>                                <span class="cm"># keep solutions in the current directory for one run</span></code></pre>
+<h2 id="languages">Languages<a class="anchor" href="#languages">#</a></h2>
+<p>Add or override languages under <code>[lang.&lt;name&gt;]</code>. Placeholders: <code>{src}</code> the source file, <code>{bin}</code> the compiled output, <code>{dir}</code> the problem directory.</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">lang</span><span class="p">.</span><span class="nx">rust</span><span class="p">]</span>
+<span class="nx">ext</span> <span class="p">=</span> <span class="s2">&#34;rs&#34;</span>
+<span class="nx">compile</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;rustc&#34;</span><span class="p">,</span> <span class="s2">&#34;-O&#34;</span><span class="p">,</span> <span class="s2">&#34;-o&#34;</span><span class="p">,</span> <span class="s2">&#34;{bin}&#34;</span><span class="p">,</span> <span class="s2">&#34;{src}&#34;</span><span class="p">]</span>
+<span class="nx">run</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;{bin}&#34;</span><span class="p">]</span>
+<span class="nx">cf_compiler_id</span> <span class="p">=</span> <span class="mi">75</span>          <span class="c"># used by direct submit</span>
+</code></pre>
+<p>An interpreted language leaves <code>compile</code> empty and sets <code>run</code>:</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">lang</span><span class="p">.</span><span class="nx">ruby</span><span class="p">]</span>
+<span class="nx">ext</span> <span class="p">=</span> <span class="s2">&#34;rb&#34;</span>
+<span class="nx">run</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;ruby&#34;</span><span class="p">,</span> <span class="s2">&#34;{src}&#34;</span><span class="p">]</span>
+</code></pre>
+<p>Then <code>verd config set default_lang rust</code>. Set <code>default_lang ask</code> to pick a language per Problem from a list instead. Scale limits per language with <code>time_multiplier</code>. Reference: <a href="../docs/config.html">Configuration</a>, <a href="../docs/customizing.html">Customizing</a>.</p>
+<h2 id="check-your-work">Check your work<a class="anchor" href="#check-your-work">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> config          <span class="cm"># does it load, with your values?</span>
+<span class="sc">verd</span> keys check      <span class="cm"># no conflicts?</span>
+<span class="sc">verd</span> doctor          <span class="cm"># compilers, editor, terminal</span>
+<span class="sc">verd</span> schema <span class="so">&gt;</span> ~/.config/verd/schema.json   <span class="cm"># editor completion for config.toml</span></code></pre>
+<p>If <code>config.toml</code> cannot be loaded, verd names the file and the problem and does not start; a bad edit never falls back to defaults silently.</p>
+<p>Next: <a href="cli.html">Command line reference</a>.</p>
+<div class="pager"><a href="snippets.html"><small>Previous</small>Snippets and Templates</a><a class="next" href="cli.html"><small>Next</small>Command line</a></div></article><aside class="toc"><h4>On this page</h4><a href="#three-ways-to-change-a-setting">Three ways to change a setting</a><a href="#themes">Themes</a><a href="#shortcuts">Shortcuts</a><a href="#reading">Reading</a><a href="#layout-mouse-and-tabs">Layout, mouse and tabs</a><a href="#editor-and-workspace">Editor and workspace</a><a href="#languages">Languages</a><a href="#check-your-work">Check your work</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

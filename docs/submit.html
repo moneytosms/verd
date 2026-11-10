@@ -1,0 +1,131 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submitting · verd</title><meta name="description" content="Browser handoff, direct mode, verd login and the risks."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a class="on" href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="submitting">Submitting</h1>
+<p><code>s</code> in the Problem view (or <code>verd submit &lt;file&gt;</code>) sends the Solution to Codeforces and tracks the result. There are two modes, set by <code>submit_mode</code>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>browser</code> (default)</th>
+<th><code>direct</code> (experimental)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How</td>
+<td>Copies the Solution, opens the submit page, you paste and press Submit.</td>
+<td>verd posts the form itself.</td>
+</tr>
+<tr>
+<td>Credentials</td>
+<td>None.</td>
+<td>A saved browser session (<code>verd login</code>).</td>
+</tr>
+<tr>
+<td>Risk</td>
+<td>None.</td>
+<td>Account risk, see below.</td>
+</tr>
+<tr>
+<td>Verdict tracking</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>Verdicts are tracked the same way in both modes: verd polls your public <code>user.status</code> for a Submission newer than the one it saw before you submitted, and shows <code>Testing on test 7</code>, <code>Accepted</code>, <code>Wrong answer on test 2</code>, and so on. Each update is saved, so the Problem is marked solved without a refresh. In the TUI the status opens in a Submission modal (<code>q</code> closes it, tracking continues) and ends with a green <code>✓ Accepted</code> or a red <code>✗ Wrong answer on test N</code>, plus time and memory. Tracking stops at a final Verdict or after 5 minutes.</p>
+<h2 id="browser-mode">Browser mode<a class="anchor" href="#browser-mode">#</a></h2>
+<ol>
+<li>The Solution is copied with the first tool found: <code>pbcopy</code> (macOS), <code>clip.exe</code> (WSL), <code>wl-copy</code> (Wayland), <code>xclip</code> or <code>xsel</code> (X11). An OSC 52 sequence is also sent for terminals that support it, which works over ssh and tmux.</li>
+<li>The submit page opens with <code>open</code>, <code>wslview</code> / <code>explorer.exe</code>, or <code>xdg-open</code>.</li>
+<li>Paste, choose the language, submit.</li>
+</ol>
+<p>Browser mode cannot preselect the language: the Codeforces submit page takes no language in its URL, so you pick it yourself (Codeforces remembers your last choice). To have verd choose the compiler for you, use direct mode, which sends the language's <code>cf_compiler_id</code> (see <a href="config.html#languages">Configuration</a>).</p>
+<p>If no clipboard or opener is found, verd says so and prints the URL.</p>
+<p>Why this is the default: Codeforces has no submit API, and Cloudflare blocks password logins from non-browser clients. See <a href="https://github.com/moneytosms/verd/tree/main/docs/adr">ADR 0001</a>.</p>
+<h2 id="direct-mode">Direct mode<a class="anchor" href="#direct-mode">#</a></h2>
+<blockquote>
+<p><strong>Experimental. Read this first.</strong></p>
+<ul>
+<li>Direct mode replays the cookies of a real browser session. Codeforces can treat that as automation. A flagged account can be restricted or banned from contests. verd cannot protect you from that.</li>
+<li>The saved Cookie header is a login for your account. verd stores it in the OS keyring when one works. Otherwise it writes <code>~/.config/verd/credentials.json</code> with mode <code>0600</code> and warns you. Anyone who can read it can act as you until the session ends.</li>
+<li>It can stop working at any time: Cloudflare or Codeforces may change their checks, and verd falls back to the browser when they do.</li>
+<li>Codeforces does not endorse this. Use it on your own account, sparingly, and not in rated contests unless you accept the risk.</li>
+</ul>
+</blockquote>
+<p>What it does: it fetches the submit page with a Chrome TLS fingerprint, reads the form and compiler list, posts your Solution to <code>/problemset/submit</code>, and tracks the Verdict as above. The <code>ftaa</code> / <code>bfaa</code> fields the page normally fills with JavaScript are sent as placeholders; Codeforces accepted that in testing, but it is a thing that could change.</p>
+<h3 id="set-it-up">Set it up</h3>
+<ol>
+<li>
+<p>Log in to Codeforces in <strong>Chrome</strong> (the TLS fingerprint imitates Chrome, and the User-Agent must match the browser the cookie came from).</p>
+</li>
+<li>
+<p>Open <a href="https://codeforces.com/problemset/submit">https://codeforces.com/problemset/submit</a>.</p>
+</li>
+<li>
+<p>Open DevTools (<code>F12</code>), go to <strong>Network</strong>, and reload the page.</p>
+</li>
+<li>
+<p>Click the first request, <code>submit</code> (type <code>document</code>).</p>
+</li>
+<li>
+<p>Under <strong>Request Headers</strong>, right-click the <code>cookie:</code> value and choose <strong>Copy value</strong>.</p>
+</li>
+<li>
+<p>Save the session, either way:</p>
+<ul>
+<li>In verd: open the Settings tab (<code>5</code>), move to <strong>Submit mode</strong> and choose <code>direct</code>. verd asks for the cookie (shown as dots) and then the <code>user-agent:</code> value; paste each and press <code>enter</code>. Press <code>L</code> on that row to paste a new session later.</li>
+<li>Or run <code>verd login</code> and paste the same two values (input is hidden). <code>verd setup</code> also offers this when you pick <code>direct</code>.</li>
+</ul>
+</li>
+<li>
+<p>Set the mode, unless you chose it in Settings or <code>verd setup</code>: put <code>submit_mode = &quot;direct&quot;</code> in <code>~/.config/verd/config.toml</code>. It applies the next time verd starts.</p>
+</li>
+<li>
+<p>Submit as usual with <code>s</code> or <code>verd submit &lt;file&gt;</code>.</p>
+</li>
+</ol>
+<p>You can also pipe both values: <code>printf '%s\n%s\n' &quot;$COOKIE&quot; &quot;$UA&quot; | verd login</code>.</p>
+<p>Terminals limit a pasted line to about 4000 characters. If the paste is cut off, delete cookies you do not need from the header and try again.</p>
+<p><code>verd logout</code> deletes the saved credentials from the keyring and from the file.</p>
+<h3 id="when-it-falls-back">When it falls back</h3>
+<p>Any failure sends you to browser mode for that Submission and tells you why in the status notes. The common reasons:</p>
+<table>
+<thead>
+<tr>
+<th>Reason shown</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>not logged in: run verd login</code></td>
+<td>Run <code>verd login</code>.</td>
+</tr>
+<tr>
+<td><code>session expired? run verd login</code></td>
+<td>The cookie no longer works. Log in again in Chrome and repeat setup.</td>
+</tr>
+<tr>
+<td><code>Codeforces blocked the request (HTTP 403)</code></td>
+<td>Cloudflare rejected the session or fingerprint. Use browser mode.</td>
+</tr>
+<tr>
+<td><code>cf_compiler_id N is not offered by Codeforces; available: ...</code></td>
+<td>Set <code>cf_compiler_id</code> for that language to one of the listed ids. See <a href="config.html#languages">Configuration</a>.</td>
+</tr>
+<tr>
+<td><code>Codeforces did not accept the Solution: ...</code></td>
+<td>Codeforces gave a reason, for example submitting identical code twice.</td>
+</tr>
+</tbody>
+</table>
+<p>Direct mode needs network; offline, <code>s</code> refuses before doing anything.</p>
+<div class="pager"><a href="sources.html"><small>Previous</small>Sources</a><a class="next" href="contests.html"><small>Next</small>Contest sessions</a></div></article><aside class="toc"><h4>On this page</h4><a href="#browser-mode">Browser mode</a><a href="#direct-mode">Direct mode</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

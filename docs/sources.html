@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources · verd</title><meta name="description" content="CSES next to Codeforces, the Source filter and manual solved marks."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a class="on" href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="sources">Sources</h1>
+<p>verd shows Problems from more than one problem set in one list. Turn each on or off in Settings (<code>5</code>, the <strong>Sources</strong> group) or with <code>source_cf</code> / <code>source_cses</code> in <code>config.toml</code>. Codeforces is on by default; CSES is off.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>What you get</th>
+<th>Submitting</th>
+<th>Solved marks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Codeforces</td>
+<td>Ratings, tags, statements, Verdict tracking, stats</td>
+<td>Browser handoff, or <a href="submit.html#direct-mode">direct</a></td>
+<td>From your Submissions</td>
+</tr>
+<tr>
+<td><a href="https://cses.fi/problemset/">CSES</a></td>
+<td>400 tasks. The topic section (for example &quot;Dynamic Programming&quot;) is the tag; the solver count is the popularity. Limits, statement and the example from the task page</td>
+<td>Browser handoff to <code>cses.fi/problemset/submit/&lt;id&gt;/</code> (CSES needs a login and has no API)</td>
+<td>By hand with <code>m</code>, or pulled in with <code>verd sync cses</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="using-cses">Using CSES<a class="anchor" href="#using-cses">#</a></h2>
+<ol>
+<li>Settings, <strong>CSES</strong>, turn it on. Press <code>ctrl+r</code> on a list to load the tasks (24 hours cache, then refreshed on start).</li>
+<li>CSES tasks appear in the same list as <code>CSES1068</code>. Search by name, topic or id. Filter with the <strong>Source</strong> field in the filter modal (<code>f</code>) or <code>src:cses</code> in the <code>:</code> prompt, for example <code>src:cses +graph</code>.</li>
+<li><code>enter</code> opens a task. <code>e</code> edits <code>&lt;workspace&gt;/cses/&lt;id&gt;/main.&lt;ext&gt;</code>, <code>t</code> runs the example and your Custom Tests, <code>S</code> stress tests it.</li>
+<li><code>s</code> copies the Solution and opens the CSES submit page. verd cannot read the verdict there, so press <code>m</code> on the task to mark it solved (<code>m</code> again clears it).</li>
+</ol>
+<p>CSES shows a single example per task, so local runs cover that plus the tests you add. Marks live only in verd's own database. Codeforces stats do not include CSES.</p>
+<p>Statements are fetched once and cached. verd waits a second between requests to cses.fi and identifies itself in the User-Agent.</p>
+<h2 id="sync-solved-tasks">Sync solved tasks<a class="anchor" href="#sync-solved-tasks">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> sync cses     <span class="cm"># or just `verd sync` for every provider</span></code></pre>
+<p>The first run asks for your CSES username and password (the password is typed hidden and never stored). verd signs in the way the website does, keeps only the session cookie (OS keyring, or a 0600 file next to <code>credentials.json</code>), and reads the task list's solved icons. Every solved task becomes a mark. After that <code>verd sync cses</code> and <code>Y</code> on the Problems list reuse the session without asking; when it expires you are asked again. <code>verd logout cses</code> forgets the session.</p>
+<p>Sync only adds marks: it never clears one you set with <code>m</code>. Tasks you merely tried are not marked. CSES has no API, so this reads the same HTML you see in a browser; if CSES changes it, <code>verd sync</code> says what it could not find.</p>
+<h3 id="adding-a-provider">Adding a provider</h3>
+<p>A provider is a <code>provider</code> value in <code>cmd/verd/sync.go</code>: a login (username and password to session cookie) and a function listing the solved ids. The marks, the keyring storage, the <code>verd sync</code> command and the <code>Y</code> key come with it. LeetCode would fit the same shape (its solved list needs a session cookie too), but it would also need its own source for the problems themselves, so it is not planned yet.</p>
+<h2 id="usaco">USACO<a class="anchor" href="#usaco">#</a></h2>
+<p>Not implemented. Its statements are public (<code>usaco.org/index.php?page=viewproblem2&amp;cpid=N</code>) and contests list their problems on results pages, but submitting needs a login, so it would use the same browser handoff and manual marks as CSES. Official test data is published as per-contest zip files, which could give full local tests; that is the main reason to add it. A new source needs one Source tag in <code>internal/cf/source.go</code>, a fetcher beside <code>internal/cses</code>, and a line in <code>refresh.Source</code>.</p>
+<div class="pager"><a href="embedded-pane.html"><small>Previous</small>Embedded pane</a><a class="next" href="submit.html"><small>Next</small>Submitting</a></div></article><aside class="toc"><h4>On this page</h4><a href="#using-cses">Using CSES</a><a href="#sync-solved-tasks">Sync solved tasks</a><a href="#usaco">USACO</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

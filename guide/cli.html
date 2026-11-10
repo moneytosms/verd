@@ -1,0 +1,196 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command line reference · verd</title><meta name="description" content="Every command, exit codes and scripting examples."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a class="on" href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="command-line-reference">Command line reference</h1>
+<p><code>verd</code> with no arguments opens the TUI. Every command has a built-in help page, colored on a terminal and plain text when piped:</p>
+<pre><code class="hl"><span class="sc">verd</span> help                  <span class="cm"># the overview</span>
+<span class="sc">verd</span> help stress           <span class="cm"># one command</span>
+<span class="sc">verd</span> snippet add <span class="sf">--help</span>    <span class="cm"># a subcommand</span></code></pre>
+<p><code>NO_COLOR</code> and <code>TERM=dumb</code> give plain text; <code>FORCE_COLOR=1</code> forces colors. A usage error ends with <code>run verd help &lt;command&gt; for details</code>.</p>
+<h2 id="exit-codes">Exit codes<a class="anchor" href="#exit-codes">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>success (tests all <code>AC</code>, no counterexample, submission Accepted, editorial printed)</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>the thing you asked about failed or there is nothing to show (WA, counterexample, Rejected, no editorial)</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>verd could not do it (bad input, build error, offline, unknown argument)</td>
+</tr>
+</tbody>
+</table>
+<p>This makes the commands usable in scripts, git hooks and editor jobs.</p>
+<h2 id="everyday">Everyday<a class="anchor" href="#everyday">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd test &lt;file&gt; [-v] [-t NAME]</code></td>
+<td>run Sample and Custom Tests; <code>-v</code> full detail, <code>-t</code> one test</td>
+<td><code>verd test ~/verd/1900/A/main.cpp</code></td>
+</tr>
+<tr>
+<td><code>verd stress [--iter N] [--time S] [--jobs N] [--batch N] [--multi N] &lt;file&gt;</code></td>
+<td>search for a counterexample</td>
+<td><code>verd stress --iter 5000 main.cpp</code></td>
+</tr>
+<tr>
+<td><code>verd submit &lt;file&gt;</code></td>
+<td>submit and track the verdict</td>
+<td><code>verd submit main.cpp</code></td>
+</tr>
+<tr>
+<td><code>verd editorial [--reveal N | --all] &lt;file|contest/index&gt;</code></td>
+<td>read the editorial, hints withheld</td>
+<td><code>verd editorial --reveal 1 1900/A</code></td>
+</tr>
+<tr>
+<td><code>verd snippet ...</code></td>
+<td>print, copy, add, edit, remove, export snippets (<code>add</code>, <code>edit</code>, <code>rm</code>, <code>open</code>, <code>path</code>; the TUI adds and edits from Settings)</td>
+<td><code>verd snippet --copy dijkstra</code></td>
+</tr>
+<tr>
+<td><code>verd daily</code></td>
+<td>today's unsolved pick</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><code>&lt;file&gt;</code> is a solution inside the workspace (<code>&lt;workspace&gt;/&lt;contest&gt;/&lt;index&gt;/main.&lt;ext&gt;</code>); the problem and language come from its path. When the TUI is running, <code>test</code>, <code>stress</code> and <code>submit</code> are handed to it and show in its pane; otherwise they run headless.</p>
+<h2 id="setup-and-diagnosis">Setup and diagnosis<a class="anchor" href="#setup-and-diagnosis">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd init [--force] [--no-setup]</code></td>
+<td>write the config, Templates and snippet library, offer the guided setup</td>
+</tr>
+<tr>
+<td><code>verd setup</code></td>
+<td>guided setup for handle, workspace, language, theme, editor split, submit mode; safe to re-run</td>
+</tr>
+<tr>
+<td><code>verd doctor</code></td>
+<td>check config, handle, workspace, compilers, editor, tmux/herdr, terminal</td>
+</tr>
+<tr>
+<td><code>verd update [--check]</code></td>
+<td>replace verd with the latest release (checksum verified), then print the release notes of every release you skipped; <code>--check</code> only reports</td>
+</tr>
+<tr>
+<td><code>verd uninstall [--all|--keep|--backup DIR] [--yes]</code></td>
+<td>remove verd; keep, back up or delete config and data; <code>--yes</code> skips the confirmation</td>
+</tr>
+<tr>
+<td><code>verd version</code>, <code>verd --version</code></td>
+<td>print the version and commit</td>
+</tr>
+</tbody>
+</table>
+<p><code>verd update</code> retries a few times when the network fails. A source build (version <code>dev</code>) is refused; update those with <code>go install</code>. verd also checks for a newer release when the TUI starts: it asks inside the TUI whether to update (<code>y</code> updates, <code>n</code> or <code>esc</code> dismisses), and the first launch after an update shows a <strong>What's new</strong> screen with the release notes.</p>
+<h2 id="configuration">Configuration<a class="anchor" href="#configuration">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd config [path | keys | get &lt;key&gt; | set &lt;key&gt; &lt;value&gt;]</code></td>
+<td>show or change the config</td>
+</tr>
+<tr>
+<td><code>verd keys [--json] [list | contexts | check]</code></td>
+<td>list shortcuts</td>
+</tr>
+<tr>
+<td><code>verd keys set &lt;ctx.action&gt; &lt;key&gt;...</code> / <code>reset &lt;ctx.action&gt;</code></td>
+<td>rebind / restore</td>
+</tr>
+<tr>
+<td><code>verd keys presets | preset &lt;name&gt; | export | import &lt;file|-&gt;</code></td>
+<td>presets, and moving bindings between machines</td>
+</tr>
+<tr>
+<td><code>verd themes [show &lt;name&gt;]</code></td>
+<td>list themes / print an editable block</td>
+</tr>
+<tr>
+<td><code>verd completions bash|zsh|fish</code></td>
+<td>shell completions</td>
+</tr>
+<tr>
+<td><code>verd schema</code></td>
+<td>JSON Schema of <code>config.toml</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="accounts">Accounts<a class="anchor" href="#accounts">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd login</code> / <code>verd logout</code></td>
+<td>save or delete the browser session used by direct submit</td>
+</tr>
+<tr>
+<td><code>verd sync [cses]</code></td>
+<td>pull solved CSES tasks into verd as marks</td>
+</tr>
+<tr>
+<td><code>verd logout cses</code></td>
+<td>forget the CSES session</td>
+</tr>
+</tbody>
+</table>
+<h2 id="global-flag">Global flag<a class="anchor" href="#global-flag">#</a></h2>
+<p><code>--here</code> uses the current directory as the workspace for this run, so solutions land in <code>&lt;dir&gt;/&lt;contest&gt;/&lt;index&gt;/</code>.</p>
+<h2 id="scripting-examples">Scripting examples<a class="anchor" href="#scripting-examples">#</a></h2>
+<pre><code class="hl"><span class="cm"># fail a pre-push hook if the samples do not pass</span>
+<span class="sc">verd</span> test main.cpp <span class="so">||</span> <span class="sc">{</span> echo <span class="ss">&#34;samples failing&#34;;</span> exit 1; }
+
+<span class="cm"># hunt for a counterexample for two minutes, quietly</span>
+<span class="sc">verd</span> stress <span class="sf">--time</span> 120 <span class="sf">--jobs</span> 8 main.cpp &gt;/dev/null <span class="so">&amp;&amp;</span> <span class="sc">echo</span> <span class="ss">&#34;none found&#34;</span>
+
+<span class="cm"># every config key and its current value</span>
+<span class="sc">for</span> k in <span class="sv">$(verd</span> config keys); do printf <span class="ss">&#39;%s = %s\n&#39;</span> <span class="ss">&#34;$k&#34;</span> <span class="ss">&#34;$(verd config get $k)&#34;;</span> done
+
+<span class="cm"># submit and notify when judged</span>
+<span class="sc">verd</span> submit main.cpp <span class="so">&amp;&amp;</span> <span class="sc">notify-send</span> <span class="ss">&#34;verd&#34;</span> <span class="ss">&#34;Accepted&#34;</span></code></pre>
+<p>Next: <a href="editors.html">Neovim and other editors</a>.</p>
+<div class="pager"><a href="customize.html"><small>Previous</small>Customize</a><a class="next" href="editors.html"><small>Next</small>Neovim and editors</a></div></article><aside class="toc"><h4>On this page</h4><a href="#exit-codes">Exit codes</a><a href="#everyday">Everyday</a><a href="#setup-and-diagnosis">Setup and diagnosis</a><a href="#configuration">Configuration</a><a href="#accounts">Accounts</a><a href="#global-flag">Global flag</a><a href="#scripting-examples">Scripting examples</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

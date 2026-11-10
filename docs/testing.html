@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing and stress · verd</title><meta name="description" content="Test Runs, Comparison Modes, Custom Tests and the stress workflow."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a href="keys.html">Keys</a><a class="on" href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="testing-and-stress">Testing and stress</h1>
+<h2 id="test-runs">Test Runs<a class="anchor" href="#test-runs">#</a></h2>
+<p>A Test Run compiles the Solution (cached by content), then runs it against every complete test in <code>tests/</code>: the Sample Tests from the statement (<code>sample-N</code>) and your Custom Tests (<code>custom-N</code>). Each test gets a <strong>Local Verdict</strong>, a time, and peak memory.</p>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AC</code></td>
+<td>Output matches under the Comparison Mode.</td>
+</tr>
+<tr>
+<td><code>WA</code></td>
+<td>Output differs. verd shows the first mismatch (line, column, wanted, got).</td>
+</tr>
+<tr>
+<td><code>TLE</code></td>
+<td>Over the Problem's time limit times <code>time_multiplier</code>.</td>
+</tr>
+<tr>
+<td><code>RE</code></td>
+<td>Non-zero exit or killed by a signal.</td>
+</tr>
+<tr>
+<td><code>MLE</code></td>
+<td>Peak memory over the Problem's limit. Reported and flagged, not enforced.</td>
+</tr>
+<tr>
+<td><code>CE</code></td>
+<td>The compiler failed. The compiler output is shown.</td>
+</tr>
+<tr>
+<td><code>??</code></td>
+<td>Comparison Mode <code>none</code>: output is shown, not judged.</td>
+</tr>
+</tbody>
+</table>
+<p>Output beyond 64 MB is cut and the test is <code>RE</code> with an &quot;output limit exceeded&quot; note, so a runaway print loop cannot fill your disk. Interactive Problems are not supported locally.</p>
+<p>Run tests with <code>t</code> in the TUI, by saving the Solution (<code>autotest</code>), or with <code>verd test &lt;file&gt;</code>. The command exits <code>0</code> only if every test is <code>AC</code>, which makes it usable in scripts and editor jobs.</p>
+<h2 id="comparison-modes">Comparison Modes<a class="anchor" href="#comparison-modes">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Matches when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tokens</code></td>
+<td>Whitespace-separated tokens are equal. Like Codeforces' default checker.</td>
+</tr>
+<tr>
+<td><code>exact</code></td>
+<td>Equal after trimming trailing whitespace per line and trailing blank lines.</td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td>Tokens equal, with numbers compared within <code>float_eps</code> (absolute or relative).</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>Never judged.</td>
+</tr>
+</tbody>
+</table>
+<p>The default comes from the statement (a note like &quot;answers within 1e-6&quot; selects <code>float</code>), else <code>tokens</code>. Press <code>c</code> to cycle; the choice is saved per Problem.</p>
+<h2 id="custom-tests">Custom Tests<a class="anchor" href="#custom-tests">#</a></h2>
+<p>Press <code>a</code>. verd creates the next <code>tests/custom-N.in</code> and <code>custom-N.ans</code>, empty, and opens them side by side. An incomplete pair (a lone <code>.in</code>) is ignored until the <code>.ans</code> exists. Existing files are never overwritten.</p>
+<h2 id="stress-testing">Stress testing<a class="anchor" href="#stress-testing">#</a></h2>
+<p>A stress test generates random inputs until your Solution and a brute force disagree.</p>
+<ol>
+<li>Press <code>S</code> (or run <code>verd stress &lt;file&gt;</code>). On first use verd creates <code>gen.&lt;ext&gt;</code> and <code>brute.&lt;ext&gt;</code> from your Templates and, in the TUI, opens them. Fill them in:
+<ul>
+<li><code>gen</code> prints one random input; <code>argv[1]</code> is the seed.</li>
+<li><code>brute</code> is a slow but obviously correct Solution for the same Problem.</li>
+</ul>
+</li>
+<li>Press <code>S</code> again. For seed <code>1, 2, 3, ...</code> verd runs <code>gen &lt;seed&gt;</code>, feeds the input to the Solution and to <code>brute</code>, and compares outputs with the Problem's Comparison Mode.</li>
+<li>It stops at the first of:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Stop</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Outputs differ</td>
+<td>Counterexample: seed, input, both outputs. In the TUI it opens in the diff overlay.</td>
+</tr>
+<tr>
+<td>Solution crashes or exceeds the time limit</td>
+<td><code>solution-re</code> / <code>solution-tle</code> with the input.</td>
+</tr>
+<tr>
+<td><code>gen</code> or <code>brute</code> fails, or either does not build</td>
+<td>An error, not a verdict on your Solution.</td>
+</tr>
+<tr>
+<td>1000 iterations or 30 seconds</td>
+<td>&quot;No counterexample&quot;. Raise it with <code>--iter N</code> and <code>--time S</code>.</td>
+</tr>
+<tr>
+<td>You press <code>esc</code> or hit <code>Ctrl-C</code></td>
+<td>Cancelled.</td>
+</tr>
+</tbody>
+</table>
+<ol start="4">
+<li>In the diff overlay press <code>w</code> to save the failing input as the next Custom Test, with <strong>brute's output as the expected answer</strong>. Now <code>t</code> reproduces the bug on every run.</li>
+</ol>
+<p>Seeds are deterministic, so the same buggy Solution reports the same counterexample every time.</p>
+<p><code>verd stress</code> exits <code>0</code> only if no counterexample was found.</p>
+<h3 id="going-faster">Going faster</h3>
+<p>Iterations run in parallel (<code>--jobs N</code>, default CPU count, max 16). Two opt-in flags cut process spawns further; the reported seed and verdicts are unchanged.</p>
+<ul>
+<li><code>--batch N</code>: <code>gen</code> runs once per N seeds as <code>gen &lt;first seed&gt; &lt;N&gt;</code> and prints N cases, each followed by a line <code>---</code>.</li>
+<li><code>--multi N</code>: for multi-test problems. Solution and brute read <code>t</code> then <code>t</code> cases, <code>gen</code> prints one case without <code>t</code>, and N cases go through one process pair. If a batch disagrees or fails, verd reruns its seeds one by one (input <code>1</code> then the case) to report the exact seed.</li>
+</ul>
+<p>Trivial C++ programs, 16 threads: ~3.8k iterations/s default, ~5.4k with <code>--batch 100</code>, ~290k with <code>--batch 100 --multi 100</code> (<code>go test ./internal/stress -bench .</code>).</p>
+<h2 id="debugging">Debugging<a class="anchor" href="#debugging">#</a></h2>
+<ul>
+<li><code>f</code> in the TUI opens a test full-screen: input, expected, stdout and stderr, for any verdict. <code>verd test &lt;file&gt; -v</code> prints the same for every test; <code>-t sample-2</code> runs one test.</li>
+<li>Failures get a <code>why:</code> line in plain English (segfault, division by zero, <code>std::out_of_range</code>, Python <code>IndexError</code>, ...) and an <code>at:</code> source location with the source line when stderr has one. Sanitizer reports are read for their numbers: <code>Index 4, but the container has size 4 (valid 0..3): one past the end</code>, the overflowing expression, or which local or global array was overrun. A <code>via:</code> line lists your own calls, innermost first, with recursion folded (<code>dfs:7 ← dfs:8 ×3 ← solve:19 ← main:21</code>).</li>
+<li>Sanitizer stderr is folded for reading: library stack frames, repeated recursive frames, libstdc++'s function signature and register or shadow-memory dumps each become one <code>⋯ N ...</code> line. In the full-screen test view <code>z</code> shows it as printed; <code>y</code> always copies the raw text, and <code>verd test -v</code> prints it unfolded.</li>
+<li>New C++ files include <code>debug.h</code> under <code>#ifdef LOCAL</code>. <code>debug(a, b)</code> prints <code>[L12] a = 5, b = [1, 2, 3]</code> to stderr for any value (containers, nested, pairs, tuples, maps, queues). Local test builds define <code>LOCAL</code>; on Codeforces <code>debug</code> compiles to nothing, so there is nothing to strip. C has <code>debug(&quot;%d&quot;, x)</code>; Python has <code>debug(f&quot;{x=}&quot;, y)</code> (runs set the <code>LOCAL</code> environment variable).</li>
+<li>The same <code>debug(x)</code> handles 2D values: a matrix, grid, adjacency list or map of lists prints one row per line (<code>0: [1, 2]</code>), so there is no separate matrix or graph macro. On Codeforces <code>debug(...)</code> expands to <code>42</code>, as in tourist's template.</li>
+<li>verd writes <code>debug.h</code> into <code>~/.local/share/verd/include</code> and a <code>compile_flags.txt</code> into the Workspace root so clangd finds it. Re-run <code>verd init --force</code> to refresh your Templates (existing ones are never overwritten otherwise).</li>
+</ul>
+<h3 id="partial-runs-and-failures">Partial runs and failures</h3>
+<ul>
+<li><code>space</code> marks a test, <code>R</code> runs only the marked tests (or the selected one if none is marked), <code>F</code> reruns only the tests that did not pass. <code>verd test &lt;file&gt; -t sample-1,custom-2</code> does the same from the shell.</li>
+<li>When a test ends <code>WA</code> or <code>RE</code> and the compiler is <code>g++</code>/<code>gcc</code>, verd rebuilds the Solution once with <code>-fsanitize=address,undefined</code> and <code>-D_GLIBCXX_DEBUG</code> and reruns that test. If this finds a memory error, undefined behavior or an out-of-range container access, its message replaces stderr (marked <code>[verd: rerun with sanitizers]</code>) and the <code>why:</code> / <code>at:</code> lines point at your line. Verdicts are never changed by it. If the sanitizer build fails, verd carries on without it.</li>
+<li>A Custom Test whose <code>.ans</code> is empty is not judged: it shows <code>??</code> and the output, so it doubles as a scratch run.</li>
+<li>A failing line in the full view shows <code>want: ...</code> under it, and the header counts how many lines differ.</li>
+</ul>
+<h3 id="checker-and-validator-optional">Checker and validator (optional)</h3>
+<p>Drop a file next to the Solution in the same language and verd picks it up. Nothing to configure.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Used by</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>checker.&lt;ext&gt;</code></td>
+<td>tests</td>
+<td>run as <code>checker &lt;input&gt; &lt;output&gt; &lt;answer&gt;</code>; exit 0 accepts. Replaces the Comparison Mode, for problems with many valid answers.</td>
+</tr>
+<tr>
+<td><code>validator.&lt;ext&gt;</code></td>
+<td>stress</td>
+<td>reads the generated input on stdin; non-zero exit stops the run with &quot;validator rejected the generated input&quot;.</td>
+</tr>
+</tbody>
+</table>
+<p><code>gen</code> also sees an environment variable <code>SIZE</code> that grows from 1 to 10 over the first 300 seeds, so the first counterexample is usually small. The default <code>gen</code> templates use it.</p>
+<div class="pager"><a href="keys.html"><small>Previous</small>Keys</a><a class="next" href="neovim.html"><small>Next</small>Neovim and editors</a></div></article><aside class="toc"><h4>On this page</h4><a href="#test-runs">Test Runs</a><a href="#comparison-modes">Comparison Modes</a><a href="#custom-tests">Custom Tests</a><a href="#stress-testing">Stress testing</a><a href="#debugging">Debugging</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

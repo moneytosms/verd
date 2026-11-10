@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editorials · verd</title><meta name="description" content="Read an editorial one hint at a time."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a href="contests.html">Contests and sessions</a><a class="on" href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="editorials">Editorials</h1>
+<p>Stuck? Read the editorial, one hint at a time.</p>
+<pre><code class="hl"><span class="sc">verd</span> editorial 1900/A              <span class="cm"># the idea, hints still locked</span>
+<span class="sc">verd</span> editorial <span class="sf">--reveal</span> 1 1900/A   <span class="cm"># plus the first hint</span>
+<span class="sc">verd</span> editorial <span class="sf">--all</span> 1900/A        <span class="cm"># everything</span></code></pre>
+<p>In the TUI press <code>H</code> in the Problem view (or in the contest modal for the selected problem).</p>
+<h2 id="how-it-behaves">How it behaves<a class="anchor" href="#how-it-behaves">#</a></h2>
+<ul>
+<li>The text before the first hint shows at once. <strong>Hints, the solution and code stay closed</strong>, and <code>enter</code> opens the next one, strictly in order. There is no way to jump to the solution by accident.</li>
+<li><code>j</code>/<code>k</code> scroll, <code>o</code> opens the blog post in your browser, <code>q</code> closes.</li>
+<li>The contest's announcement, video tutorial and discussion stream appear under <strong>More materials</strong> as links.</li>
+<li>Only English editorials are shown. A contest with a Russian-only editorial, or none, says so.</li>
+<li>Only Codeforces problems have editorials (CSES does not).</li>
+<li>It is hidden while a <a href="contests.html">contest session</a> runs on that contest.</li>
+</ul>
+<h2 id="where-it-comes-from">Where it comes from<a class="anchor" href="#where-it-comes-from">#</a></h2>
+<p>The link is the <strong>Tutorial</strong> entry of the &quot;Contest materials&quot; box on the problem page. The text is the blog post behind it, fetched through the Codeforces API (the blog pages themselves are behind Cloudflare). Both are cached, so a second look works offline, and a contest without an editorial is checked again after six hours.</p>
+<p>The post covers the whole round, so verd shows the part that starts at the paragraph beginning with your problem's link (<code>1900A - Name</code>) up to the next problem's. A post laid out differently is shown whole, with a note.</p>
+<pre><code class="hl">$ verd editorial 4/A
+no editorial is published for 4A
+$ echo $?
+1
+</code></pre>
+<p>More: <a href="../docs/editorials.html">Editorials</a>. Next: <a href="snippets.html">Snippets and Templates</a>.</p>
+<div class="pager"><a href="contests.html"><small>Previous</small>Contests and sessions</a><a class="next" href="snippets.html"><small>Next</small>Snippets and Templates</a></div></article><aside class="toc"><h4>On this page</h4><a href="#how-it-behaves">How it behaves</a><a href="#where-it-comes-from">Where it comes from</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

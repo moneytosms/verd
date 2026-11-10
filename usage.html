@@ -1,0 +1,112 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage · verd</title><meta name="description" content="A tour of verd: the contest loop, the CLI, and the keys you use most."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="apple-touch-icon" href="assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="index.html#features">Features</a><a href="guide/index.html">Guide</a><a href="docs/index.html">Docs</a><a href="install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout nosidebar"><article class="prose"><h1 id="usage">Usage</h1>
+<p>verd is a keyboard-driven TUI for the contest loop: <strong>pick a problem, read it, write the solution, test it, stress it, submit it</strong>. Press <code>?</code> on any screen for its key list, or <code>ctrl+k</code> to fuzzy-run any action or setting (the command palette). The mouse works too.</p>
+<h2 id="the-loop">The loop<a class="anchor" href="#the-loop">#</a></h2>
+<ol>
+<li><strong>Pick.</strong> Open verd and stay on the Problems tab. <code>/</code> fuzzy-searches (try <code>water 4a</code>, or <code>#dp</code> for tags), <code>f</code> opens the filters (rating range, status, sort, tags), <code>4</code> draws a random unsolved problem, and <code>enter</code> opens one.</li>
+<li><strong>Read.</strong> The statement is rendered in the left pane with the tests on the right. <code>tab</code> moves between panes, <code>j</code>/<code>k</code> scroll, <code>y</code> copies the whole question (with difficulty and tags) for pasting into a chat or notes.</li>
+<li><strong>Edit.</strong> <code>e</code> creates <code>main.cpp</code> from your Template and opens Neovim next to verd (tmux or herdr split, or embedded in verd's own window). Switch language per problem with <code>l</code>.</li>
+<li><strong>Test.</strong> <code>t</code> runs every Sample and Custom Test locally and shows a verdict per test with time and memory. With autotest on (default) just save the file. <code>d</code> shows a side-by-side diff of a failing test, <code>c</code> cycles how output is compared.</li>
+<li><strong>Add cases.</strong> <code>a</code> adds a Custom Test, <code>T</code> manages them all.</li>
+<li><strong>Stress.</strong> <code>S</code> creates a generator and a brute force from your Templates; fill them in, press <code>S</code> again, and verd searches for an input where your solution and the brute force disagree. <code>w</code> saves the counterexample as your next Custom Test.</li>
+<li><strong>Submit.</strong> <code>s</code> copies the solution, opens the submit page and streams the verdict into the pane.</li>
+</ol>
+<h2 id="from-inside-neovim">From inside Neovim<a class="anchor" href="#from-inside-neovim">#</a></h2>
+<pre><code class="hl"><span class="sc">verd</span> test main.cpp      <span class="cm"># run tests, report in verd&#39;s pane</span>
+<span class="sc">verd</span> stress main.cpp    <span class="cm"># search for a counterexample</span>
+<span class="sc">verd</span> submit main.cpp    <span class="cm"># submit and track the verdict</span></code></pre>
+<p>These talk to the running TUI over a Unix socket. With no TUI running they run headless and print the result. Exit codes: <code>0</code> success, <code>1</code> the thing you asked about failed (WA, counterexample, rejected), <code>2</code> verd could not do it (bad input, build error, offline). Map them to keys in your editor; see <a href="docs/neovim.html">Neovim</a>.</p>
+<h2 id="screens">Screens<a class="anchor" href="#screens">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code> Problems</td>
+<td>Codeforces (and optionally CSES) in one list with live fuzzy search, filter chips and solved marks.</td>
+</tr>
+<tr>
+<td><code>2</code> Contests</td>
+<td>Browse contests; <code>/</code> searches by name, id or problem name, <code>a</code> <code>u</code> <code>p</code> <code>r</code> <code>s</code> filter by chip, <code>o</code> sorts least solved first. <code>enter</code> lists a contest's problems with your per-problem status.</td>
+</tr>
+<tr>
+<td><code>3</code> Stats</td>
+<td>Totals, rating chart, difficulty histogram, per-topic strengths, streaks, a solve heatmap.</td>
+</tr>
+<tr>
+<td><code>4</code> Picker</td>
+<td>A random unsolved problem in your rating band. <code>w</code> is the weak-topics preset.</td>
+</tr>
+<tr>
+<td><code>5</code> Settings</td>
+<td>Every option, live: theme, reading layout, editor, shortcuts, mouse, layout. <code>/</code> searches settings by name, key and description.</td>
+</tr>
+</tbody>
+</table>
+<p>A Problem you opened stays open when you switch tabs; <code>esc</code> closes it.</p>
+<p>Start a contest session from the Contests tab and verd switches to contest mode: the tabs hide and the contest's Problems sit on a rail. See <a href="docs/contests.html">Contest sessions</a>.</p>
+<h2 id="everyday-commands">Everyday commands<a class="anchor" href="#everyday-commands">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd</code></td>
+<td>Open the TUI. <code>--here</code> keeps solutions in the current directory.</td>
+</tr>
+<tr>
+<td><code>verd daily</code></td>
+<td>Today's pick: an unsolved problem near your rating, from your weak topics.</td>
+</tr>
+<tr>
+<td><code>verd sync cses</code></td>
+<td>Pull your solved CSES tasks into verd.</td>
+</tr>
+<tr>
+<td><code>verd config</code></td>
+<td>Print the effective config; <code>config set &lt;key&gt; &lt;value&gt;</code> changes one key.</td>
+</tr>
+<tr>
+<td><code>verd keys</code></td>
+<td>List every shortcut; <code>keys set &lt;context.action&gt; &lt;key&gt;</code> rebinds one.</td>
+</tr>
+<tr>
+<td><code>verd themes</code></td>
+<td>List themes; <code>themes show &lt;name&gt;</code> prints an editable block.</td>
+</tr>
+<tr>
+<td><code>verd doctor</code></td>
+<td>Check compilers, editor and terminal.</td>
+</tr>
+<tr>
+<td><code>verd update</code></td>
+<td>Update to the latest release and print the notes of every release you skipped.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="make-it-yours">Make it yours<a class="anchor" href="#make-it-yours">#</a></h2>
+<p>Everything is configurable, live, from Settings (<code>5</code>) or from <code>config.toml</code> (edits apply within a second). Rebind any shortcut, define your own colour theme, tune how statements are laid out, put Neovim on the left, hide the footer, reorder tabs. The <a href="docs/customizing.html">Customizing guide</a> covers each of these with the exact commands, and is written so an agent can configure verd for you.</p>
+<h2 id="where-to-go-next">Where to go next<a class="anchor" href="#where-to-go-next">#</a></h2>
+<ul>
+<li>The <a href="guide/index.html">Guide</a> walks through everything with small examples: finding problems, testing, stress, submitting, contests, editorials, snippets, customizing and the command line</li>
+<li><a href="docs/customizing.html">Customizing</a> for shortcuts, themes, layout and reading options</li>
+<li><a href="docs/testing.html">Testing and stress</a> for Comparison Modes and the stress workflow</li>
+<li><a href="docs/submit.html">Submitting</a> for browser handoff versus direct submit, and the risks</li>
+<li><a href="docs/config.html">Configuration</a> for every key, languages and Templates</li>
+</ul>
+</article><aside class="toc"><h4>On this page</h4><a href="#the-loop">The loop</a><a href="#from-inside-neovim">From inside Neovim</a><a href="#screens">Screens</a><a href="#everyday-commands">Everyday commands</a><a href="#make-it-yours">Make it yours</a><a href="#where-to-go-next">Where to go next</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="guide/index.html">Guide</a><a href="docs/index.html">Docs</a><a href="usage.html">Usage</a></div><div><a href="install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

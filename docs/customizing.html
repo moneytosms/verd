@@ -1,0 +1,387 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customizing verd (for people and agents) · verd</title><meta name="description" content="Set up and restyle verd from the CLI: shortcuts, themes, layout, reading. Written for people and agents."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a href="../guide/index.html">Guide</a><a class="on" href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Documentation</h4><a class="on" href="customizing.html">Customizing</a><a href="config.html">Configuration</a><a href="keys.html">Keys</a><a href="testing.html">Testing and stress</a><a href="neovim.html">Neovim and editors</a><a href="embedded-pane.html">Embedded pane</a><a href="sources.html">Sources</a><a href="submit.html">Submitting</a><a href="contests.html">Contest sessions</a><a href="editorials.html">Editorials</a></nav>
+<article class="prose"><h1 id="customizing-verd-for-people-and-agents">Customizing verd (for people and agents)</h1>
+<p>Everything verd does is driven by one file, <code>config.toml</code>, and every customization has a CLI command, so a person or an agent can set verd up and reshape it without clicking through the TUI. Each command below prints what it did and refuses a change that would leave a config verd cannot load.</p>
+<p>Config location: <code>verd config path</code> (default <code>~/.config/verd/config.toml</code>, or <code>$XDG_CONFIG_HOME/verd/config.toml</code>).</p>
+<h2 id="contents">Contents<a class="anchor" href="#contents">#</a></h2>
+<ol>
+<li><a href="#set-up-from-scratch">Set up from scratch</a></li>
+<li><a href="#read-and-change-settings">Read and change settings</a></li>
+<li><a href="#keyboard-shortcuts">Keyboard shortcuts</a></li>
+<li><a href="#themes-and-styling">Themes and styling</a></li>
+<li><a href="#layout-and-editor">Layout and editor</a></li>
+<li><a href="#languages-and-templates">Languages and Templates</a></li>
+<li><a href="#verify-your-changes">Verify your changes</a></li>
+<li><a href="#live-reload">Live reload</a></li>
+<li><a href="#reading-and-fonts">Reading and fonts</a></li>
+</ol>
+<h2 id="set-up-from-scratch">Set up from scratch<a class="anchor" href="#set-up-from-scratch">#</a></h2>
+<pre><code class="hl"><span class="sc">curl</span> <span class="sf">-fsSL</span> https://raw.githubusercontent.com/moneytosms/verd/main/install.sh <span class="so">|</span> <span class="sc">sh</span>   <span class="cm"># or: go install github.com/moneytosms/verd/cmd/verd@latest</span>
+<span class="sc">verd</span> <span class="sf">--version</span>
+<span class="sc">verd</span> init <span class="sf">--no-setup</span>            <span class="cm"># writes config.toml (every key commented) and starter Templates</span>
+<span class="sc">verd</span> config set handle tourist  <span class="cm"># the only required setting</span>
+<span class="sc">verd</span> config set workspace ~/cp  <span class="cm"># where Solutions live (default ~/verd)</span>
+<span class="sc">verd</span> config set default_lang cpp
+<span class="sc">verd</span> config set editor nvim
+<span class="sc">verd</span>                            <span class="cm"># open the TUI</span></code></pre>
+<p><code>verd setup</code> is the interactive version of the same questions. Two things need a human at a keyboard: <code>verd login</code> (pasting a browser session for <a href="submit.html#direct-mode">direct submit</a>) and <code>verd sync cses</code> (your CSES password, never stored). Everything else is scriptable. You need <code>nvim</code> (or another editor) and a compiler for your languages (<code>g++</code>, <code>gcc</code>, <code>python3</code> by default); <code>tmux</code> or <code>herdr</code> are optional for the editor split.</p>
+<h2 id="read-and-change-settings">Read and change settings<a class="anchor" href="#read-and-change-settings">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verd config</code></td>
+<td>Print the effective, merged config.</td>
+</tr>
+<tr>
+<td><code>verd config path</code></td>
+<td>Print the config file path.</td>
+</tr>
+<tr>
+<td><code>verd config keys</code></td>
+<td>List the keys <code>config set</code> accepts.</td>
+</tr>
+<tr>
+<td><code>verd config get &lt;key&gt;</code></td>
+<td>Print one value.</td>
+</tr>
+<tr>
+<td><code>verd config set &lt;key&gt; &lt;value&gt;</code></td>
+<td>Change one top-level key. Comments and other lines stay; a commented default is uncommented in place. Enum values are checked (<code>split</code>, <code>background</code>, <code>embed_side</code>, <code>submit_mode</code>), numbers and booleans are parsed.</td>
+</tr>
+</tbody>
+</table>
+<p>Tables (<code>[lang.*]</code>, <code>[keys.*]</code>, <code>[themes.*]</code>) are edited as text, or with <code>verd keys</code> for shortcuts. The full key list is in <a href="config.html">Configuration</a>. The Settings tab (<code>5</code>) edits the same file live, and <code>/</code> there searches settings by name, key and description. Press <code>ctrl+k</code> anywhere to fuzzy-run any action or setting (the command palette).</p>
+<h2 id="keyboard-shortcuts">Keyboard shortcuts<a class="anchor" href="#keyboard-shortcuts">#</a></h2>
+<p>Every shortcut is rebindable. A shortcut is an <strong>action</strong> (<code>run_tests</code>) inside a <strong>context</strong> (<code>problem</code>), written <code>problem.run_tests</code>.</p>
+<h3 id="inspect">Inspect</h3>
+<pre><code class="hl"><span class="sc">verd</span> keys                 <span class="cm"># every action: current keys, description, * if changed</span>
+<span class="sc">verd</span> keys <span class="sf">--json</span>          <span class="cm"># same, machine readable: context, action, description, default, keys, modified</span>
+<span class="sc">verd</span> keys contexts        <span class="cm"># the contexts and what they are</span></code></pre>
+<p>Always read <code>verd keys --json</code> for the authoritative, current action list; it is generated from the same table the TUI uses and cannot drift from the code.</p>
+<h3 id="presets">Presets</h3>
+<p>Quick-apply curated binding sets:</p>
+<pre><code class="hl"><span class="sc">verd</span> keys presets                                        <span class="cm"># show available presets</span>
+<span class="sc">verd</span> keys preset vim                             <span class="cm"># apply vim preset (j/k, ctrl+d/u)</span>
+<span class="sc">verd</span> keys preset arrows                          <span class="cm"># arrow keys only</span>
+<span class="sc">verd</span> keys preset emacs                           <span class="cm"># emacs-style (ctrl+n/p, alt+v/ctrl+v)</span>
+<span class="sc">verd</span> keys preset default                         <span class="cm"># clear all custom bindings</span></code></pre>
+<h3 id="change">Change</h3>
+<pre><code class="hl"><span class="sc">verd</span> keys set problem.run_tests ctrl+t        <span class="cm"># one key</span>
+<span class="sc">verd</span> keys set problem.down j down ctrl+n      <span class="cm"># several keys for one action</span>
+<span class="sc">verd</span> keys set editor.focus_left alt+h
+<span class="sc">verd</span> keys reset problem.run_tests             <span class="cm"># back to the default</span>
+<span class="sc">verd</span> keys check                               <span class="cm"># validate [keys.*] in config.toml</span></code></pre>
+<p>Export and import:</p>
+<pre><code class="hl"><span class="sc">verd</span> keys export                      <span class="cm"># print current bindings as [keys.*] TOML blocks</span>
+<span class="sc">verd</span> keys import shortcuts.toml       <span class="cm"># import from a file</span>
+<span class="sc">verd</span> keys export <span class="so">|</span> <span class="sc">ssh</span> host verd keys import -  <span class="cm"># save elsewhere or paste</span></code></pre>
+<p>or write the table yourself:</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">keys</span><span class="p">.</span><span class="nx">problem</span><span class="p">]</span>
+<span class="nx">run_tests</span> <span class="p">=</span> <span class="s2">&#34;ctrl+t&#34;</span>
+<span class="nx">down</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;j&#34;</span><span class="p">,</span> <span class="s2">&#34;down&#34;</span><span class="p">,</span> <span class="s2">&#34;ctrl+n&#34;</span><span class="p">]</span>
+</code></pre>
+<h3 id="rules">Rules</h3>
+<ul>
+<li><strong>Key names:</strong> a single character (<code>x</code>, <code>X</code>, <code>?</code>, <code>/</code>), <code>enter</code>, <code>esc</code>, <code>tab</code>, <code>space</code>, <code>backspace</code>, <code>delete</code>, <code>insert</code>, <code>up</code>, <code>down</code>, <code>left</code>, <code>right</code>, <code>home</code>, <code>end</code>, <code>pgup</code>, <code>pgdown</code>, and <code>ctrl+</code>, <code>alt+</code>, <code>shift+</code> prefixes (<code>ctrl+t</code>, <code>alt+z</code>, <code>shift+tab</code>). Uppercase letters are their own keys (<code>S</code> is not <code>s</code>).</li>
+<li><strong>A rebound action stops answering to its old key.</strong> Rebinding <code>problem.run_tests</code> to <code>ctrl+t</code> makes <code>t</code> do nothing in the Problem view.</li>
+<li><strong>No two actions on one key</strong> within the same screen. <code>verd keys set</code> and the editor refuse the change and name both actions.</li>
+<li><strong><code>ctrl+c</code> always quits</strong> and cannot be rebound.</li>
+<li><strong>Not rebindable:</strong> text entry (the search and filter prompts, the filters modal, the test editor, the credential paste box) and y/n confirmations.</li>
+<li>The first key in an action's list is the one shown in footers, help and messages, which all follow your bindings.</li>
+</ul>
+<h3 id="contexts">Contexts</h3>
+<table>
+<thead>
+<tr>
+<th>Context</th>
+<th>Applies on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>common</code></td>
+<td>Every screen: help, dismiss a notification.</td>
+</tr>
+<tr>
+<td><code>tabs</code></td>
+<td>Every screen: switch tab <code>1</code>-<code>5</code>.</td>
+</tr>
+<tr>
+<td><code>app</code></td>
+<td>The tab screens (not the Problem view): refresh, next tab.</td>
+</tr>
+<tr>
+<td><code>problems</code>, <code>contests</code>, <code>stats</code>, <code>picker</code>, <code>settings</code></td>
+<td>That tab.</td>
+</tr>
+<tr>
+<td><code>contest</code></td>
+<td>The contest modal on the Contests tab.</td>
+</tr>
+<tr>
+<td><code>problem</code></td>
+<td>The Problem view, including the diff and stress overlays.</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>The full-screen test view.</td>
+</tr>
+<tr>
+<td><code>editorial</code></td>
+<td>The editorial modal (<code>H</code>): reveal, scroll, open the post.</td>
+</tr>
+<tr>
+<td><code>testmgr</code></td>
+<td>The test manager modal (<code>T</code>).</td>
+</tr>
+<tr>
+<td><code>submission</code></td>
+<td>The Submission modal.</td>
+</tr>
+<tr>
+<td><code>help</code></td>
+<td>The help overlay.</td>
+</tr>
+<tr>
+<td><code>contest_mode</code></td>
+<td>Contest mode: next and previous Problem, jump to one, the rail, ending the session.</td>
+</tr>
+<tr>
+<td><code>editor</code></td>
+<td>The embedded editor pane: <code>focus</code>, <code>focus_left</code>, <code>focus_right</code>, <code>zoom</code>, <code>wider</code>, <code>narrower</code>, <code>swap_side</code>. These work even while Neovim has the keyboard.</td>
+</tr>
+</tbody>
+</table>
+<p>The same shortcuts can be edited in the TUI: Settings (<code>5</code>) &gt; <strong>Keyboard shortcuts</strong>. <code>/</code> fuzzy-searches by description, group, id or key; <code>enter</code> rebinds, <code>a</code> adds a key, <code>backspace</code> resets one action, <code>R</code> resets all (with y/n confirmation).</p>
+<h2 id="themes-and-styling">Themes and styling<a class="anchor" href="#themes-and-styling">#</a></h2>
+<p>Eight themes ship: <code>terminal</code> (inherits your terminal's 16 colors, the default), <code>tokyo-night</code>, <code>dracula</code>, <code>catppuccin</code>, <code>gruvbox</code>, <code>nord</code>, <code>one-dark</code>, <code>solarized</code>.</p>
+<pre><code class="hl"><span class="sc">verd</span> themes                       <span class="cm"># list every theme, built in and yours</span>
+<span class="sc">verd</span> themes show nord             <span class="cm"># print an editable [themes.*] block for it</span>
+<span class="sc">verd</span> config set theme nord        <span class="cm"># select one</span>
+<span class="sc">verd</span> config set background dark   <span class="cm"># auto | dark | light</span></code></pre>
+<h3 id="define-your-own">Define your own</h3>
+<p><code>verd themes show &lt;name&gt;</code> prints a complete block to start from. Paste it into <code>config.toml</code>, rename it, edit colors, then <code>verd config set theme &lt;your-name&gt;</code>:</p>
+<pre><code class="hl"><span class="p">[</span><span class="nx">themes</span><span class="p">.</span><span class="nx">midnight</span><span class="p">]</span>
+<span class="nx">base</span> <span class="p">=</span> <span class="s2">&#34;tokyo-night&#34;</span>          <span class="c"># optional: start from a built-in, override only what you list</span>
+<span class="nx">glamour_dark</span> <span class="p">=</span> <span class="s2">&#34;tokyo-night&#34;</span>  <span class="c"># statement/markdown style on a dark background</span>
+<span class="nx">glamour_light</span> <span class="p">=</span> <span class="s2">&#34;light&#34;</span>       <span class="c"># ... and on a light one</span>
+
+<span class="p">[</span><span class="nx">themes</span><span class="p">.</span><span class="nx">midnight</span><span class="p">.</span><span class="nx">dark</span><span class="p">]</span>        <span class="c"># used when the terminal background is dark</span>
+<span class="nx">accent</span> <span class="p">=</span> <span class="s2">&#34;#7aa2f7&#34;</span>
+<span class="nx">good</span> <span class="p">=</span> <span class="s2">&#34;#9ece6a&#34;</span>
+
+<span class="p">[</span><span class="nx">themes</span><span class="p">.</span><span class="nx">midnight</span><span class="p">.</span><span class="nx">light</span><span class="p">]</span>       <span class="c"># used when it is light</span>
+<span class="nx">accent</span> <span class="p">=</span> <span class="s2">&#34;#34548a&#34;</span>
+</code></pre>
+<p>A theme has a <code>dark</code> and a <code>light</code> palette; verd picks one from <code>background</code> (<code>auto</code> detects the terminal). Unset colors come from <code>base</code> (default <code>terminal</code>). Colors are <code>#rrggbb</code>, <code>#rgb</code>, or <code>ansiN</code> for terminal palette index N (0-255), which follows whatever palette your terminal uses.</p>
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>accent</code></td>
+<td>Titles, focused borders, the active tab fill, selected text.</td>
+</tr>
+<tr>
+<td><code>accent2</code></td>
+<td>Key caps, filter chips, section headings, the divider and badges.</td>
+</tr>
+<tr>
+<td><code>dim</code></td>
+<td>Secondary text, hints, unfocused borders.</td>
+</tr>
+<tr>
+<td><code>good</code></td>
+<td>AC, solved marks, success notes.</td>
+</tr>
+<tr>
+<td><code>bad</code></td>
+<td>WA, RE, CE, TLE, errors.</td>
+</tr>
+<tr>
+<td><code>warn</code></td>
+<td>Warnings, running state, &quot;applies next start&quot; notes.</td>
+</tr>
+<tr>
+<td><code>surface</code></td>
+<td>Background of the selected row and of chips.</td>
+</tr>
+<tr>
+<td><code>bar</code></td>
+<td>Header and footer background.</td>
+</tr>
+<tr>
+<td><code>on_accent</code></td>
+<td>Text drawn on an <code>accent</code> fill (the active tab).</td>
+</tr>
+</tbody>
+</table>
+<p><code>glamour_dark</code> / <code>glamour_light</code> style the rendered statement: <code>dark</code>, <code>light</code>, <code>dracula</code>, <code>tokyo-night</code>, <code>pink</code>, <code>notty</code>, <code>ascii</code>, or a path to a <a href="https://github.com/charmbracelet/glamour">glamour</a> style JSON file for full control of headings, code blocks and tables. An unknown theme name in <code>theme</code> falls back to <code>terminal</code> and shows a notice. A bad color or base is a config error that names the theme and key.</p>
+<p>Pick a theme live in Settings (<code>5</code>): it previews as you move through the list.</p>
+<h2 id="layout-and-editor">Layout and editor<a class="anchor" href="#layout-and-editor">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Values</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>editor</code></td>
+<td><code>nvim</code>, <code>vim</code>, <code>hx</code>, <code>nano</code>, <code>micro</code>, <code>emacs</code>, <code>code</code>, any command</td>
+<td>The editor <code>e</code> opens.</td>
+</tr>
+<tr>
+<td><code>split</code></td>
+<td><code>auto</code>, <code>tmux</code>, <code>herdr</code>, <code>embedded</code>, <code>suspend</code></td>
+<td>Where the editor opens. See <a href="neovim.html">Neovim</a>.</td>
+</tr>
+<tr>
+<td><code>embed_side</code></td>
+<td><code>right</code> (default), <code>left</code></td>
+<td>Which column an embedded editor takes. Applies live.</td>
+</tr>
+<tr>
+<td><code>embed_ratio</code></td>
+<td><code>0.1</code> to <code>0.9</code></td>
+<td>Share of the window verd keeps when the editor is embedded.</td>
+</tr>
+<tr>
+<td><code>embed_zoom</code></td>
+<td><code>true</code>, <code>false</code> (default)</td>
+<td>Start the editor fullscreen when it opens.</td>
+</tr>
+<tr>
+<td><code>autotest</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Re-run tests whenever you save the Solution.</td>
+</tr>
+<tr>
+<td><code>resume</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Start where you left off: tab, filter, sort, open contest and Problem.</td>
+</tr>
+<tr>
+<td><code>browser</code></td>
+<td><code>default</code>, or a command</td>
+<td>Opens submit pages and Problem links. <code>default</code> uses the system opener; a command takes its arguments too, e.g. <code>chromium --new-window</code>.</td>
+</tr>
+<tr>
+<td><code>source_cf</code>, <code>source_cses</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Which Problem sources the lists show.</td>
+</tr>
+</tbody>
+</table>
+<p>Embedded editor keys (rebindable under <code>[keys.editor]</code>): <code>ctrl+\</code> toggles the keyboard between verd and the editor, <code>alt+h</code> / <code>alt+l</code> move the keyboard to the left / right column, <code>alt+z</code> hides verd so the editor fills the window, <code>alt+]</code> / <code>alt+[</code> grow/shrink the editor column, <code>alt+s</code> swaps the editor between left and right. See <a href="embedded-pane.html">Embedded pane</a>.</p>
+<p>A Problem you opened stays open when you switch tabs; <code>esc</code> closes it.</p>
+<h2 id="languages-and-templates">Languages and Templates<a class="anchor" href="#languages-and-templates">#</a></h2>
+<p>Add or override languages under <code>[lang.&lt;name&gt;]</code> (<code>ext</code>, <code>compile</code>, <code>run</code>, <code>cf_compiler_id</code>) and edit Templates in <code>~/.config/verd/snippets/templates/</code>. Both are documented, with placeholders and Template variables, in <a href="config.html#languages">Configuration</a>.</p>
+<h2 id="verify-your-changes">Verify your changes<a class="anchor" href="#verify-your-changes">#</a></h2>
+<p>An agent should confirm each step rather than assume:</p>
+<pre><code class="hl"><span class="sc">verd</span> config                 <span class="cm"># does the merged config load, and show your values?</span>
+<span class="sc">verd</span> keys check             <span class="cm"># no unknown actions, bad keys or conflicts</span>
+<span class="sc">verd</span> keys <span class="sf">--json</span> <span class="so">|</span> <span class="sc">jq</span> <span class="ss">&#39;.[] | select(.modified)&#39;</span>   <span class="cm"># what differs from the defaults</span>
+<span class="sc">verd</span> themes show &lt;name&gt;     <span class="cm"># does your theme resolve to the colors you meant?</span></code></pre>
+<p>If <code>config.toml</code> cannot be loaded, verd names the file and the problem (<code>themes.midnight: dark: accent: &quot;red&quot;: want #rrggbb, #rgb or ansiN</code>) and does not start the TUI, so a bad edit never silently falls back to defaults. Footers, help and messages are built from the live bindings, so after changing a shortcut open the TUI and press <code>?</code> to confirm.</p>
+<h2 id="live-reload">Live reload<a class="anchor" href="#live-reload">#</a></h2>
+<p>Changes to <code>config.toml</code> apply while verd runs, within about one second. Edit the file in your editor (or use <code>verd config set</code> / <code>verd keys set</code>), and you'll see the updates in the TUI: theme changes, reading options, shortcuts, autotest, source toggles, and embed settings all take effect immediately. Invalid edits show an error notice and are ignored; the old values stay in use.</p>
+<h2 id="reading-and-fonts">Reading and fonts<a class="anchor" href="#reading-and-fonts">#</a></h2>
+<p>Your terminal sets the font. What verd controls is how a statement is laid out and styled, live from Settings (<code>5</code>) &gt; <strong>Reading</strong> or with <code>verd config set</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>images</code></td>
+<td><code>auto</code>, <code>kitty</code>, <code>blocks</code>, <code>off</code></td>
+<td>Statement images, drawn in the terminal. <code>auto</code> uses the Kitty graphics protocol in kitty and Ghostty (real pixels, scrolls like text) and colour half-blocks everywhere else, Alacritty and tmux included. <code>off</code> leaves a link. Images are fetched over https from any public host (authors use imgur and similar), never from loopback or private addresses, up to 10 MB and 16 megapixels, and cached under the cache directory. When one cannot be loaded, the statement says why next to <code>[image]</code>.</td>
+</tr>
+<tr>
+<td><code>reading_width</code></td>
+<td><code>0</code> or <code>40</code>-<code>200</code></td>
+<td>Cap the statement's line length (0 = the whole pane). Narrow columns read faster.</td>
+</tr>
+<tr>
+<td><code>reading_margin</code></td>
+<td><code>0</code>-<code>8</code></td>
+<td>Left margin in columns.</td>
+</tr>
+<tr>
+<td><code>reading_spacing</code></td>
+<td><code>compact</code>, <code>normal</code>, <code>relaxed</code></td>
+<td>Blank lines between paragraphs.</td>
+</tr>
+<tr>
+<td><code>reading_headings</code></td>
+<td><code>plain</code>, <code>bold</code>, <code>bar</code>, <code>underline</code></td>
+<td>Input / Output / Note headings: text, bold, <code>▌ Input</code>, or bold with a rule under them. <code>bar</code> (default) has both the marker and the rule.</td>
+</tr>
+<tr>
+<td><code>reading_math</code></td>
+<td><code>unicode</code>, <code>latex</code>, <code>raw</code></td>
+<td>Maths is drawn as code, so it stands out from the text. <code>unicode</code> shows symbols (<code>1 ≤ w ≤ 10⁹</code>); <code>latex</code> shows the TeX source (<code>1 \le w \le 10^9</code>). <code>raw</code> is the same as <code>latex</code>. The terminal cannot typeset real LaTeX.</td>
+</tr>
+<tr>
+<td><code>reading_emphasis</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td><code>false</code> turns italics and bold into plain text, for fonts that render them badly.</td>
+</tr>
+</tbody>
+</table>
+<p>Colors of headings and text come from the theme (see <a href="#themes-and-styling">Themes</a>); <code>glamour_dark</code> / <code>glamour_light</code> in a theme pick the statement style.</p>
+<h3 id="reading-palettes">Reading palettes</h3>
+<p><code>reading_palette</code> recolors the statement only and leaves the rest of the screen on your theme. Pick <code>app</code> (the theme's own colors, the default), <code>paper</code>, <code>sepia</code>, <code>cool</code>, <code>night</code>, <code>mono</code>, <code>contrast</code>, or <code>auto</code>, which uses <code>night</code> from <code>reading_night_from</code> (hour 0-23, default 20) until 07:00 and <code>app</code> otherwise. Set one with <code>verd config set reading_palette sepia</code>, or press <code>P</code> in a Problem to cycle them. <code>reading_split</code> (<code>full</code> or <code>cap</code>) decides whether the split view caps the statement at 76 columns when <code>reading_width</code> is 0.</p>
+<h2 id="layout">Layout<a class="anchor" href="#layout">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>header</code></td>
+<td><code>true</code> (default), <code>false</code></td>
+<td>Show the tab bar and the rule under it. With it off, switch tabs with the number keys or <code>next_tab</code>.</td>
+</tr>
+<tr>
+<td><code>footer</code></td>
+<td><code>true</code> (default), <code>false</code></td>
+<td>Show the key-hint footer and status badges. Off gives the rows back to the content.</td>
+</tr>
+<tr>
+<td><code>tabs</code></td>
+<td>list, default <code>[&quot;problems&quot;,&quot;contests&quot;,&quot;stats&quot;,&quot;picker&quot;,&quot;settings&quot;]</code></td>
+<td>Which tabs are shown and in what order. <code>settings</code> cannot be removed. The number keys select the Nth visible tab. <code>verd config set tabs problems,stats,settings</code></td>
+</tr>
+</tbody>
+</table>
+<p>All three apply live from Settings (<code>5</code>) &gt; Layout.</p>
+<div class="pager"><span></span><a class="next" href="config.html"><small>Next</small>Configuration</a></div></article><aside class="toc"><h4>On this page</h4><a href="#contents">Contents</a><a href="#set-up-from-scratch">Set up from scratch</a><a href="#read-and-change-settings">Read and change settings</a><a href="#keyboard-shortcuts">Keyboard shortcuts</a><a href="#themes-and-styling">Themes and styling</a><a href="#layout-and-editor">Layout and editor</a><a href="#languages-and-templates">Languages and Templates</a><a href="#verify-your-changes">Verify your changes</a><a href="#live-reload">Live reload</a><a href="#reading-and-fonts">Reading and fonts</a><a href="#layout">Layout</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>

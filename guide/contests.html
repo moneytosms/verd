@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contests and sessions · verd</title><meta name="description" content="Virtual, practice and live sessions with a timer and scoring."><meta name="theme-color" content="#0f1012">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"><link rel="apple-touch-icon" href="../assets/favicon.svg"><meta property="og:title" content="verd: competitive programming in your terminal"><meta property="og:image" content="https://moneytosms.github.io/verd/assets/launch.jpg"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap"><link rel="stylesheet" href="../assets/site.css"><script>document.documentElement.className="js"</script></head><body class="docs"><nav class="nav" aria-label="Site"><a class="logo" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">verd</a><div class="links"><a class="opt" href="../index.html#features">Features</a><a class="on" href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd">GitHub</a></div></nav><div class="layout"><nav class="side" aria-label="Documentation"><h4>Guide</h4><a href="start.html">Quick start</a><a href="problems.html">Finding problems</a><a href="solve.html">Read, edit and test</a><a href="stress.html">Stress testing</a><a href="submit.html">Submitting</a><a class="on" href="contests.html">Contests and sessions</a><a href="editorials.html">Editorials</a><a href="snippets.html">Snippets and Templates</a><a href="customize.html">Customize</a><a href="cli.html">Command line</a><a href="editors.html">Neovim and editors</a><a href="troubleshooting.html">Troubleshooting</a></nav>
+<article class="prose"><h1 id="contests-and-sessions">Contests and sessions</h1>
+<p>The Contests tab (<code>2</code>) lists upcoming contests (soonest first) and past ones. <code>enter</code> opens a contest: its problems with your status, each openable like any other.</p>
+<p>Press <code>/</code> to search by contest name, id or problem name. The chips <code>a</code> (all), <code>u</code> (upcoming), <code>p</code> (past), <code>r</code> (running) and <code>s</code> (at least one solve) narrow the list, and <code>o</code> sorts least-solved first. Each row shows <code>solved/total</code> for cached problems (<code>-</code> when not fetched yet).</p>
+<p>A <strong>session</strong> turns a contest into a timed run inside verd. Start one from the contest modal.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>For</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s</code> on a finished contest</td>
+<td>replay</td>
+<td><strong>virtual contest</strong>: a timer for the contest's real length, starting now</td>
+</tr>
+<tr>
+<td><code>p</code> on a finished contest</td>
+<td>replay</td>
+<td><strong>practice</strong>: same view, no timer, no penalty</td>
+</tr>
+<tr>
+<td><code>s</code> on a running contest</td>
+<td>now</td>
+<td><strong>live</strong>: the real clock, results from the Codeforces standings</td>
+</tr>
+<tr>
+<td><code>s</code> on an upcoming contest</td>
+<td>soon</td>
+<td><strong>wait</strong>: a countdown, then the problems load by themselves at the start</td>
+</tr>
+</tbody>
+</table>
+<p>Each key asks to be pressed twice, the first press tells you what will happen. One session runs at a time and survives restarting verd.</p>
+<h2 id="while-it-runs">While it runs<a class="anchor" href="#while-it-runs">#</a></h2>
+<ul>
+<li>The header shows the clock and score on every tab: <code>virtual  1:12:03 left  solved 2/6  penalty 47</code>.</li>
+<li>For that contest, <strong>ratings, tags and solved counts are hidden</strong> and your old solved marks are ignored. Only submissions made after the start count, so replaying a contest you solved before starts clean.</li>
+<li>The contest modal lists each problem with <code>12m +1</code> (solved at minute 12 after one wrong attempt) or <code>-2</code> (two wrong attempts, still open).</li>
+<li>The contest's <a href="editorials.html">editorial</a> is hidden.</li>
+<li>Submit as usual. Scoring updates as soon as the verdict lands.</li>
+</ul>
+<h2 id="contest-mode">Contest mode<a class="anchor" href="#contest-mode">#</a></h2>
+<p>While a session runs, verd shows the contest's Problems on a rail at the left. <code>alt+n</code> / <code>alt+p</code> move between them, <code>alt+1</code> to <code>alt+9</code> jump to one, <code>alt+b</code> cycles the rail (full, compact, hidden) and <code>alt+x</code> opens the summary. Each session also writes a Markdown report to the workspace when it ends. Details: <a href="../docs/contests.html">Contest sessions</a>.</p>
+<h2 id="scoring">Scoring<a class="anchor" href="#scoring">#</a></h2>
+<p><strong>Virtual and practice</strong> are scored locally, ICPC style: a solve costs its minute plus 20 minutes per wrong attempt before it. Compile errors and attempts after the first accepted one are free. It is an approximation of Codeforces' own scoring.</p>
+<p><strong>Live</strong> uses the real thing. Every minute verd downloads the standings and keeps your row:</p>
+<ul>
+<li>Codeforces-type rounds: <code>rank 5  490 pts</code>, and <code>490* +1</code> per problem (the star means system testing has not confirmed it yet).</li>
+<li>ICPC-type rounds: solved count and penalty.</li>
+<li>Not in the standings? The header says <code>not in the standings (register on the site)</code>. Registering happens on codeforces.com; verd cannot do it for you.</li>
+</ul>
+<p>The full standings are several MB for a big round, so verd streams the response and keeps one row, and polls every two minutes after a download over 8 MB.</p>
+<h2 id="the-end">The end<a class="anchor" href="#the-end">#</a></h2>
+<p>When the time is up (or when you press <code>e</code> in the contest modal) the summary opens: solved problems with times, penalty, and a list to upsolve. <code>e</code> or <code>enter</code> ends the session and shows everything again; <code>esc</code> keeps it.</p>
+<pre><code class="hl">Session summary
+  ✓ A   4m
+  ✓ B   31m +1
+  · C
+  solved 2/3  penalty 75
+  upsolve: C
+</code></pre>
+<p>Details and limits: <a href="../docs/contests.html">Contest sessions</a>.</p>
+<p>Next: <a href="editorials.html">Editorials</a>.</p>
+<div class="pager"><a href="submit.html"><small>Previous</small>Submitting</a><a class="next" href="editorials.html"><small>Next</small>Editorials</a></div></article><aside class="toc"><h4>On this page</h4><a href="#while-it-runs">While it runs</a><a href="#contest-mode">Contest mode</a><a href="#scoring">Scoring</a><a href="#the-end">The end</a></aside></div><footer><div class="mark" aria-hidden="true"><span>v</span><span>e</span><span>r</span><span>d</span></div><div class="foot"><div><a href="../guide/index.html">Guide</a><a href="../docs/index.html">Docs</a><a href="../usage.html">Usage</a></div><div><a href="../install.html">Install</a><a href="https://github.com/moneytosms/verd/releases">Releases</a><a href="../docs/keys.html">Keys</a></div><div><a href="https://github.com/moneytosms/verd">GitHub</a><a href="https://github.com/moneytosms/verd/issues">Issues</a><a href="../guide/troubleshooting.html">Troubleshooting</a></div><div class="wide"><span>verd is a keyboard-driven terminal app for Codeforces and CSES.</span><span class="soft">MIT licensed. Not affiliated with Codeforces or CSES.</span></div></div><div class="last"><span>Made for people who would rather not alt+tab.</span><a class="key blue" href="../index.html#install">Install verd</a></div></footer><script>(function(){var els=document.querySelectorAll(".rv,.prose h2,.prose pre,.prose table,.docgrid a,.pager a,.lineup tr,.mark span,.foot div");
+if(matchMedia("(prefers-reduced-motion: reduce)").matches||!("IntersectionObserver"in window))return;
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px"});
+els.forEach(function(el,i){if(!el.classList.contains("rv")){el.classList.add("rv");el.style.setProperty("--i",i%5)}io.observe(el)})})()</script><script>
+document.querySelectorAll('.prose pre').forEach(function(p){var b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=function(){var t=p.querySelector('code').innerText;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Select + copy'})};p.appendChild(b)});
+</script></body></html>
